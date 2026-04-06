@@ -49,65 +49,61 @@ export default function WaitlistPage() {
   };
 
   return (
-    <main className="waitlist-page">
-      <div className="waitlist-atmosphere" aria-hidden="true">
-        <div className="waitlist-bloom waitlist-bloom-copper" />
-        <div className="waitlist-bloom waitlist-bloom-electric" />
+    <main className="hero">
+      <div className="hero__atmosphere" aria-hidden="true">
+        <div className="hero__bloom hero__bloom--copper" />
+        <div className="hero__bloom hero__bloom--electric" />
+        <div className="hero__grain" />
       </div>
 
-      <section className="hero-shell">
-        <div className="hero-grid">
-          <div className="hero-copy">
-            <p className="wordmark">SOS</p>
+      <section className="hero__inner">
+        <div className="hero__copy">
+          <p className="hero__wordmark">SOS</p>
 
-            <h1 className="headline">You already know something is shifting.</h1>
+          <h1 className="hero__headline">You already know something is shifting.</h1>
 
-            <p className="subhead">
-              The pressure is real. The pattern is not random. SOS shows you what is actually
-              happening, and when to move.
-            </p>
+          <p className="hero__subhead">
+            The pressure is real. The pattern is not random. SOS shows you what is actually
+            happening, and when to move.
+          </p>
 
-            {done ? (
-              <div className="form-stack">
-                <p className="support-text">Be first in when the doors open.</p>
-                <p className="success-text">You&apos;re in.</p>
-              </div>
-            ) : (
-              <form className="form-stack" onSubmit={handleSubmit}>
-                <div className="form-row">
-                  <input
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="email-input"
-                    aria-label="Email address"
-                  />
-                  <button type="submit" disabled={isSubmitting} className="cta-button">
-                    {isSubmitting ? 'Saving...' : 'Save my spot'}
-                  </button>
-                </div>
-
-                <p className="support-text">Be first in when the doors open.</p>
-                {error ? <p className="error-text">{error}</p> : null}
-              </form>
-            )}
-          </div>
-
-          <div className="hero-image-wrap">
-            <div className="hero-image-frame">
-              <Image
-                src="/brand/sos-1-container.jpeg"
-                alt="Cinematic SOS system console"
-                fill
-                priority
-                sizes="(max-width: 767px) 100vw, (max-width: 1439px) 44vw, 520px"
-                className="hero-image"
-              />
-              <div className="hero-image-overlay" aria-hidden="true" />
+          {done ? (
+            <div className="hero__form-state">
+              <p className="hero__support">Be first in when the doors open.</p>
+              <p className="hero__success">You&apos;re in.</p>
             </div>
-          </div>
+          ) : (
+            <>
+              <form className="hero__form" onSubmit={handleSubmit}>
+                <input
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="hero__input"
+                  aria-label="Email address"
+                />
+                <button type="submit" disabled={isSubmitting} className="hero__button">
+                  {isSubmitting ? 'Saving...' : 'Save my spot'}
+                </button>
+              </form>
+
+              <p className="hero__support">Be first in when the doors open.</p>
+              {error ? <p className="hero__error">{error}</p> : null}
+            </>
+          )}
+        </div>
+
+        <div className="hero__image-wrap">
+          <Image
+            src="/brand/sos-1-container.jpeg"
+            alt="Cinematic SOS system console"
+            fill
+            priority
+            sizes="(max-width: 767px) 100vw, (max-width: 1279px) 460px, 520px"
+            className="hero__image"
+          />
         </div>
       </section>
     </main>

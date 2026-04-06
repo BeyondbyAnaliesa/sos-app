@@ -39,3 +39,4 @@ vercel
 ```
 
 Or connect the GitHub repo to Vercel directly via https://vercel.com/new.
+# SOS

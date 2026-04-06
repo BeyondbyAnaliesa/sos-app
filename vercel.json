@@ -1,0 +1,12 @@
+{
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "outputDirectory": ".next",
+  "env": {},
+  "regions": ["sfo1"],
+  "functions": {
+    "api/**": {
+      "maxDuration": 60
+    }
+  }
+}

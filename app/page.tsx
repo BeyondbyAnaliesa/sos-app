@@ -2,6 +2,8 @@
 
 import { useState, FormEvent } from 'react';
 
+const submittedEmails = new Set<string>();
+
 export default function WaitlistPage() {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -10,17 +12,30 @@ export default function WaitlistPage() {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || isSubmitting || submittedEmails.has(normalizedEmail)) {
+      if (submittedEmails.has(normalizedEmail)) {
+        setDone(true);
+      }
+      return;
+    }
+
     setIsSubmitting(true);
     setError('');
 
     try {
       const res = await fetch('/api/subscribe', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Idempotency-Key': normalizedEmail,
+        },
+        body: JSON.stringify({ email: normalizedEmail }),
       });
 
       if (res.ok) {
+        submittedEmails.add(normalizedEmail);
         setDone(true);
       } else {
         setError('Something went wrong. Try again.');
@@ -57,10 +72,10 @@ export default function WaitlistPage() {
 
           {/* Headline */}
           <h2
-            className="text-2xl sm:text-3xl md:text-4xl font-light tracking-widest leading-relaxed"
+            className="text-2xl sm:text-3xl md:text-4xl font-light tracking-wide leading-relaxed"
             style={{ color: '#F4EFE8' }}
           >
-            The map exists.
+            You already know something is shifting.
           </h2>
 
           {/* Subhead */}
@@ -68,7 +83,7 @@ export default function WaitlistPage() {
             className="text-sm sm:text-base md:text-lg tracking-wide leading-relaxed"
             style={{ color: '#9A948C' }}
           >
-            Be first to hold it.
+            The pressure is real. The pattern is not random. SOS shows you what is actually happening, and when to move.
           </p>
 
           {/* Form or Success */}
@@ -120,8 +135,15 @@ export default function WaitlistPage() {
                   e.currentTarget.style.backgroundColor = '#C9A27A';
                 }}
               >
-                {isSubmitting ? 'Sending...' : "I'm in."}
+                {isSubmitting ? 'Saving...' : 'Save my spot'}
               </button>
+
+              <p
+                className="text-sm tracking-wide"
+                style={{ color: '#9A948C' }}
+              >
+                Be first in when the doors open.
+              </p>
 
               {error && (
                 <p className="text-sm" style={{ color: '#E07070' }}>

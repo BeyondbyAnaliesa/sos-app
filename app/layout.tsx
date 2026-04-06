@@ -3,7 +3,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'SOS - The Spiritual Operating System',
-  description: 'Be first. Join the waitlist.',
+  description: 'You already know something is shifting.',
 };
 
 export const viewport: Viewport = {

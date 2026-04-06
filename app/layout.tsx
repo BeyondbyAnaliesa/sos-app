@@ -1,10 +1,14 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
   title: 'SOS - The Spiritual Operating System',
-  description: 'Be first to hold the map. Join the waitlist.',
-  viewport: 'width=device-width, initial-scale=1',
+  description: 'Be first. Join the waitlist.',
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({

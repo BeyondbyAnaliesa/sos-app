@@ -74,15 +74,16 @@ export default function WaitlistPage() {
             </div>
           ) : (
             <>
+              <label className="hero__label" htmlFor="email-input">EMAIL</label>
               <form className="hero__form" onSubmit={handleSubmit}>
                 <input
                   type="email"
-                  placeholder="Enter your email"
+                  placeholder="Your email address"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="hero__input"
-                  aria-label="Email address"
+                  id="email-input"
                 />
                 <button type="submit" disabled={isSubmitting} className="hero__button">
                   {isSubmitting ? 'Saving...' : 'Save my spot'}

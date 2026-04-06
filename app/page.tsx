@@ -98,7 +98,7 @@ export default function WaitlistPage() {
 
         <div className="hero__image-wrap">
           <Image
-            src="/brand/sos-1-container.jpeg"
+            src="/brand/sos-hero-new.png"
             alt="Cinematic SOS system console"
             fill
             priority

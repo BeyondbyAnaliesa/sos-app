@@ -3,12 +3,13 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'SOS',
-  description: 'You already know something is shifting.',
+  description: 'SOS V1, astrology, reflection, and daily guidance.',
 };
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  themeColor: '#0E0C1E',
 };
 
 export default function RootLayout({

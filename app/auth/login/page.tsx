@@ -17,7 +17,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
           <p className="section-copy">Sign in to open your chart, your journal, and your daily guidance.</p>
         </div>
 
-        <form className="stack" action="/auth/login" method="post">
+        <form className="stack" action="/api/auth/login" method="post">
           <input type="hidden" name="next" value={next} />
           <div className="stack form-field">
             <label className="entry-label" htmlFor="email">Email</label>

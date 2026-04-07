@@ -15,7 +15,7 @@ export default async function SignupPage({ searchParams }: PageProps) {
           <p className="section-copy">Start with email and password, then finish your birth data inside the app.</p>
         </div>
 
-        <form className="stack" action="/auth/signup" method="post">
+        <form className="stack" action="/api/auth/signup" method="post">
           <div className="stack form-field">
             <label className="entry-label" htmlFor="email">Email</label>
             <input className="input" id="email" name="email" type="email" required autoComplete="email" />

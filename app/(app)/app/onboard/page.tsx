@@ -38,7 +38,7 @@ export default async function OnboardPage({ searchParams }: PageProps) {
       </section>
 
       <section className="panel stack">
-        <form className="stack" action="/app/onboard" method="post">
+        <form className="stack" action="/api/app/onboard" method="post">
           <div className="stack form-field">
             <label className="entry-label" htmlFor="birthDate">Birth date</label>
             <input className="input" id="birthDate" name="birthDate" type="date" required />

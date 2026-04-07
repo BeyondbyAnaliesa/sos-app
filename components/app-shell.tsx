@@ -19,9 +19,16 @@ export function AppShell({ children }: { children: ReactNode }) {
         <Link className="app-shell__brand" href="/app">
           SOS
         </Link>
-        <Link className="button-ghost" href="/app/onboard">
-          Onboard
-        </Link>
+        <div className="app-shell__header-actions">
+          <Link className="button-ghost" href="/app/onboard">
+            Onboard
+          </Link>
+          <form action="/auth/logout" method="post">
+            <button className="button-ghost" type="submit">
+              Log out
+            </button>
+          </form>
+        </div>
       </header>
 
       <main className="app-shell__content">{children}</main>

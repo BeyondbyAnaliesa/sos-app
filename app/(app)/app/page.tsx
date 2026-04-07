@@ -1,11 +1,33 @@
-export default function AppHomePage() {
+import { redirect } from 'next/navigation';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+
+export default async function AppHomePage() {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/auth/login');
+  }
+
+  const { data: birthData } = await supabase
+    .from('birth_data')
+    .select('id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (!birthData) {
+    redirect('/app/onboard');
+  }
+
   return (
     <div className="stack">
       <section className="panel stack">
         <p className="section-eyebrow">Today</p>
         <h1 className="section-title">Your chart, your journal, your daily pulse.</h1>
         <p className="section-copy">
-          V1 app shell is live. Auth-gated routes are in place, and this area is ready for Supabase-backed data.
+          Your birth data is saved. Next up, this surface can read live chart data, reflections, and daily transits.
         </p>
         <div className="page-actions">
           <a className="button" href="/app/today">
@@ -24,7 +46,7 @@ export default function AppHomePage() {
         </article>
         <article className="metric-card">
           <p className="metric-label">Natal chart</p>
-          <p className="metric-value">Natal placements and aspects will persist in natal_charts.</p>
+          <p className="metric-value">Natal placements, angles, and aspects are now stored in natal_charts.</p>
         </article>
       </section>
     </div>

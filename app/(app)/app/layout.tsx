@@ -11,7 +11,7 @@ export default async function ProtectedAppLayout({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/?auth=required');
+    redirect('/auth/login');
   }
 
   return <AppShell>{children}</AppShell>;

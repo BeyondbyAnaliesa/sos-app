@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "SOS",
+    "slug": "sos",
+    "scheme": "sos",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#0E0C1E"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0E0C1E"
+      }
+    },
+    "extra": {
+      "apiUrl": "http://localhost:4000"
+    }
+  }
+}

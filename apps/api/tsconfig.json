@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "dist",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "baseUrl": ".",
+    "paths": {
+      "@sos/shared": ["../../packages/shared/src/index.ts"],
+      "@sos/chart-service": ["../../packages/chart-service/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}

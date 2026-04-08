@@ -1,0 +1,24 @@
+{
+  "name": "@sos/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo/AppEntry",
+  "scripts": {
+    "start": "expo start",
+    "ios": "expo start --ios",
+    "android": "expo start --android",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "expo": "^54.0.13",
+    "expo-status-bar": "^3.0.8",
+    "react": "19.1.0",
+    "react-native": "0.81.4",
+    "@react-native-async-storage/async-storage": "^2.2.0",
+    "@sos/shared": "0.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.16",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,11 +1,21 @@
 {
   "name": "sos-app",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "build:api": "npm run build --workspace @sos/api",
+    "typecheck:api": "npm run typecheck --workspace @sos/api",
+    "typecheck:mobile": "npm run typecheck --workspace @sos/mobile",
+    "typecheck:shared": "npm run typecheck --workspace @sos/shared",
+    "typecheck:chart": "npm run typecheck --workspace @sos/chart-service"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.0",
@@ -13,8 +23,7 @@
     "next": "16.2.2",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "stripe": "^22.0.0",
-    "sweph": "^2.10.3-b-1"
+    "stripe": "^22.0.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -22,6 +31,6 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5.9.3"
   }
 }

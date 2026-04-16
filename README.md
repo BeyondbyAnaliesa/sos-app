@@ -1,36 +1,28 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SOS — Spiritual Operating System
 
-## Getting Started
+An intelligent daily guidance app that reads your natal chart against current planetary transits and surfaces three practical insights: one for relationships, one for work, one for personal growth.
 
-First, run the development server:
+## v0 Status
+
+This is a UI prototype using **mock data only**. A real astrology engine exists and will be wired in after the guidance UX is validated.
+
+## Where Things Live
+
+| What | File |
+|------|------|
+| Mock natal chart | `src/data/natal-chart.ts` |
+| Mock daily transits | `src/data/transits.ts` |
+| Interpretation function | `src/lib/interpret.ts` |
+| Guidance card component | `src/components/GuidanceCard.tsx` |
+| App header | `src/components/Header.tsx` |
+
+**To swap in real data:** replace `mockNatalChart` and `mockTransits`, then update the `GUIDANCE` lookup in `interpret.ts` (or replace `interpretTransits` entirely with real engine output).
+
+## Running the App
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Open [http://localhost:3000](http://localhost:3000).

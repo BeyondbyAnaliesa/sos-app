@@ -4,6 +4,7 @@ import Stripe from 'stripe';
 import stripe from '@/lib/stripe';
 import { createAdminClient } from '@/lib/supabase/server';
 import { PLANS } from '@/lib/stripe';
+import { track } from '@/lib/analytics';
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
@@ -39,6 +40,8 @@ export async function POST(request: Request) {
         // Retrieve the full subscription object
         const stripeSubId = session.subscription as string;
         const stripeSub = await stripe.subscriptions.retrieve(stripeSubId);
+
+        track('checkout_complete', { userId: userId ?? undefined, plan: plan ?? undefined });
 
         const item = stripeSub.items.data[0];
         await admin.from('subscriptions').upsert({

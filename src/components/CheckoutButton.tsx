@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { PlanKey } from '@/lib/stripe';
+import { trackClient } from '@/lib/analytics';
 
 interface Props {
   plan: PlanKey;
@@ -16,6 +17,8 @@ export default function CheckoutButton({ plan, label = 'Get started', className 
   async function handleClick() {
     setLoading(true);
     setError(null);
+
+    trackClient('checkout_started', { plan });
 
     try {
       const res = await fetch('/api/stripe/checkout', {

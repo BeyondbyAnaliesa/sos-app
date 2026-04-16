@@ -8,6 +8,7 @@ import { getSubscription, isActive } from '@/lib/subscription';
 import type { NatalChart as RichChart } from '@/lib/astrology/types';
 import type { DailyTransits, Aspect } from '@/data/transits';
 import CalendarGrid from './CalendarGrid';
+import { track } from '@/lib/analytics';
 
 export default async function CalendarPage() {
   const supabase = await createClient();
@@ -42,6 +43,8 @@ export default async function CalendarPage() {
     aspects:    chartRow.aspects_json,
     metadata:   chartRow.metadata_json,
   };
+
+  track('calendar_viewed', { userId: user.id });
 
   // Calculate transits for the current month + padding
   const today = new Date();

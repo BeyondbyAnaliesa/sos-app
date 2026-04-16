@@ -3,6 +3,7 @@ import OpenAI from 'openai';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { buildOnboardingReportPrompt, type OnboardingReport } from '@/lib/onboarding-prompt';
 import type { NatalChart } from '@/lib/astrology/types';
+import { track } from '@/lib/analytics';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -87,6 +88,8 @@ export async function POST(request: Request) {
     await admin.auth.admin.updateUserById(user.id, {
       user_metadata: { onboarding_complete: true },
     });
+
+    track('onboarding_complete', { userId: user.id, questionCount: Object.keys(answers).length });
 
     return NextResponse.json({ report });
   } catch (err) {

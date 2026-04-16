@@ -5,6 +5,7 @@ import type { NatalReadingReport } from '@/lib/natal-reading-prompt';
 import { getHouse } from '@/lib/astrology/transform';
 import { getSubscription, isActive } from '@/lib/subscription';
 import ReadingRefresh from '@/components/ReadingRefresh';
+import { track } from '@/lib/analytics';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -130,6 +131,8 @@ export default async function ReadingPage() {
       </main>
     );
   }
+
+  track('reading_viewed', { userId: user.id, paid: String(paid) });
 
   const reading = readingResult.data.reading_json as NatalReadingReport;
   const placements = (chartResult.data.placements_json ?? []) as Placement[];

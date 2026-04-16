@@ -7,6 +7,7 @@ import { toSimpleChart } from '@/lib/astrology/transform';
 import { calculateTransitsForDate, calculateTransitsForRange } from '@/lib/astrology/calculate-transits';
 import type { NatalChart as RichChart } from '@/lib/astrology/types';
 import { mockNatalChart } from '@/data/natal-chart';
+import { track } from '@/lib/analytics';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -45,6 +46,8 @@ export async function POST(request: Request) {
         return new Response('Failed to save entry', { status: 500 });
       }
       resolvedEntryId = entry.id;
+
+      track('journal_entry_created', { userId: user.id, entryId: entry.id });
     }
 
     if (!resolvedEntryId) {

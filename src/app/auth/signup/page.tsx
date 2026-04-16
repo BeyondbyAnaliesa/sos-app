@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
+import { trackClient } from '@/lib/analytics';
 
 export default function SignupPage() {
   const [email, setEmail]       = useState('');
@@ -33,6 +34,8 @@ export default function SignupPage() {
       setLoading(false);
       return;
     }
+
+    trackClient('signup_complete', { method: 'email' });
 
     // Redirect to onboarding — middleware handles the routing
     window.location.href = '/onboarding';

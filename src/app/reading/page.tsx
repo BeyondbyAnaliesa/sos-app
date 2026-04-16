@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import type { NatalReadingReport } from '@/lib/natal-reading-prompt';
 import { getHouse } from '@/lib/astrology/transform';
+import { getSubscription, isActive } from '@/lib/subscription';
 import ReadingRefresh from '@/components/ReadingRefresh';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -78,7 +79,7 @@ export default async function ReadingPage() {
 
   if (!user) redirect('/auth/login');
 
-  const [readingResult, chartResult] = await Promise.all([
+  const [readingResult, chartResult, sub] = await Promise.all([
     supabase
       .from('natal_readings')
       .select('reading_json')
@@ -89,7 +90,10 @@ export default async function ReadingPage() {
       .select('placements_json, angles_json, houses_json, aspects_json')
       .eq('user_id', user.id)
       .single(),
+    getSubscription(user.id),
   ]);
+
+  const paid = isActive(sub);
 
   // ── No chart at all — they haven't onboarded ──
   if (!chartResult.data) {
@@ -215,86 +219,144 @@ export default async function ReadingPage() {
         })}
 
         {/* ── Full planet grid ── */}
-        <section className="rounded-2xl border border-white/[0.07] bg-white/[0.03] px-5 py-5 sm:px-6">
-          <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-zinc-500">
-            ◈ Full Chart
-          </p>
-          <div className="space-y-2.5">
-            {sortedPlacements.map((p) => {
-              const house = houseFor(p.longitude);
-              return (
-                <div key={p.key} className="flex items-baseline justify-between gap-2 text-sm">
-                  <span className="w-20 shrink-0 text-zinc-500">{p.label}</span>
-                  <span className="flex-1 text-zinc-200">
-                    {p.sign}
-                    {p.retrograde && (
-                      <span className="ml-1 text-[10px] text-zinc-500" title="Retrograde">℞</span>
-                    )}
-                  </span>
-                  <span className="text-zinc-600 tabular-nums">
-                    {p.degree}°{p.minute}′
-                  </span>
-                  {house != null && (
-                    <span className="w-16 shrink-0 text-right text-[10px] text-zinc-700">
-                      H{house}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-            {/* Angles */}
-            {angles && (
-              <>
-                <div className="my-2 h-px bg-white/[0.04]" />
-                <div className="flex items-baseline justify-between gap-2 text-sm">
-                  <span className="w-20 shrink-0 text-zinc-500">Rising</span>
-                  <span className="flex-1 text-zinc-200">{angles.ascendant.sign}</span>
-                  <span className="text-zinc-600 tabular-nums">{angles.ascendant.degree}°{angles.ascendant.minute}′</span>
-                  <span className="w-16 shrink-0 text-right text-[10px] text-zinc-700">H1</span>
-                </div>
-                <div className="flex items-baseline justify-between gap-2 text-sm">
-                  <span className="w-20 shrink-0 text-zinc-500">Midheaven</span>
-                  <span className="flex-1 text-zinc-200">{angles.midheaven.sign}</span>
-                  <span className="text-zinc-600 tabular-nums">{angles.midheaven.degree}°{angles.midheaven.minute}′</span>
-                  <span className="w-16 shrink-0 text-right text-[10px] text-zinc-700">H10</span>
-                </div>
-              </>
-            )}
-          </div>
-        </section>
-
-        {/* ── Key Aspects — calculated data + AI prose ── */}
-        <section className="rounded-2xl border border-white/[0.07] bg-white/[0.03] px-5 py-5 sm:px-6">
-          <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-emerald-400">
-            ✦ Key Aspects
-          </p>
-
-          {/* Calculated aspect grid */}
-          {topAspects.length > 0 && (
-            <div className="mb-5 space-y-2">
-              {topAspects.map((a, i) => {
-                const glyphAccent = ASPECT_ACCENT[a.type] ?? 'text-zinc-400';
-                const glyph = ASPECT_GLYPH[a.type] ?? '·';
+        {paid ? (
+          <section className="rounded-2xl border border-white/[0.07] bg-white/[0.03] px-5 py-5 sm:px-6">
+            <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-zinc-500">
+              ◈ Full Chart
+            </p>
+            <div className="space-y-2.5">
+              {sortedPlacements.map((p) => {
+                const house = houseFor(p.longitude);
                 return (
-                  <div key={i} className="flex items-center gap-2 text-sm">
-                    <span className={`w-5 shrink-0 text-center text-base ${glyphAccent}`}>{glyph}</span>
-                    <span className="flex-1 text-zinc-300">
-                      {a.between[0]} <span className="text-zinc-500">{a.type}</span> {a.between[1]}
+                  <div key={p.key} className="flex items-baseline justify-between gap-2 text-sm">
+                    <span className="w-20 shrink-0 text-zinc-500">{p.label}</span>
+                    <span className="flex-1 text-zinc-200">
+                      {p.sign}
+                      {p.retrograde && (
+                        <span className="ml-1 text-[10px] text-zinc-500" title="Retrograde">℞</span>
+                      )}
                     </span>
-                    <span className="shrink-0 text-[10px] text-zinc-700 tabular-nums">{a.orb}°</span>
+                    <span className="text-zinc-600 tabular-nums">
+                      {p.degree}°{p.minute}′
+                    </span>
+                    {house != null && (
+                      <span className="w-16 shrink-0 text-right text-[10px] text-zinc-700">
+                        H{house}
+                      </span>
+                    )}
                   </div>
                 );
               })}
+              {/* Angles */}
+              {angles && (
+                <>
+                  <div className="my-2 h-px bg-white/[0.04]" />
+                  <div className="flex items-baseline justify-between gap-2 text-sm">
+                    <span className="w-20 shrink-0 text-zinc-500">Rising</span>
+                    <span className="flex-1 text-zinc-200">{angles.ascendant.sign}</span>
+                    <span className="text-zinc-600 tabular-nums">{angles.ascendant.degree}°{angles.ascendant.minute}′</span>
+                    <span className="w-16 shrink-0 text-right text-[10px] text-zinc-700">H1</span>
+                  </div>
+                  <div className="flex items-baseline justify-between gap-2 text-sm">
+                    <span className="w-20 shrink-0 text-zinc-500">Midheaven</span>
+                    <span className="flex-1 text-zinc-200">{angles.midheaven.sign}</span>
+                    <span className="text-zinc-600 tabular-nums">{angles.midheaven.degree}°{angles.midheaven.minute}′</span>
+                    <span className="w-16 shrink-0 text-right text-[10px] text-zinc-700">H10</span>
+                  </div>
+                </>
+              )}
             </div>
-          )}
+          </section>
+        ) : (
+          <section className="relative overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.03] px-5 py-5 sm:px-6">
+            {/* Blurred preview rows */}
+            <div className="pointer-events-none select-none blur-sm">
+              <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-zinc-500">
+                ◈ Full Chart
+              </p>
+              <div className="space-y-2.5">
+                {sortedPlacements.slice(0, 4).map((p) => (
+                  <div key={p.key} className="flex items-baseline justify-between gap-2 text-sm">
+                    <span className="w-20 shrink-0 text-zinc-500">{p.label}</span>
+                    <span className="flex-1 text-zinc-200">{p.sign}</span>
+                    <span className="text-zinc-600 tabular-nums">{p.degree}°{p.minute}′</span>
+                    <span className="w-16 shrink-0 text-right text-[10px] text-zinc-700">H—</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Lock overlay */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/70 px-6 text-center">
+              <p className="text-xs text-zinc-500">All 10 planets · houses · degrees</p>
+              <Link
+                href="/upgrade"
+                className="mt-4 rounded-xl border border-white/[0.1] bg-white/[0.05] px-5 py-3 text-sm text-zinc-200 transition-colors hover:bg-white/[0.08]"
+              >
+                Unlock full chart →
+              </Link>
+            </div>
+          </section>
+        )}
 
-          {/* AI prose interpretation */}
-          <div className="space-y-3 text-sm leading-relaxed text-zinc-300">
-            {splitParagraphs(reading.aspectHighlights).map((paragraph, i) => (
-              <p key={i}>{paragraph}</p>
-            ))}
-          </div>
-        </section>
+        {/* ── Key Aspects — calculated data + AI prose ── */}
+        {paid ? (
+          <section className="rounded-2xl border border-white/[0.07] bg-white/[0.03] px-5 py-5 sm:px-6">
+            <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-emerald-400">
+              ✦ Key Aspects
+            </p>
+
+            {/* Calculated aspect grid */}
+            {topAspects.length > 0 && (
+              <div className="mb-5 space-y-2">
+                {topAspects.map((a, i) => {
+                  const glyphAccent = ASPECT_ACCENT[a.type] ?? 'text-zinc-400';
+                  const glyph = ASPECT_GLYPH[a.type] ?? '·';
+                  return (
+                    <div key={i} className="flex items-center gap-2 text-sm">
+                      <span className={`w-5 shrink-0 text-center text-base ${glyphAccent}`}>{glyph}</span>
+                      <span className="flex-1 text-zinc-300">
+                        {a.between[0]} <span className="text-zinc-500">{a.type}</span> {a.between[1]}
+                      </span>
+                      <span className="shrink-0 text-[10px] text-zinc-700 tabular-nums">{a.orb}°</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* AI prose interpretation */}
+            <div className="space-y-3 text-sm leading-relaxed text-zinc-300">
+              {splitParagraphs(reading.aspectHighlights).map((paragraph, i) => (
+                <p key={i}>{paragraph}</p>
+              ))}
+            </div>
+          </section>
+        ) : (
+          <section className="relative overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.03] px-5 py-5 sm:px-6">
+            <div className="pointer-events-none select-none blur-sm">
+              <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-emerald-400">
+                ✦ Key Aspects
+              </p>
+              <div className="space-y-2">
+                {topAspects.slice(0, 3).map((a, i) => (
+                  <div key={i} className="flex items-center gap-2 text-sm">
+                    <span className="w-5 shrink-0 text-center text-zinc-500">·</span>
+                    <span className="flex-1 text-zinc-300">{a.between[0]} · {a.between[1]}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/70 px-6 text-center">
+              <p className="text-xs text-zinc-500">Aspects · interpretations · patterns</p>
+              <Link
+                href="/upgrade"
+                className="mt-4 rounded-xl border border-white/[0.1] bg-white/[0.05] px-5 py-3 text-sm text-zinc-200 transition-colors hover:bg-white/[0.08]"
+              >
+                Unlock full chart →
+              </Link>
+            </div>
+          </section>
+        )}
 
         {/* ── Synthesis ── */}
         <section className="rounded-2xl border border-white/[0.07] bg-white/[0.03] px-5 py-5 sm:px-6">

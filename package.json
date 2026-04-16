@@ -15,6 +15,7 @@
     "openai": "^6.34.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "stripe": "^22.0.2",
     "sweph": "^2.10.3-b-1"
   },
   "devDependencies": {

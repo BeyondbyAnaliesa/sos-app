@@ -1,8 +1,10 @@
 export const runtime = 'nodejs'; // required for sweph
 
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { calculateTransitsForRange } from '@/lib/astrology/calculate-transits';
+import { getSubscription, isActive } from '@/lib/subscription';
 import type { NatalChart as RichChart } from '@/lib/astrology/types';
 import type { Aspect } from '@/data/transits';
 
@@ -39,7 +41,10 @@ export default async function CalendarPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) return null;
+  if (!user) redirect('/auth/login');
+
+  const sub = await getSubscription(user.id);
+  if (!isActive(sub)) redirect('/upgrade');
 
   const { data: chartRow } = await supabase
     .from('natal_charts')

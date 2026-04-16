@@ -3,7 +3,7 @@ import type { NatalChart as SimpleChart } from '@/data/natal-chart';
 
 // Determine which house a planet falls in based on house cusp longitudes.
 // Placidus houses: a planet is in house N if its longitude is between cusp N and cusp N+1.
-function getHouse(longitude: number, cusps: number[]): number {
+export function getHouse(longitude: number, cusps: number[]): number {
   for (let i = 0; i < 12; i++) {
     const nextI = (i + 1) % 12;
     const start = cusps[i];

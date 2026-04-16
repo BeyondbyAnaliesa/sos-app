@@ -8,10 +8,31 @@ body {
   background-color: #07070f;
   color: #f2f2f7;
   font-family: var(--font-sans, sans-serif);
+  /* background-attachment: fixed is broken on iOS Safari — use a pseudo-element instead */
   background-image: radial-gradient(
     ellipse 80% 40% at 50% 0%,
     rgba(120, 80, 255, 0.07),
     transparent
   );
-  background-attachment: fixed;
+  /* Prevent horizontal overflow on mobile */
+  overflow-x: hidden;
+}
+
+/* Prevent iOS double-tap zoom on buttons/links */
+button, a {
+  touch-action: manipulation;
+}
+
+/* Ensure date/time inputs are styled properly on iOS */
+input[type="date"],
+input[type="time"] {
+  appearance: none;
+  -webkit-appearance: none;
+  color-scheme: dark;
+}
+
+/* Prevent text size adjustment on orientation change */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }

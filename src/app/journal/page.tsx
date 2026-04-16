@@ -105,12 +105,15 @@ export default function JournalPage() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-xl flex-col px-6 py-10" style={{ minHeight: '100dvh' }}>
+    <main
+      className="mx-auto flex w-full max-w-xl flex-col px-5 pt-10"
+      style={{ minHeight: '100dvh', paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <Link
           href="/"
-          className="flex items-center gap-1.5 text-xs text-zinc-600 transition-colors hover:text-zinc-400"
+          className="flex items-center gap-1.5 py-2 pr-4 text-xs text-zinc-600 transition-colors hover:text-zinc-400"
         >
           <span>←</span>
           <span>Home</span>
@@ -120,27 +123,26 @@ export default function JournalPage() {
 
       {/* Journal Entry Form (before submission) */}
       {!journalSubmitted && (
-        <div className="flex flex-1 flex-col justify-center">
+        <div className="flex flex-1 flex-col justify-center pb-10">
           <h1 className="mb-2 text-2xl font-light tracking-wide text-white">
             Journal
           </h1>
           <p className="mb-6 text-sm text-zinc-500">
-            Write what's on your mind. SOS is listening.
+            Write what&apos;s on your mind. SOS is listening.
           </p>
           <form onSubmit={handleJournalSubmit}>
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              rows={8}
+              rows={7}
               placeholder="What happened today? What are you feeling? What's on your mind?"
-              className="w-full resize-none rounded-2xl border border-white/[0.07] bg-white/[0.03] px-5 py-4 text-sm leading-relaxed text-zinc-200 placeholder:text-zinc-600 focus:border-white/[0.15] focus:outline-none"
-              autoFocus
+              className="w-full resize-none rounded-2xl border border-white/[0.07] bg-white/[0.03] px-5 py-4 text-base leading-relaxed text-zinc-200 placeholder:text-zinc-600 focus:border-white/[0.15] focus:outline-none"
             />
             <div className="mt-4 flex justify-end">
               <button
                 type="submit"
                 disabled={!input.trim()}
-                className="rounded-xl border border-white/[0.07] bg-white/[0.05] px-6 py-2.5 text-xs font-semibold uppercase tracking-widest text-zinc-300 transition-colors hover:border-white/[0.15] hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-xl border border-white/[0.07] bg-white/[0.05] px-6 py-3 text-xs font-semibold uppercase tracking-widest text-zinc-300 transition-colors hover:border-white/[0.15] hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Reflect
               </button>
@@ -176,8 +178,12 @@ export default function JournalPage() {
             <div ref={bottomRef} />
           </div>
 
-          {/* Follow-up input */}
-          <form onSubmit={handleFollowUp} className="sticky bottom-0 border-t border-white/[0.05] bg-[#07070f] pb-6 pt-4">
+          {/* Follow-up input — pinned above home indicator */}
+          <form
+            onSubmit={handleFollowUp}
+            className="sticky bottom-0 border-t border-white/[0.05] bg-[#07070f] pt-4"
+            style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
+          >
             <div className="flex gap-3">
               <input
                 type="text"
@@ -185,8 +191,7 @@ export default function JournalPage() {
                 onChange={(e) => setInput(e.target.value)}
                 disabled={streaming}
                 placeholder="Say something back…"
-                className="flex-1 rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-white/[0.15] focus:outline-none disabled:opacity-50"
-                autoFocus
+                className="flex-1 rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-base text-zinc-200 placeholder:text-zinc-600 focus:border-white/[0.15] focus:outline-none disabled:opacity-50"
               />
               <button
                 type="submit"

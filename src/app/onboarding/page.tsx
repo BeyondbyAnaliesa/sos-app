@@ -88,7 +88,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-xl px-6 py-10">
+    <main className="mx-auto w-full max-w-xl px-5 py-8 sm:px-6 sm:py-10">
       {step > 0 && <ProgressBar step={step} />}
 
       {error && (

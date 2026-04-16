@@ -45,42 +45,44 @@ export default async function Home() {
   const guidance = interpretTransits(transitsForGuidance, simpleChart);
 
   return (
-    <main className="mx-auto w-full max-w-xl px-6 py-16">
+    <main className="mx-auto w-full max-w-xl px-5 pb-10 pt-10 sm:px-6 sm:pt-14">
       <Header date={todayDate} />
 
       <section>
-        <p className="mb-6 text-[10px] uppercase tracking-[0.25em] text-zinc-600">
+        <p className="mb-5 text-[10px] uppercase tracking-[0.25em] text-zinc-600">
           Today&apos;s Guidance
         </p>
-        <div className="space-y-4">
+        <div className="space-y-3">
           {guidance.map((result) => (
             <GuidanceCard key={result.domain} result={result} />
           ))}
         </div>
       </section>
 
-      <div className="mt-10 flex flex-col items-center gap-3">
+      {/* Navigation — full-width tap targets for mobile */}
+      <nav className="mt-10 flex flex-col gap-1">
         <Link
           href="/journal"
-          className="text-xs text-zinc-600 transition-colors hover:text-zinc-400"
+          className="flex items-center justify-between rounded-xl border border-white/[0.05] px-5 py-4 text-sm text-zinc-400 transition-colors hover:border-white/[0.1] hover:text-zinc-300 active:bg-white/[0.03]"
         >
-          → Write today&apos;s journal
+          <span>Write today&apos;s journal</span>
+          <span className="text-zinc-600">→</span>
         </Link>
-        <div className="flex gap-6">
-          <Link
-            href="/reading"
-            className="text-xs text-zinc-600 transition-colors hover:text-zinc-400"
-          >
-            ◆ Natal reading
-          </Link>
-          <Link
-            href="/calendar"
-            className="text-xs text-zinc-600 transition-colors hover:text-zinc-400"
-          >
-            ◇ Transit calendar
-          </Link>
-        </div>
-      </div>
+        <Link
+          href="/reading"
+          className="flex items-center justify-between rounded-xl border border-white/[0.05] px-5 py-4 text-sm text-zinc-400 transition-colors hover:border-white/[0.1] hover:text-zinc-300 active:bg-white/[0.03]"
+        >
+          <span>Natal reading</span>
+          <span className="text-zinc-600">◆</span>
+        </Link>
+        <Link
+          href="/calendar"
+          className="flex items-center justify-between rounded-xl border border-white/[0.05] px-5 py-4 text-sm text-zinc-400 transition-colors hover:border-white/[0.1] hover:text-zinc-300 active:bg-white/[0.03]"
+        >
+          <span>Transit calendar</span>
+          <span className="text-zinc-600">◇</span>
+        </Link>
+      </nav>
     </main>
   );
 }

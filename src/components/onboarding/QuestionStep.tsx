@@ -32,9 +32,9 @@ export default function QuestionStep({
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        rows={7}
+        rows={6}
         placeholder="Write freely. The more honest and detailed you are, the more SOS can do for you."
-        className="w-full resize-none rounded-2xl border border-white/[0.07] bg-white/[0.03] px-5 py-4 text-sm leading-relaxed text-zinc-200 placeholder:text-zinc-600 focus:border-white/[0.15] focus:outline-none"
+        className="w-full resize-none rounded-2xl border border-white/[0.07] bg-white/[0.03] px-5 py-4 text-base leading-relaxed text-zinc-200 placeholder:text-zinc-600 focus:border-white/[0.15] focus:outline-none"
       />
 
       <div className="mt-2 flex items-center justify-between">
@@ -46,7 +46,7 @@ export default function QuestionStep({
       <button
         onClick={onContinue}
         disabled={!met}
-        className="mt-6 w-full rounded-xl border border-white/[0.07] bg-white/[0.05] py-3 text-xs font-semibold uppercase tracking-widest text-zinc-300 transition-colors hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40"
+        className="mt-6 w-full rounded-xl border border-white/[0.07] bg-white/[0.05] py-4 text-sm font-semibold uppercase tracking-widest text-zinc-300 transition-colors hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40"
       >
         Continue
       </button>

@@ -50,7 +50,7 @@ export default function ChartRevealStep({ chart, onContinue }: Props) {
 
       <button
         onClick={onContinue}
-        className="mt-8 w-full rounded-xl border border-white/[0.07] bg-white/[0.05] py-3 text-xs font-semibold uppercase tracking-widest text-zinc-300 transition-colors hover:bg-white/[0.08]"
+        className="mt-8 w-full rounded-xl border border-white/[0.07] bg-white/[0.05] py-4 text-sm font-semibold uppercase tracking-widest text-zinc-300 transition-colors hover:bg-white/[0.08]"
       >
         Continue
       </button>

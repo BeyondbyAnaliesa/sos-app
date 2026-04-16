@@ -54,7 +54,7 @@ export default function SignupPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          className="w-full rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-white/[0.15] focus:outline-none"
+          className="w-full rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-base text-zinc-200 placeholder:text-zinc-600 focus:border-white/[0.15] focus:outline-none"
         />
         <input
           type="password"
@@ -63,7 +63,7 @@ export default function SignupPage() {
           onChange={(e) => setPassword(e.target.value)}
           required
           minLength={8}
-          className="w-full rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-white/[0.15] focus:outline-none"
+          className="w-full rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-base text-zinc-200 placeholder:text-zinc-600 focus:border-white/[0.15] focus:outline-none"
         />
 
         {error && <p className="text-xs text-rose-400">{error}</p>}
@@ -71,7 +71,7 @@ export default function SignupPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-xl border border-white/[0.07] bg-white/[0.06] py-3 text-xs font-semibold uppercase tracking-widest text-zinc-300 transition-colors hover:bg-white/[0.1] disabled:opacity-40"
+          className="w-full rounded-xl border border-white/[0.07] bg-white/[0.06] py-3.5 text-sm font-semibold uppercase tracking-widest text-zinc-300 transition-colors hover:bg-white/[0.1] disabled:opacity-40"
         >
           {loading ? 'Creating account…' : 'Sign Up'}
         </button>

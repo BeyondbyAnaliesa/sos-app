@@ -47,7 +47,7 @@ export default function BirthDataStep({ onSubmit, loading }: Props) {
             value={birthDate}
             onChange={(e) => setBirthDate(e.target.value)}
             required
-            className="w-full rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-sm text-zinc-200 focus:border-white/[0.15] focus:outline-none"
+            className="w-full rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-base text-zinc-200 focus:border-white/[0.15] focus:outline-none"
           />
         </div>
 
@@ -67,7 +67,7 @@ export default function BirthDataStep({ onSubmit, loading }: Props) {
               type="time"
               value={birthTime}
               onChange={(e) => setBirthTime(e.target.value)}
-              className="w-full rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-sm text-zinc-200 focus:border-white/[0.15] focus:outline-none"
+              className="w-full rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-base text-zinc-200 focus:border-white/[0.15] focus:outline-none"
             />
           )}
           {timeUnknown && (
@@ -88,14 +88,14 @@ export default function BirthDataStep({ onSubmit, loading }: Props) {
             value={locationText}
             onChange={(e) => setLocationText(e.target.value)}
             required
-            className="w-full rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-white/[0.15] focus:outline-none"
+            className="w-full rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-base text-zinc-200 placeholder:text-zinc-600 focus:border-white/[0.15] focus:outline-none"
           />
         </div>
 
         <button
           type="submit"
           disabled={!ready || loading}
-          className="w-full rounded-xl border border-white/[0.07] bg-white/[0.05] py-3 text-xs font-semibold uppercase tracking-widest text-zinc-300 transition-colors hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40"
+          className="w-full rounded-xl border border-white/[0.07] bg-white/[0.05] py-4 text-sm font-semibold uppercase tracking-widest text-zinc-300 transition-colors hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40"
         >
           {loading ? 'Reading your stars…' : 'Generate My Chart'}
         </button>

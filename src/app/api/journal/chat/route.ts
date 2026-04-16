@@ -103,8 +103,40 @@ export async function POST(request: Request) {
       }
     }
 
+    // --- Fetch recent prior journal entries for Day 2+ callback ---
+    let priorEntriesContext = '';
+    const { data: recentEntries } = await admin
+      .from('journal_entries')
+      .select('entry_text, entry_date')
+      .eq('user_id', user.id)
+      .order('entry_date', { ascending: false })
+      .limit(7);
+
+    if (recentEntries && recentEntries.length > 0) {
+      // Exclude today's entry if it's the one we just created
+      const todayStr = new Date().toISOString().split('T')[0];
+      const prior = recentEntries.filter((e: { entry_text: string; entry_date: string }) => {
+        // If we just created an entry, skip it (it's the current one)
+        if (e.entry_date === todayStr && e.entry_text.trim() === entryText?.trim()) return false;
+        return true;
+      });
+
+      if (prior.length > 0) {
+        const formatted = prior
+          .slice(0, 5) // max 5 prior entries for context window
+          .map((e: { entry_text: string; entry_date: string }) => {
+            const d = new Date(`${e.entry_date}T12:00:00`);
+            const label = d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+            return `[${label}]\n${e.entry_text.trim()}`;
+          })
+          .join('\n\n');
+
+        priorEntriesContext = `\n\n--- THEIR RECENT JOURNAL ENTRIES ---\nThese are entries they wrote previously. Reference specific things they said — their words, themes, patterns you notice across entries. This is how you show you remember them.\n\n${formatted}`;
+      }
+    }
+
     // --- Build conversation ---
-    const systemPrompt = buildSystemPrompt(simpleChart, todayTransits, userContext) + upcomingContext;
+    const systemPrompt = buildSystemPrompt(simpleChart, todayTransits, userContext) + upcomingContext + priorEntriesContext;
 
     const { data: existingMessages } = await admin
       .from('journal_messages')

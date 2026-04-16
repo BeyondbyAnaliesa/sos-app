@@ -8,6 +8,43 @@ function describeTransits(transits: DailyTransits['transits']): string {
     .join(', ');
 }
 
+const ASPECT_FEEL: Record<string, string> = {
+  conjunction: 'intensifying',
+  opposition:  'creating tension with',
+  trine:       'flowing easily with',
+  square:      'creating friction with',
+  sextile:     'gently activating',
+};
+
+const PLANET_THEMES: Record<string, string> = {
+  Sun:     'identity, vitality, core self',
+  Moon:    'emotions, needs, inner world',
+  Mercury: 'communication, thinking, decisions',
+  Venus:   'love, values, pleasure, money',
+  Mars:    'drive, anger, desire, action',
+  Jupiter: 'growth, luck, expansion, meaning',
+  Saturn:  'structure, limits, responsibility, maturity',
+  Uranus:  'disruption, freedom, surprise, innovation',
+  Neptune: 'dreams, confusion, spirituality, illusion',
+  Pluto:   'transformation, power, depth, letting go',
+};
+
+function describeTransitsNarrative(transits: DailyTransits['transits']): string {
+  if (transits.length === 0) return 'A quiet sky today — no major planetary activations.';
+
+  // Top 6 most significant transits (already sorted by orb)
+  const top = transits.slice(0, 6);
+  return top
+    .map((t) => {
+      const feel = ASPECT_FEEL[t.aspect] ?? t.aspect;
+      const themes = PLANET_THEMES[t.transitPlanet] ?? '';
+      const natalLabel = t.natalPlanet.charAt(0).toUpperCase() + t.natalPlanet.slice(1);
+      const tight = t.orb < 1 ? ' (exact — very strong)' : t.orb < 2 ? ' (tight — strong)' : '';
+      return `${t.transitPlanet} (${themes}) is ${feel} their natal ${natalLabel}${tight}`;
+    })
+    .join('\n');
+}
+
 function describeChart(chart: NatalChart): string {
   return [
     `Sun in ${chart.sun.sign} (House ${chart.sun.house})`,
@@ -55,6 +92,12 @@ YOUR FIRST RESPONSE to a journal entry should:
 - Offer one genuinely useful thought or reframe — something that shifts their perspective
 - End with something that invites them to keep talking — a question, a provocation, a "what do you think about..."
 
+IF THEY HAVE PRIOR JOURNAL ENTRIES:
+- Reference what they've written before using their actual words. "Yesterday you said you felt like you were drowning" — not "you mentioned some stress."
+- Notice patterns across entries: recurring themes, shifting moods, unresolved threads. Name them.
+- Connect today's entry to what came before. "Last week you were wrestling with X, and now here you are saying Y — do you see the thread?"
+- Don't summarize their history like a therapist reviewing notes. Weave it in naturally, the way a friend who remembers your conversations would.
+
 IN FOLLOW-UP CONVERSATION:
 - Be natural. Respond to what they said. Go deeper where they go deeper.
 - If they push back, engage honestly — don't just agree.
@@ -65,10 +108,12 @@ IN FOLLOW-UP CONVERSATION:
 ${describeChart(natalChart)}
 
 --- TODAY'S TRANSITS (${dailyTransits.date}) ---
-${describeTransits(dailyTransits.transits)}
+${describeTransitsNarrative(dailyTransits.transits)}
 
 --- TODAY'S THEMES ---
 ${guidanceSummary}
+
+IMPORTANT: Weave the transit information into your response naturally. Instead of "Transit Mars is squaring your natal Saturn," say something like "there's a Mars-Saturn friction in your sky right now — that restless, hemmed-in feeling you're describing makes total sense." Connect the sky to their actual lived experience.
 
 ${userContext ? `--- WHAT YOU KNOW ABOUT THEM ---\n${userContext}\n` : ''}
 Respond in plain text. No JSON. No markdown headers. Just talk to them.`;

@@ -10,13 +10,17 @@ import type { NatalChart as RichChart } from '@/lib/astrology/types';
 import { getSubscription, isActive } from '@/lib/subscription';
 import GuidanceCard from '@/components/GuidanceCard';
 import Header from '@/components/Header';
+import LandingPage from '@/components/LandingPage';
 
 export default async function Home() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
+  // Unauthenticated → show landing/marketing page
+  if (!user) return <LandingPage />;
+
   // Load subscription state
-  const sub = user ? await getSubscription(user.id) : null;
+  const sub = await getSubscription(user.id);
   const paid = isActive(sub);
 
   // Load user's real chart or fall back to mock

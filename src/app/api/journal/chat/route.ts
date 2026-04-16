@@ -8,6 +8,7 @@ import { calculateTransitsForDate, calculateTransitsForRange } from '@/lib/astro
 import type { NatalChart as RichChart } from '@/lib/astrology/types';
 import { mockNatalChart } from '@/data/natal-chart';
 import { track } from '@/lib/analytics';
+import { logError } from '@/lib/logger';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -217,7 +218,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (err) {
-    console.error('Journal chat error:', err);
+    logError(err, { route: '/api/journal/chat', userId: undefined });
     return new Response('Something went wrong', { status: 500 });
   }
 }

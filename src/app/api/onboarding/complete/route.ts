@@ -4,6 +4,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { buildOnboardingReportPrompt, type OnboardingReport } from '@/lib/onboarding-prompt';
 import type { NatalChart } from '@/lib/astrology/types';
 import { track } from '@/lib/analytics';
+import { logError } from '@/lib/logger';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -93,7 +94,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ report });
   } catch (err) {
-    console.error('Onboarding complete error:', err);
+    logError(err, { route: '/api/onboarding/complete' });
     return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
   }
 }

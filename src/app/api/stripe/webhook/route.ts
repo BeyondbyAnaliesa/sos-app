@@ -5,6 +5,7 @@ import stripe from '@/lib/stripe';
 import { createAdminClient } from '@/lib/supabase/server';
 import { PLANS } from '@/lib/stripe';
 import { track } from '@/lib/analytics';
+import { logError } from '@/lib/logger';
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
@@ -107,7 +108,7 @@ export async function POST(request: Request) {
         break;
     }
   } catch (err) {
-    console.error(`Error processing webhook event ${event.type}:`, err);
+    logError(err, { route: '/api/stripe/webhook', eventType: event.type });
     // Return 500 so Stripe retries — transient DB errors should self-heal
     return new Response('Internal error', { status: 500 });
   }

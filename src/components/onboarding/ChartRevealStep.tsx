@@ -10,39 +10,39 @@ interface Props {
 }
 
 const placements = [
-  { key: 'sun',    label: 'Sun',    desc: 'Your core identity', accent: 'text-amber-400'   },
-  { key: 'moon',   label: 'Moon',   desc: 'Your inner world',   accent: 'text-violet-400'  },
-  { key: 'rising', label: 'Rising', desc: 'How the world sees you', accent: 'text-cyan-400' },
+  { key: 'sun',    label: 'Sun',    desc: 'Your core identity' },
+  { key: 'moon',   label: 'Moon',   desc: 'Your inner world' },
+  { key: 'rising', label: 'Rising', desc: 'How the world sees you' },
 ] as const;
 
 export default function ChartRevealStep({ chart, onContinue }: Props) {
   return (
     <div>
-      <h2 className="mb-2 text-xl font-light tracking-wide text-white">
+      <h2 className="mb-2 text-xl font-light tracking-wide text-[var(--color-text)]">
         Your Chart
       </h2>
-      <p className="mb-8 text-sm text-zinc-500">
+      <p className="mb-8 text-sm text-[var(--color-text-muted)]">
         These are the three pillars of who you are.
       </p>
 
       <div className="space-y-3">
-        {placements.map(({ key, label, desc, accent }) => {
+        {placements.map(({ key, label, desc }) => {
           const data = chart[key];
           return (
             <div
               key={key}
-              className="rounded-2xl border border-white/[0.07] bg-white/[0.03] px-6 py-5"
+              className="rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-6 py-5"
             >
               <div className="flex items-baseline justify-between">
-                <p className={`text-xs font-semibold uppercase tracking-widest ${accent}`}>
+                <p className="text-xs font-medium uppercase tracking-widest text-[var(--color-copper)]">
                   {label}
                 </p>
-                <p className="text-lg font-light text-white">
+                <p className="text-lg font-light text-[var(--color-text)]">
                   {data.sign}{' '}
-                  <span className="text-sm text-zinc-500">{data.degree}°</span>
+                  <span className="text-sm text-[var(--color-text-muted)]">{data.degree}°</span>
                 </p>
               </div>
-              <p className="mt-1 text-xs text-zinc-500">{desc}</p>
+              <p className="mt-1 text-xs text-[var(--color-text-muted)]">{desc}</p>
             </div>
           );
         })}
@@ -50,7 +50,7 @@ export default function ChartRevealStep({ chart, onContinue }: Props) {
 
       <button
         onClick={onContinue}
-        className="mt-8 w-full rounded-xl border border-white/[0.07] bg-white/[0.05] py-4 text-sm font-semibold uppercase tracking-widest text-zinc-300 transition-colors hover:bg-white/[0.08]"
+        className="mt-8 h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] text-sm font-medium uppercase tracking-widest text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:text-[var(--color-text)]"
       >
         Continue
       </button>

@@ -33,7 +33,6 @@ export default function CheckoutButton({ plan, label = 'Get started', className 
         throw new Error(data.error ?? 'Something went wrong');
       }
 
-      // Redirect to Stripe hosted checkout
       window.location.href = data.url;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
@@ -51,7 +50,7 @@ export default function CheckoutButton({ plan, label = 'Get started', className 
         {loading ? 'Redirecting…' : label}
       </button>
       {error && (
-        <p className="mt-2 text-xs text-rose-400">{error}</p>
+        <p className="mt-2 text-xs text-red-400">{error}</p>
       )}
     </div>
   );

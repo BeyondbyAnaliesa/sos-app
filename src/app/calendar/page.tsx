@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { calculateTransitsForRange } from '@/lib/astrology/calculate-transits';
 import { getSubscription, isActive } from '@/lib/subscription';
 import type { NatalChart as RichChart } from '@/lib/astrology/types';
-import type { DailyTransits, Aspect } from '@/data/transits';
+import type { DailyTransits } from '@/data/transits';
 import CalendarGrid from './CalendarGrid';
 import { track } from '@/lib/analytics';
 
@@ -28,13 +28,15 @@ export default async function CalendarPage() {
   if (!chartRow) {
     return (
       <main className="mx-auto w-full max-w-xl px-6 py-16 text-center">
-        <p className="text-sm text-zinc-400">Complete onboarding to see your transit calendar.</p>
-        <Link href="/" className="mt-4 block text-xs text-zinc-600 hover:text-zinc-400">
+        <p className="text-sm text-[var(--color-text-muted)]">Complete onboarding to see your transit calendar.</p>
+        <Link href="/" className="mt-4 block text-xs text-[var(--color-copper-dim)] hover:text-[var(--color-copper)]">
           ← Back to home
         </Link>
       </main>
     );
   }
+
+  track('calendar_viewed', { userId: user.id });
 
   const richChart: RichChart = {
     placements: chartRow.placements_json,
@@ -44,27 +46,17 @@ export default async function CalendarPage() {
     metadata:   chartRow.metadata_json,
   };
 
-  track('calendar_viewed', { userId: user.id });
-
-  // Calculate transits for the current month + padding
   const today = new Date();
   const year = today.getFullYear();
   const month = today.getMonth();
-
-  // Start from the 1st of the month
   const monthStart = new Date(year, month, 1);
-  // Calculate days in month + days we need before (to fill the first week)
-  const startDayOfWeek = monthStart.getDay(); // 0 = Sunday
+  const startDayOfWeek = monthStart.getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-  // Calculate from a few days before month start to fill the grid
   const calcStart = new Date(year, month, 1 - startDayOfWeek);
   const totalDays = startDayOfWeek + daysInMonth;
-  const gridDays = Math.ceil(totalDays / 7) * 7; // fill complete weeks
+  const gridDays = Math.ceil(totalDays / 7) * 7;
 
   const allTransits = calculateTransitsForRange(calcStart, gridDays, richChart);
-
-  // Filter out Moon transits (too frequent for calendar view)
   const filteredTransits: DailyTransits[] = allTransits.map((d) => ({
     ...d,
     transits: d.transits.filter((t) => t.transitPlanet !== 'Moon'),
@@ -77,21 +69,21 @@ export default async function CalendarPage() {
     <main className="mx-auto w-full max-w-xl px-4 py-10 sm:px-6 sm:py-14">
       <Link
         href="/"
-        className="mb-8 flex items-center gap-1.5 py-2 text-xs text-zinc-600 transition-colors hover:text-zinc-400"
+        className="mb-8 flex items-center gap-1.5 py-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-copper)]"
       >
         <span>←</span>
         <span>Home</span>
       </Link>
 
       <header className="mb-8">
-        <div className="mx-auto mb-6 h-px w-16 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-        <h1 className="text-center text-3xl font-light tracking-[0.15em] text-white">
+        <div className="mx-auto mb-6 h-px w-16 bg-gradient-to-r from-transparent via-[var(--color-copper-dim)] to-transparent" />
+        <h1 className="text-center text-3xl font-light tracking-[0.15em] text-[var(--color-text)]">
           {monthLabel}
         </h1>
-        <p className="mt-2 text-center text-[10px] uppercase tracking-[0.25em] text-zinc-500">
+        <p className="mt-2 text-center text-[10px] uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
           Transit Calendar
         </p>
-        <div className="mt-6 h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        <div className="mt-6 h-px w-full bg-gradient-to-r from-transparent via-[var(--color-border-subtle)] to-transparent" />
       </header>
 
       <CalendarGrid

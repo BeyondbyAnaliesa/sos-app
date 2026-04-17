@@ -37,8 +37,8 @@ export default function LoginPage() {
   return (
     <>
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-light tracking-[0.2em] text-white">SOS</h1>
-        <p className="mt-2 text-[10px] uppercase tracking-[0.25em] text-zinc-500">
+        <h1 className="text-3xl font-light tracking-[0.2em] text-[var(--color-text)]">SOS</h1>
+        <p className="mt-2 text-[10px] uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
           Welcome Back
         </p>
       </div>
@@ -50,7 +50,7 @@ export default function LoginPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          className="w-full rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-base text-zinc-200 placeholder:text-zinc-600 focus:border-white/[0.15] focus:outline-none"
+          className="h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-input)] px-4 text-base text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border)] focus:outline-none"
         />
         <input
           type="password"
@@ -58,23 +58,23 @@ export default function LoginPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          className="w-full rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-base text-zinc-200 placeholder:text-zinc-600 focus:border-white/[0.15] focus:outline-none"
+          className="h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-input)] px-4 text-base text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border)] focus:outline-none"
         />
 
-        {error && <p className="text-xs text-rose-400">{error}</p>}
+        {error && <p className="text-xs text-red-400">{error}</p>}
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-xl border border-white/[0.07] bg-white/[0.06] py-3.5 text-sm font-semibold uppercase tracking-widest text-zinc-300 transition-colors hover:bg-white/[0.1] disabled:opacity-40"
+          className="h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] text-sm font-medium uppercase tracking-widest text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:text-[var(--color-text)] disabled:opacity-40"
         >
           {loading ? 'Signing in…' : 'Log In'}
         </button>
       </form>
 
-      <p className="mt-6 text-center text-xs text-zinc-600">
+      <p className="mt-6 text-center text-xs text-[var(--color-text-muted)]">
         New to SOS?{' '}
-        <Link href="/auth/signup" className="text-zinc-400 hover:text-zinc-300">
+        <Link href="/auth/signup" className="text-[var(--color-copper)] hover:underline">
           Create an account
         </Link>
       </p>

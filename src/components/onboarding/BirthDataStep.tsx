@@ -29,17 +29,17 @@ export default function BirthDataStep({ onSubmit, loading }: Props) {
 
   return (
     <div>
-      <h2 className="mb-2 text-xl font-light tracking-wide text-white">
+      <h2 className="mb-2 text-xl font-light tracking-wide text-[var(--color-text)]">
         When and where were you born?
       </h2>
-      <p className="mb-8 text-sm text-zinc-500">
+      <p className="mb-8 text-sm text-[var(--color-text-muted)]">
         Your birth data is the foundation of your chart. The more precise, the
         more accurate your reading.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label className="mb-1 block text-[10px] uppercase tracking-widest text-zinc-600">
+          <label className="mb-1 block text-[10px] uppercase tracking-widest text-[var(--color-text-muted)]">
             Birth Date
           </label>
           <input
@@ -47,17 +47,17 @@ export default function BirthDataStep({ onSubmit, loading }: Props) {
             value={birthDate}
             onChange={(e) => setBirthDate(e.target.value)}
             required
-            className="w-full rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-base text-zinc-200 focus:border-white/[0.15] focus:outline-none"
+            className="h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-input)] px-4 text-base text-[var(--color-text)] focus:border-[var(--color-border)] focus:outline-none"
           />
         </div>
 
         <div>
-          <label className="mb-1 flex items-center justify-between text-[10px] uppercase tracking-widest text-zinc-600">
+          <label className="mb-1 flex items-center justify-between text-[10px] uppercase tracking-widest text-[var(--color-text-muted)]">
             <span>Birth Time</span>
             <button
               type="button"
               onClick={() => setTimeUnknown(!timeUnknown)}
-              className={`text-[10px] normal-case tracking-normal ${timeUnknown ? 'text-violet-400' : 'text-zinc-600 hover:text-zinc-400'}`}
+              className={`text-[10px] normal-case tracking-normal ${timeUnknown ? 'text-[var(--color-copper)]' : 'text-[var(--color-text-muted)] hover:text-[var(--color-copper)]'}`}
             >
               {timeUnknown ? '✓ Unknown' : "I don't know"}
             </button>
@@ -67,11 +67,11 @@ export default function BirthDataStep({ onSubmit, loading }: Props) {
               type="time"
               value={birthTime}
               onChange={(e) => setBirthTime(e.target.value)}
-              className="w-full rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-base text-zinc-200 focus:border-white/[0.15] focus:outline-none"
+              className="h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-input)] px-4 text-base text-[var(--color-text)] focus:border-[var(--color-border)] focus:outline-none"
             />
           )}
           {timeUnknown && (
-            <p className="rounded-xl border border-white/[0.04] bg-white/[0.02] px-4 py-3 text-xs text-zinc-500">
+            <p className="rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-4 py-3 text-xs text-[var(--color-text-muted)]">
               We will use noon as a default. Your rising sign may be less
               precise, but everything else will be accurate.
             </p>
@@ -79,7 +79,7 @@ export default function BirthDataStep({ onSubmit, loading }: Props) {
         </div>
 
         <div>
-          <label className="mb-1 block text-[10px] uppercase tracking-widest text-zinc-600">
+          <label className="mb-1 block text-[10px] uppercase tracking-widest text-[var(--color-text-muted)]">
             Birth Location
           </label>
           <input
@@ -88,14 +88,14 @@ export default function BirthDataStep({ onSubmit, loading }: Props) {
             value={locationText}
             onChange={(e) => setLocationText(e.target.value)}
             required
-            className="w-full rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-base text-zinc-200 placeholder:text-zinc-600 focus:border-white/[0.15] focus:outline-none"
+            className="h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-input)] px-4 text-base text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border)] focus:outline-none"
           />
         </div>
 
         <button
           type="submit"
           disabled={!ready || loading}
-          className="w-full rounded-xl border border-white/[0.07] bg-white/[0.05] py-4 text-sm font-semibold uppercase tracking-widest text-zinc-300 transition-colors hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40"
+          className="h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] text-sm font-medium uppercase tracking-widest text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:text-[var(--color-text)] disabled:cursor-not-allowed disabled:opacity-40"
         >
           {loading ? 'Reading your stars…' : 'Generate My Chart'}
         </button>

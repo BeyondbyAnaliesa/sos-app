@@ -23,7 +23,6 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    // Structured log — swap to Sentry.captureException() later
     console.error(
       JSON.stringify({
         _level: 'error',
@@ -42,9 +41,9 @@ export default class ErrorBoundary extends Component<Props, State> {
 
       return (
         <div className="mx-auto max-w-xl px-6 py-20 text-center">
-          <div className="mx-auto mb-6 h-px w-12 bg-gradient-to-r from-transparent via-rose-400/30 to-transparent" />
-          <h2 className="text-lg font-light text-white">Something went wrong</h2>
-          <p className="mt-2 text-sm text-zinc-500">
+          <div className="mx-auto mb-6 h-px w-12 bg-gradient-to-r from-transparent via-[var(--color-copper-dim)] to-transparent" />
+          <h2 className="text-lg font-light text-[var(--color-text)]">Something went wrong</h2>
+          <p className="mt-2 text-sm text-[var(--color-text-muted)]">
             Try refreshing the page. If this keeps happening, reach out to us.
           </p>
           <button
@@ -52,7 +51,7 @@ export default class ErrorBoundary extends Component<Props, State> {
               this.setState({ hasError: false, error: null });
               window.location.reload();
             }}
-            className="mt-6 rounded-xl border border-white/[0.07] bg-white/[0.05] px-6 py-3 text-xs font-semibold uppercase tracking-widest text-zinc-300 transition-colors hover:bg-white/[0.08]"
+            className="mt-6 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-6 py-3 text-xs font-semibold uppercase tracking-widest text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:text-[var(--color-text)]"
           >
             Reload
           </button>

@@ -1,29 +1,75 @@
 @import "tailwindcss";
 
+/* ── Satoshi font from Fontshare ── */
+@font-face {
+  font-family: 'Satoshi';
+  src: url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap');
+  font-display: swap;
+}
+
+@import url('https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap');
+
+/* ── SOS Brand Tokens ── */
 @theme inline {
-  --font-sans: var(--font-geist);
+  --font-sans: 'Satoshi', system-ui, sans-serif;
+
+  --color-void: #0E0C1E;
+  --color-surface: #161422;
+  --color-input: #1E1B30;
+  --color-border: #8E6E52;
+  --color-border-subtle: rgba(142, 110, 82, 0.25);
+  --color-copper: #C9A27A;
+  --color-copper-dim: rgba(201, 162, 122, 0.5);
+  --color-text: #F4EFE8;
+  --color-text-muted: #9A948C;
+  --color-electric: #EF4488;
 }
 
 body {
-  background-color: #07070f;
-  color: #f2f2f7;
-  font-family: var(--font-sans, sans-serif);
-  /* background-attachment: fixed is broken on iOS Safari — use a pseudo-element instead */
-  background-image: radial-gradient(
-    ellipse 80% 40% at 50% 0%,
-    rgba(120, 80, 255, 0.07),
-    transparent
-  );
-  /* Prevent horizontal overflow on mobile */
+  background-color: var(--color-void);
+  color: var(--color-text);
+  font-family: var(--font-sans);
   overflow-x: hidden;
+  /* Subtle grain texture */
+  position: relative;
 }
 
-/* Prevent iOS double-tap zoom on buttons/links */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.08;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* Atmospheric electric edge — felt not seen */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(239, 68, 136, 0.04),
+    transparent
+  );
+  z-index: 9998;
+  pointer-events: none;
+}
+
+/* Prevent iOS double-tap zoom */
 button, a {
   touch-action: manipulation;
 }
 
-/* Ensure date/time inputs are styled properly on iOS */
+/* Dark color scheme for native inputs */
 input[type="date"],
 input[type="time"] {
   appearance: none;
@@ -31,8 +77,30 @@ input[type="time"] {
   color-scheme: dark;
 }
 
-/* Prevent text size adjustment on orientation change */
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+}
+
+/* ── Brand transition speed ── */
+* {
+  transition-duration: 600ms;
+  transition-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+/* Reset transition on things that shouldn't animate by default */
+input, textarea, select {
+  transition-duration: 150ms;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(142, 110, 82, 0.2);
+  border-radius: 10px;
 }

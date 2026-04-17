@@ -5,12 +5,12 @@ import type { DailyTransits, Aspect } from '@/data/transits';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-const ASPECT_ENERGY: Record<Aspect, { label: string; color: string; dot: string }> = {
-  conjunction: { label: 'Intense',     color: 'text-rose-400',    dot: 'bg-rose-400'    },
-  opposition:  { label: 'Tension',     color: 'text-rose-400',    dot: 'bg-rose-400'    },
-  square:      { label: 'Friction',    color: 'text-amber-400',   dot: 'bg-amber-400'   },
-  trine:       { label: 'Flow',        color: 'text-emerald-400', dot: 'bg-emerald-400' },
-  sextile:     { label: 'Opportunity', color: 'text-cyan-400',    dot: 'bg-cyan-400'    },
+const ASPECT_ENERGY: Record<Aspect, { label: string; dot: string }> = {
+  conjunction: { label: 'Intense',     dot: 'bg-[var(--color-copper)]' },
+  opposition:  { label: 'Tension',     dot: 'bg-[var(--color-copper)]' },
+  square:      { label: 'Friction',    dot: 'bg-[var(--color-copper-dim)]' },
+  trine:       { label: 'Flow',        dot: 'bg-[var(--color-text-muted)]' },
+  sextile:     { label: 'Opportunity', dot: 'bg-[var(--color-text-muted)]' },
 };
 
 const ASPECT_LABELS: Record<Aspect, string> = {
@@ -25,16 +25,6 @@ function formatPlanetName(key: string): string {
   return key.charAt(0).toUpperCase() + key.slice(1);
 }
 
-function getDayIntensity(transits: DailyTransits['transits']): 'high' | 'medium' | 'low' | 'none' {
-  if (transits.length === 0) return 'none';
-  const hasHigh = transits.some(
-    (t) => (t.aspect === 'conjunction' || t.aspect === 'opposition') && t.orb < 2,
-  );
-  if (hasHigh) return 'high';
-  if (transits.length >= 3) return 'medium';
-  return 'low';
-}
-
 interface Props {
   transitDays: DailyTransits[];
   todayStr: string;
@@ -47,33 +37,18 @@ export default function CalendarGrid({
   transitDays,
   todayStr,
   currentMonth,
-  startDayOfWeek,
-  daysInMonth,
 }: Props) {
   const [selectedDay, setSelectedDay] = useState<DailyTransits | null>(null);
 
-  // Build a map for quick lookup
-  const transitMap = new Map<string, DailyTransits>();
-  for (const d of transitDays) {
-    transitMap.set(d.date, d);
-  }
-
-  // Generate grid cells
-  const cells: Array<{
-    date: string;
-    dayNum: number;
-    inMonth: boolean;
-    transits: DailyTransits;
-  }> = [];
-
-  for (let i = 0; i < transitDays.length; i++) {
-    const d = transitDays[i];
+  const cells = transitDays.map((d) => {
     const dateObj = new Date(`${d.date}T12:00:00`);
-    const dayNum = dateObj.getDate();
-    const inMonth = dateObj.getMonth() === currentMonth;
-
-    cells.push({ date: d.date, dayNum, inMonth, transits: d });
-  }
+    return {
+      date: d.date,
+      dayNum: dateObj.getDate(),
+      inMonth: dateObj.getMonth() === currentMonth,
+      transits: d,
+    };
+  });
 
   return (
     <>
@@ -82,7 +57,7 @@ export default function CalendarGrid({
         {WEEKDAYS.map((day) => (
           <div
             key={day}
-            className="py-2 text-center text-[10px] uppercase tracking-widest text-zinc-600"
+            className="py-2 text-center text-[10px] uppercase tracking-widest text-[var(--color-text-muted)]"
           >
             {day}
           </div>
@@ -93,7 +68,6 @@ export default function CalendarGrid({
       <div className="grid grid-cols-7 gap-1">
         {cells.map((cell) => {
           const isToday = cell.date === todayStr;
-          const intensity = getDayIntensity(cell.transits.transits);
           const isSelected = selectedDay?.date === cell.date;
           const hasTransits = cell.transits.transits.length > 0;
 
@@ -105,35 +79,33 @@ export default function CalendarGrid({
                   ? setSelectedDay(isSelected ? null : cell.transits)
                   : setSelectedDay(null)
               }
-              className={`relative flex min-h-[52px] flex-col items-center rounded-xl py-2 transition-all ${
+              className={`relative flex min-h-[52px] flex-col items-center rounded-[10px] py-2 ${
                 !cell.inMonth
-                  ? 'opacity-30'
+                  ? 'opacity-25'
                   : isSelected
-                    ? 'border border-violet-500/30 bg-violet-500/10'
+                    ? 'border border-[var(--color-border)] bg-[var(--color-surface)]'
                     : isToday
-                      ? 'border border-violet-500/20 bg-violet-500/[0.06]'
+                      ? 'border border-[var(--color-copper-dim)] bg-[var(--color-surface)]'
                       : hasTransits
-                        ? 'border border-white/[0.05] bg-white/[0.02] active:bg-white/[0.05]'
+                        ? 'border border-[var(--color-border-subtle)] bg-[var(--color-surface)]'
                         : 'border border-transparent'
               }`}
             >
               <span
                 className={`text-sm ${
                   isToday
-                    ? 'font-semibold text-violet-400'
+                    ? 'font-medium text-[var(--color-copper)]'
                     : cell.inMonth
-                      ? 'text-zinc-300'
-                      : 'text-zinc-700'
+                      ? 'text-[var(--color-text)]'
+                      : 'text-[var(--color-text-muted)]'
                 }`}
               >
                 {cell.dayNum}
               </span>
 
-              {/* Transit intensity dots */}
               {hasTransits && cell.inMonth && (
                 <div className="mt-1 flex gap-0.5">
                   {(() => {
-                    // Show colored dots for the dominant aspect types (max 3)
                     const aspects = new Set(cell.transits.transits.map((t) => t.aspect));
                     const sorted: Aspect[] = ['conjunction', 'opposition', 'square', 'trine', 'sextile'];
                     const active = sorted.filter((a) => aspects.has(a)).slice(0, 3);
@@ -156,16 +128,16 @@ export default function CalendarGrid({
         {(['conjunction', 'square', 'trine', 'sextile'] as Aspect[]).map((aspect) => (
           <div key={aspect} className="flex items-center gap-1.5">
             <span className={`h-1.5 w-1.5 rounded-full ${ASPECT_ENERGY[aspect].dot}`} />
-            <span className="text-[10px] text-zinc-600">{ASPECT_ENERGY[aspect].label}</span>
+            <span className="text-[10px] text-[var(--color-text-muted)]">{ASPECT_ENERGY[aspect].label}</span>
           </div>
         ))}
       </div>
 
-      {/* Selected day detail panel */}
+      {/* Selected day detail */}
       {selectedDay && (
-        <div className="mt-6 rounded-2xl border border-white/[0.07] bg-white/[0.03] px-5 py-4">
+        <div className="mt-6 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-4">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400">
+            <p className="text-xs font-medium uppercase tracking-widest text-[var(--color-copper)]">
               {selectedDay.date === todayStr
                 ? 'Today'
                 : new Date(`${selectedDay.date}T12:00:00`).toLocaleDateString('en-US', {
@@ -176,7 +148,7 @@ export default function CalendarGrid({
             </p>
             <button
               onClick={() => setSelectedDay(null)}
-              className="text-xs text-zinc-600 hover:text-zinc-400"
+              className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
             >
               ✕
             </button>
@@ -187,16 +159,16 @@ export default function CalendarGrid({
               const energy = ASPECT_ENERGY[t.aspect];
               return (
                 <div key={i} className="flex items-center justify-between text-sm">
-                  <span className="text-zinc-300">
+                  <span className="text-[var(--color-text)]">
                     {t.transitPlanet}{' '}
-                    <span className="text-zinc-500">{ASPECT_LABELS[t.aspect]}</span>{' '}
+                    <span className="text-[var(--color-text-muted)]">{ASPECT_LABELS[t.aspect]}</span>{' '}
                     {formatPlanetName(t.natalPlanet)}
                   </span>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-zinc-600">
+                    <span className="text-[10px] text-[var(--color-text-muted)]">
                       {t.orb}°
                     </span>
-                    <span className={`text-[10px] uppercase tracking-wider ${energy.color}`}>
+                    <span className="text-[10px] uppercase tracking-wider text-[var(--color-copper)]">
                       {energy.label}
                     </span>
                   </div>
@@ -206,7 +178,7 @@ export default function CalendarGrid({
           </div>
 
           {selectedDay.transits.length === 0 && (
-            <p className="text-sm text-zinc-600">A quiet day. No major transits.</p>
+            <p className="text-sm text-[var(--color-text-muted)]">A quiet day. No major transits.</p>
           )}
         </div>
       )}

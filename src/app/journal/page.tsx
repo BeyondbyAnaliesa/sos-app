@@ -29,8 +29,6 @@ export default function JournalPage() {
 
   async function streamResponse(body: Record<string, string>) {
     setStreaming(true);
-
-    // Add an empty assistant message that we'll fill as chunks arrive
     setMessages((prev) => [...prev, { role: 'assistant', content: '' }]);
 
     try {
@@ -51,7 +49,6 @@ export default function JournalPage() {
         return;
       }
 
-      // Capture entry ID from the first response
       const newEntryId = res.headers.get('X-Entry-Id');
       if (newEntryId) setEntryId(newEntryId);
 
@@ -113,21 +110,21 @@ export default function JournalPage() {
       <div className="mb-6 flex items-center justify-between">
         <Link
           href="/"
-          className="flex items-center gap-1.5 py-2 pr-4 text-xs text-zinc-600 transition-colors hover:text-zinc-400"
+          className="flex items-center gap-1.5 py-2 pr-4 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-copper)]"
         >
           <span>←</span>
           <span>Home</span>
         </Link>
-        <p className="text-xs text-zinc-600">{TODAY}</p>
+        <p className="text-xs text-[var(--color-text-muted)]">{TODAY}</p>
       </div>
 
       {/* Journal Entry Form (before submission) */}
       {!journalSubmitted && (
         <div className="flex flex-1 flex-col justify-center pb-10">
-          <h1 className="mb-2 text-2xl font-light tracking-wide text-white">
+          <h1 className="mb-2 text-2xl font-light tracking-wide text-[var(--color-text)]">
             Journal
           </h1>
-          <p className="mb-6 text-sm text-zinc-500">
+          <p className="mb-6 text-sm text-[var(--color-text-muted)]">
             Write what&apos;s on your mind. SOS is listening.
           </p>
           <form onSubmit={handleJournalSubmit}>
@@ -136,13 +133,13 @@ export default function JournalPage() {
               onChange={(e) => setInput(e.target.value)}
               rows={7}
               placeholder="What happened today? What are you feeling? What's on your mind?"
-              className="w-full resize-none rounded-2xl border border-white/[0.07] bg-white/[0.03] px-5 py-4 text-base leading-relaxed text-zinc-200 placeholder:text-zinc-600 focus:border-white/[0.15] focus:outline-none"
+              className="w-full resize-none rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-input)] px-5 py-4 text-base leading-relaxed text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border)] focus:outline-none"
             />
             <div className="mt-4 flex justify-end">
               <button
                 type="submit"
                 disabled={!input.trim()}
-                className="rounded-xl border border-white/[0.07] bg-white/[0.05] px-6 py-3 text-xs font-semibold uppercase tracking-widest text-zinc-300 transition-colors hover:border-white/[0.15] hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40"
+                className="h-[52px] rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-6 text-xs font-medium uppercase tracking-widest text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:text-[var(--color-text)] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Reflect
               </button>
@@ -158,17 +155,17 @@ export default function JournalPage() {
             {messages.map((msg, i) => (
               <div key={i}>
                 {msg.role === 'user' ? (
-                  <div className="rounded-2xl border border-white/[0.05] bg-white/[0.02] px-5 py-4">
-                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-400">
+                  <div className="rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-4">
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--color-text-muted)]">
                       {msg.content}
                     </p>
                   </div>
                 ) : (
                   <div className="px-1 py-2">
-                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-200">
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--color-text)]">
                       {msg.content}
                       {streaming && i === messages.length - 1 && (
-                        <span className="ml-0.5 inline-block h-3 w-0.5 animate-pulse bg-zinc-400" />
+                        <span className="ml-0.5 inline-block h-3 w-0.5 animate-pulse bg-[var(--color-copper)]" />
                       )}
                     </p>
                   </div>
@@ -178,10 +175,10 @@ export default function JournalPage() {
             <div ref={bottomRef} />
           </div>
 
-          {/* Follow-up input — pinned above home indicator */}
+          {/* Follow-up input */}
           <form
             onSubmit={handleFollowUp}
-            className="sticky bottom-0 border-t border-white/[0.05] bg-[#07070f] pt-4"
+            className="sticky bottom-0 border-t border-[var(--color-border-subtle)] bg-[var(--color-void)] pt-4"
             style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
           >
             <div className="flex gap-3">
@@ -191,12 +188,12 @@ export default function JournalPage() {
                 onChange={(e) => setInput(e.target.value)}
                 disabled={streaming}
                 placeholder="Say something back…"
-                className="flex-1 rounded-xl border border-white/[0.07] bg-white/[0.03] px-4 py-3 text-base text-zinc-200 placeholder:text-zinc-600 focus:border-white/[0.15] focus:outline-none disabled:opacity-50"
+                className="h-[52px] flex-1 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-input)] px-4 text-base text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border)] focus:outline-none disabled:opacity-50"
               />
               <button
                 type="submit"
                 disabled={!input.trim() || streaming}
-                className="shrink-0 rounded-xl border border-white/[0.07] bg-white/[0.05] px-4 py-3 text-xs font-semibold uppercase tracking-widest text-zinc-300 transition-colors hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40"
+                className="h-[52px] shrink-0 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-4 text-xs font-medium uppercase tracking-widest text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:text-[var(--color-text)] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Send
               </button>

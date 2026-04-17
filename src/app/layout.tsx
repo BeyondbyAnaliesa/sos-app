@@ -1,13 +1,7 @@
 import type { Metadata, Viewport } from 'next';
-import { Geist } from 'next/font/google';
 import './globals.css';
 import ServiceWorkerRegistrar from '@/components/ServiceWorkerRegistrar';
 import ErrorBoundary from '@/components/ErrorBoundary';
-
-const geist = Geist({
-  variable: '--font-geist',
-  subsets: ['latin'],
-});
 
 export const metadata: Metadata = {
   title: 'SOS — Spiritual Operating System',
@@ -28,7 +22,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#09090b',
+  themeColor: '#0E0C1E',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -42,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geist.variable} h-full`}>
+    <html lang="en" className="h-full">
       <body className="min-h-full antialiased">
         <ServiceWorkerRegistrar />
         <ErrorBoundary>

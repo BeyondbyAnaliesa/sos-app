@@ -92,7 +92,7 @@ export default function OnboardingPage() {
       {step > 0 && <ProgressBar step={step} />}
 
       {error && (
-        <div className="mb-6 rounded-xl border border-rose-500/20 bg-rose-500/5 px-4 py-3 text-xs text-rose-400">
+        <div className="mb-6 rounded-[10px] border border-red-500/20 bg-red-500/5 px-4 py-3 text-xs text-red-400">
           {error}
         </div>
       )}
@@ -125,8 +125,8 @@ export default function OnboardingPage() {
       {/* Step 11: Report */}
       {step === 11 && !report && (
         <div className="py-20 text-center">
-          <p className="text-sm text-zinc-400">Building your first reading…</p>
-          <p className="mt-2 text-xs text-zinc-600">
+          <p className="text-sm text-[var(--color-text-muted)]">Building your first reading…</p>
+          <p className="mt-2 text-xs text-[var(--color-text-muted)] opacity-60">
             This takes a moment. SOS is synthesizing your chart and your answers.
           </p>
         </div>

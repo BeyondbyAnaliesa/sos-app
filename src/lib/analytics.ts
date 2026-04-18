@@ -11,6 +11,7 @@ type AnalyticsEvent =
   | 'checkout_started'
   | 'checkout_complete'
   | 'reading_viewed'
+  | 'daily_reading_viewed'
   | 'calendar_viewed';
 
 type EventProperties = Record<string, string | number | boolean | null | undefined>;

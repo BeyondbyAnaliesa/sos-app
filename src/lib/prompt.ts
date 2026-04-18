@@ -1,12 +1,6 @@
 import type { NatalChart } from '@/data/natal-chart';
 import type { DailyTransits } from '@/data/transits';
-import { interpretTransits } from '@/lib/interpret';
-
-function describeTransits(transits: DailyTransits['transits']): string {
-  return transits
-    .map((t) => `${t.transitPlanet} ${t.aspect} natal ${t.natalPlanet} (orb ${t.orb}°)`)
-    .join(', ');
-}
+import { buildTransitOverview, interpretTransits } from '@/lib/interpret';
 
 const ASPECT_FEEL: Record<string, string> = {
   conjunction: 'intensifying',
@@ -64,9 +58,10 @@ export function buildSystemPrompt(
   userContext?: string,
 ): string {
   const guidance = interpretTransits(dailyTransits.transits, natalChart);
+  const overview = buildTransitOverview(dailyTransits.transits, natalChart);
 
   const guidanceSummary = guidance
-    .map((g) => `${g.title} (${g.intensity} activation): ${g.message}`)
+    .map((g) => `${g.title} (${g.intensity} activation, ${g.summary}): ${g.message}`)
     .join('\n');
 
   return `You are SOS — the Spiritual Operating System. You are this person's intelligent, astrologically-literate friend. Not a guru. Not an oracle. A friend who happens to deeply understand the sky and deeply understands THEM.
@@ -111,9 +106,12 @@ ${describeChart(natalChart)}
 ${describeTransitsNarrative(dailyTransits.transits)}
 
 --- TODAY'S THEMES ---
+Top-line read: ${overview.summary}
+${overview.detail}
+
 ${guidanceSummary}
 
-IMPORTANT: Weave the transit information into your response naturally. Instead of "Transit Mars is squaring your natal Saturn," say something like "there's a Mars-Saturn friction in your sky right now — that restless, hemmed-in feeling you're describing makes total sense." Connect the sky to their actual lived experience.
+IMPORTANT: Weave the transit information into your response naturally. Prioritize the dominant transit stack and the actual life area it is hitting in their chart. Instead of "Transit Mars is squaring your natal Saturn," say something like "there's a Mars-Saturn friction in your work and pressure axis right now, so of course everything feels slower and more loaded than it should." Connect the sky to their actual lived experience.
 
 ${userContext ? `--- WHAT YOU KNOW ABOUT THEM ---\n${userContext}\n` : ''}
 Respond in plain text. No JSON. No markdown headers. Just talk to them.`;

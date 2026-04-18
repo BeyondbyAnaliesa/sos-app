@@ -9,6 +9,7 @@ import type { NatalChart as RichChart } from '@/lib/astrology/types';
 import type { DailyTransits } from '@/data/transits';
 import CalendarGrid from './CalendarGrid';
 import { track } from '@/lib/analytics';
+import BottomNav from '@/components/BottomNav';
 
 export default async function CalendarPage() {
   const supabase = await createClient();
@@ -66,15 +67,7 @@ export default async function CalendarPage() {
   const todayStr = today.toISOString().split('T')[0];
 
   return (
-    <main className="mx-auto w-full max-w-xl px-4 py-10 sm:px-6 sm:py-14">
-      <Link
-        href="/"
-        className="mb-8 flex items-center gap-1.5 py-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-copper)]"
-      >
-        <span>←</span>
-        <span>Home</span>
-      </Link>
-
+    <main className="mx-auto w-full max-w-xl px-4 pb-24 pt-10 sm:px-6 sm:pt-14">
       <header className="mb-8">
         <div className="mx-auto mb-6 h-px w-16 bg-gradient-to-r from-transparent via-[var(--color-copper-dim)] to-transparent" />
         <h1 className="text-center text-3xl font-light tracking-[0.15em] text-[var(--color-text)]">
@@ -93,6 +86,7 @@ export default async function CalendarPage() {
         startDayOfWeek={startDayOfWeek}
         daysInMonth={daysInMonth}
       />
+      <BottomNav />
     </main>
   );
 }

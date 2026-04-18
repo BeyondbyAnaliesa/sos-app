@@ -1,9 +1,12 @@
 import type { GuidanceResult, Domain, Intensity } from '@/lib/interpret';
 
 const DOMAIN_CONFIG: Record<Domain, { icon: string; accentClass: string }> = {
+  body:          { icon: '◑', accentClass: 'text-[var(--color-copper)]' },
+  mind:          { icon: '✦', accentClass: 'text-[var(--color-copper)]' },
+  spirit:        { icon: '◎', accentClass: 'text-[var(--color-copper)]' },
   relationships: { icon: '◆', accentClass: 'text-[var(--color-copper)]' },
   career:        { icon: '◇', accentClass: 'text-[var(--color-copper)]' },
-  growth:        { icon: '✦', accentClass: 'text-[var(--color-copper)]' },
+  home:          { icon: '⌂', accentClass: 'text-[var(--color-copper)]' },
 };
 
 const INTENSITY_CONFIG: Record<Intensity, { label: string; dotClass: string }> = {

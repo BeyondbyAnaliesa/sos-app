@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getSubscription, isActive } from '@/lib/subscription';
 import { PLANS } from '@/lib/stripe';
 import CheckoutButton from '@/components/CheckoutButton';
+import BottomNav from '@/components/BottomNav';
 
 export default async function UpgradePage() {
   const supabase = await createClient();
@@ -15,15 +16,7 @@ export default async function UpgradePage() {
   if (isActive(sub)) redirect('/');
 
   return (
-    <main className="mx-auto w-full max-w-xl px-5 py-10 sm:px-6 sm:py-14">
-      <Link
-        href="/"
-        className="mb-8 flex items-center gap-1.5 py-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-copper)]"
-      >
-        <span>←</span>
-        <span>Home</span>
-      </Link>
-
+    <main className="mx-auto w-full max-w-xl px-5 pb-24 pt-10 sm:px-6 sm:pt-14">
       <header className="mb-10 text-center">
         <div className="mx-auto mb-6 h-px w-12 bg-gradient-to-r from-transparent via-[var(--color-copper-dim)] to-transparent" />
         <h1 className="text-3xl font-light tracking-[0.15em] text-[var(--color-text)]">
@@ -119,6 +112,7 @@ export default async function UpgradePage() {
         Annual billing. Cancel anytime — you keep access until the period ends.
         <br />Secure checkout via Stripe. We never store your card details.
       </p>
+      <BottomNav />
     </main>
   );
 }

@@ -13,7 +13,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Fire-and-forget: generates the deep natal reading in the background
 // so it's ready by the time the user finishes onboarding questions.
-async function generateNatalReading(userId: string, chart: ReturnType<typeof generateNatalChart>) {
+async function generateNatalReading(userId: string, chart: ReturnType<typeof generateNatalChart>, attempt = 0) {
   try {
     const { system, user } = buildNatalReadingPrompt(chart);
     const completion = await openai.chat.completions.create({
@@ -36,7 +36,11 @@ async function generateNatalReading(userId: string, chart: ReturnType<typeof gen
       prompt_version: 'v1',
     }, { onConflict: 'user_id' });
   } catch (err) {
-    console.error('Background natal reading generation failed:', err);
+    console.error(`Background natal reading generation failed (attempt ${attempt + 1}):`, err);
+    if (attempt < 2) {
+      await new Promise(r => setTimeout(r, 3000));
+      return generateNatalReading(userId, chart, attempt + 1);
+    }
   }
 }
 

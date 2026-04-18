@@ -15,6 +15,7 @@ type ChartSummary = {
   sun:    { sign: string; degree: number };
   moon:   { sign: string; degree: number };
   rising: { sign: string; degree: number };
+  location?: string;
 };
 
 const STORAGE_KEY = 'sos-onboarding-progress';
@@ -71,9 +72,10 @@ export default function OnboardingPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      setChartSummary(data.summary);
+      const summary = { ...data.summary, location: data.location };
+      setChartSummary(summary);
       setStep(2);
-      saveProgress(2, answers, data.summary);
+      saveProgress(2, answers, summary);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate chart');
     } finally {
@@ -85,19 +87,29 @@ export default function OnboardingPage() {
   async function handleComplete() {
     setLoading(true);
     setError(null);
-    try {
-      const res = await fetch('/api/onboarding/complete', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ answers }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setReport(data.report);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate report');
-    } finally {
-      setLoading(false);
+
+    // Retry up to 3 times — handles app-switch/network drops
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const res = await fetch('/api/onboarding/complete', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ answers }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        setReport(data.report);
+        setLoading(false);
+        return;
+      } catch (err) {
+        if (attempt === 2) {
+          setError(err instanceof Error ? err.message : 'Failed to generate report. Please try again.');
+          setLoading(false);
+        } else {
+          // Wait 2 seconds before retry
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      }
     }
   }
 
@@ -175,10 +187,20 @@ export default function OnboardingPage() {
       {/* Step 11: Report */}
       {step === 11 && !report && (
         <div className="py-20 text-center">
-          <p className="text-sm text-[var(--color-text-muted)]">Building your first reading…</p>
-          <p className="mt-2 text-xs text-[var(--color-text-muted)] opacity-60">
-            This takes a moment. SOS is synthesizing your chart and your answers.
+          <p className="text-sm text-[var(--color-text-muted)]">
+            {loading ? 'Building your first reading…' : 'Ready to generate your reading.'}
           </p>
+          <p className="mt-2 text-xs text-[var(--color-text-muted)] opacity-60">
+            {loading ? 'This takes a moment. SOS is synthesizing your chart and your answers.' : ''}
+          </p>
+          {!loading && error && (
+            <button
+              onClick={() => { setError(null); handleComplete(); }}
+              className="mt-6 rounded-[10px] border border-[var(--color-border-subtle)] px-6 py-3 text-sm text-[var(--color-copper)] hover:border-[var(--color-copper)]"
+            >
+              Try again
+            </button>
+          )}
         </div>
       )}
 

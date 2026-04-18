@@ -69,6 +69,8 @@ export default async function Home() {
     redirect('/onboarding');
   }
 
+  // TODO: Use user's local timezone instead of server time for transit date
+  // Server is Vercel SFO (PST/PDT) which works for CA users but needs fixing for other timezones
   let todayDate = new Date().toISOString().split('T')[0];
   let todayTransits: ReturnType<typeof calculateTransitsForDate> | null = null;
   let simpleChart = mockNatalChart;

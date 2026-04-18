@@ -2,6 +2,7 @@ interface ChartSummary {
   sun:    { sign: string; degree: number };
   moon:   { sign: string; degree: number };
   rising: { sign: string; degree: number };
+  location?: string;
 }
 
 interface Props {
@@ -21,9 +22,15 @@ export default function ChartRevealStep({ chart, onContinue }: Props) {
       <h2 className="mb-2 text-xl font-light tracking-wide text-[var(--color-text)]">
         Your Chart
       </h2>
-      <p className="mb-8 text-sm text-[var(--color-text-muted)]">
+      <p className="mb-4 text-sm text-[var(--color-text-muted)]">
         These are the three pillars of who you are.
       </p>
+
+      {chart.location && (
+        <p className="mb-6 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-4 py-3 text-xs text-[var(--color-text-muted)]">
+          Calculated for: <span className="text-[var(--color-text)]">{chart.location}</span>
+        </p>
+      )}
 
       <div className="space-y-3">
         {placements.map(({ key, label, desc }) => {

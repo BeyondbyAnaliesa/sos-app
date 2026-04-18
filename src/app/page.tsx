@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { mockNatalChart } from '@/data/natal-chart';
+import { redirect } from 'next/navigation';
 import { buildTransitOverview, interpretTransits } from '@/lib/interpret';
 import type { GuidanceResult } from '@/lib/interpret';
 import { toSimpleChart } from '@/lib/astrology/transform';
@@ -58,17 +59,21 @@ export default async function Home() {
   const sub = await getSubscription(user.id);
   const paid = isActive(sub);
 
-  let todayDate = new Date().toISOString().split('T')[0];
-  let todayTransits: ReturnType<typeof calculateTransitsForDate> | null = null;
-  let simpleChart = mockNatalChart;
-
   const { data: chartRow } = await supabase
     .from('natal_charts')
     .select('placements_json, angles_json, houses_json, aspects_json, metadata_json')
     .eq('user_id', user.id)
     .single();
 
-  if (chartRow) {
+  if (!chartRow) {
+    redirect('/onboarding');
+  }
+
+  let todayDate = new Date().toISOString().split('T')[0];
+  let todayTransits: ReturnType<typeof calculateTransitsForDate> | null = null;
+  let simpleChart = mockNatalChart;
+
+  {
     const richChart: RichChart = {
       placements: chartRow.placements_json,
       angles:     chartRow.angles_json,

@@ -17,8 +17,8 @@ export async function POST(request: Request) {
     }
 
     const { answers } = await request.json() as { answers: Record<string, string> };
-    if (!answers || Object.keys(answers).length < 7) {
-      return NextResponse.json({ error: 'All 7 answers are required' }, { status: 400 });
+    if (!answers || Object.keys(answers).length < 8) {
+      return NextResponse.json({ error: 'All questions must be answered' }, { status: 400 });
     }
 
     const admin = createAdminClient();

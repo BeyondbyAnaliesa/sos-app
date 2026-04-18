@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import ProgressBar from '@/components/onboarding/ProgressBar';
 import WelcomeStep from '@/components/onboarding/WelcomeStep';
@@ -17,15 +17,47 @@ type ChartSummary = {
   rising: { sign: string; degree: number };
 };
 
+const STORAGE_KEY = 'sos-onboarding-progress';
+
+function loadProgress(): { step: number; answers: Record<string, string>; chartSummary: ChartSummary | null } | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch { return null; }
+}
+
+function saveProgress(step: number, answers: Record<string, string>, chartSummary: ChartSummary | null) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ step, answers, chartSummary }));
+  } catch { /* storage full or unavailable */ }
+}
+
+function clearProgress() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch { /* noop */ }
+}
+
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep]   = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hydrated, setHydrated] = useState(false);
 
   const [chartSummary, setChartSummary] = useState<ChartSummary | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [report, setReport]   = useState<OnboardingReport | null>(null);
+
+  // Restore progress on mount
+  useEffect(() => {
+    const saved = loadProgress();
+    if (saved && saved.step >= 2) {
+      setStep(saved.step);
+      setAnswers(saved.answers);
+      setChartSummary(saved.chartSummary);
+    }
+    setHydrated(true);
+  }, []);
 
   // --- Step 1: Birth data submission ---
   async function handleBirthData(values: BirthDataValues) {
@@ -41,6 +73,7 @@ export default function OnboardingPage() {
       if (!res.ok) throw new Error(data.error);
       setChartSummary(data.summary);
       setStep(2);
+      saveProgress(2, answers, data.summary);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate chart');
     } finally {
@@ -70,7 +103,11 @@ export default function OnboardingPage() {
 
   // --- Handle question answers ---
   function updateAnswer(key: string, value: string) {
-    setAnswers((prev) => ({ ...prev, [key]: value }));
+    setAnswers((prev) => {
+      const next = { ...prev, [key]: value };
+      saveProgress(step, next, chartSummary);
+      return next;
+    });
   }
 
   // Determine which question we're on (steps 3–10 map to questions 0–7)
@@ -80,11 +117,24 @@ export default function OnboardingPage() {
   // When the last question is answered, trigger report generation
   function handleQuestionContinue() {
     if (questionIndex < ONBOARDING_QUESTIONS.length - 1) {
-      setStep(step + 1);
+      const nextStep = step + 1;
+      setStep(nextStep);
+      saveProgress(nextStep, answers, chartSummary);
     } else {
       setStep(11);
+      clearProgress();
       handleComplete();
     }
+  }
+
+  if (!hydrated) {
+    return (
+      <main className="mx-auto w-full max-w-xl px-5 py-8 sm:px-6 sm:py-10">
+        <div className="py-20 text-center">
+          <p className="text-sm text-[var(--color-text-muted)]">Loading...</p>
+        </div>
+      </main>
+    );
   }
 
   return (

@@ -39,7 +39,7 @@ export default function QuestionStep({
 
       <div className="mt-2 flex items-center justify-between">
         <p className={`text-xs ${met ? 'text-[var(--color-copper)]' : 'text-[var(--color-text-muted)]'}`}>
-          {count} / {minChars} characters minimum
+          {met ? '✓ Ready' : `${minChars - count > 0 ? minChars - count : 0} more characters to continue`}
         </p>
       </div>
 

@@ -194,9 +194,14 @@ export default function BirthDataStep({ onSubmit, loading }: Props) {
             </div>
           )}
 
-          <p className="mt-2 text-xs text-[var(--color-text-muted)]">
-            Choose your place from the dropdown so misspellings don&apos;t send us to the wrong coordinates.
-          </p>
+          {!selectedPlaceId && (
+            <p className="mt-2 text-xs text-[var(--color-text-muted)]">
+              Choose your place from the dropdown so misspellings don&apos;t send us to the wrong coordinates.
+            </p>
+          )}
+          {selectedPlaceId && (
+            <p className="mt-2 text-xs text-[var(--color-copper)]">✓ Location confirmed</p>
+          )}
           {(locationLoading || locationError) && (
             <p className={`mt-2 text-xs ${locationError ? 'text-red-400' : 'text-[var(--color-text-muted)]'}`}>
               {locationError ?? 'Finding locations…'}

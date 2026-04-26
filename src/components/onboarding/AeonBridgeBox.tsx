@@ -30,11 +30,12 @@ export default function AeonBridgeBox({ headline, body, starterChips }: Props) {
         {body}
       </p>
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <p className="mt-4 mb-2 text-[10px] uppercase tracking-[0.2em] text-[var(--color-text-muted)]">What we&apos;ll explore</p>
+      <div className="flex flex-wrap gap-2">
         {starterChips.slice(0, 3).map((chip) => (
           <span
             key={chip}
-            className="rounded-full border border-[var(--color-electric)]/30 bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-text)]"
+            className="pointer-events-none rounded-full border border-[var(--color-electric)]/30 bg-[var(--color-surface)] px-3 py-1.5 text-xs text-[var(--color-text)]"
           >
             {chip}
           </span>

@@ -1,5 +1,4 @@
-import type { NatalChart } from '@/data/natal-chart';
-import type { DailyTransits } from '@/data/transits';
+import type { NatalSummary, DailyTransits } from '@/lib/astrology/domain-types';
 import { buildTransitOverview, interpretTransits } from '@/lib/interpret';
 
 const ASPECT_FEEL: Record<string, string> = {
@@ -21,6 +20,7 @@ const PLANET_THEMES: Record<string, string> = {
   Uranus:  'disruption, freedom, surprise, innovation',
   Neptune: 'dreams, confusion, spirituality, illusion',
   Pluto:   'transformation, power, depth, letting go',
+  'North Node': 'fated growth, direction, karmic development',
 };
 
 function describeTransitsNarrative(transits: DailyTransits['transits']): string {
@@ -39,21 +39,31 @@ function describeTransitsNarrative(transits: DailyTransits['transits']): string 
     .join('\n');
 }
 
-function describeChart(chart: NatalChart): string {
+function describeChart(chart: NatalSummary): string {
+  const placement = (key: string, label: string) => {
+    const p = chart.placementsByKey[key];
+    return p ? `${label} in ${p.sign} (House ${p.house})` : null;
+  };
+
   return [
-    `Sun in ${chart.sun.sign} (House ${chart.sun.house})`,
-    `Moon in ${chart.moon.sign} (House ${chart.moon.house})`,
+    placement('sun', 'Sun'),
+    placement('moon', 'Moon'),
     `Rising (Ascendant) in ${chart.ascendant.sign}`,
-    `Mercury in ${chart.mercury.sign} (House ${chart.mercury.house})`,
-    `Venus in ${chart.venus.sign} (House ${chart.venus.house})`,
-    `Mars in ${chart.mars.sign} (House ${chart.mars.house})`,
-    `Jupiter in ${chart.jupiter.sign} (House ${chart.jupiter.house})`,
-    `Saturn in ${chart.saturn.sign} (House ${chart.saturn.house})`,
-  ].join('\n');
+    placement('mercury', 'Mercury'),
+    placement('venus', 'Venus'),
+    placement('mars', 'Mars'),
+    placement('jupiter', 'Jupiter'),
+    placement('saturn', 'Saturn'),
+    placement('uranus', 'Uranus'),
+    placement('neptune', 'Neptune'),
+    placement('pluto', 'Pluto'),
+    placement('northNode', 'North Node'),
+    `Midheaven in ${chart.midheaven.sign}`,
+  ].filter(Boolean).join('\n');
 }
 
 export function buildSystemPrompt(
-  natalChart: NatalChart,
+  natalChart: NatalSummary,
   dailyTransits: DailyTransits,
   userContext?: string,
 ): string {

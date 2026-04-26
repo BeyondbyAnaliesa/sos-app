@@ -1,5 +1,4 @@
-import type { Transit } from '@/data/transits';
-import type { NatalChart, PlanetPosition } from '@/data/natal-chart';
+import type { Transit, NatalSummary, NatalPlanetSummary } from '@/lib/astrology/domain-types';
 
 export type Domain = 'body' | 'mind' | 'spirit' | 'relationships' | 'career' | 'home';
 export type Intensity = 'high' | 'medium' | 'low';
@@ -12,7 +11,6 @@ export interface GuidanceResult {
   summary: string;
 }
 
-type NatalKey = keyof NatalChart;
 
 interface DomainTheme {
   focus: string;
@@ -137,19 +135,20 @@ const PLANET_THEMES: Record<string, string> = {
   mars: 'your drive and anger',
   jupiter: 'your beliefs and growth edge',
   saturn: 'your boundaries and responsibilities',
+  uranus: 'your liberation edge and disruptions',
+  neptune: 'your dreams, dissolving, and spiritual sensitivity',
+  pluto: 'your transformation, power, and underworld material',
+  northNode: 'your growth edge and karmic pull forward',
   ascendant: 'how life is meeting you directly',
   midheaven: 'your direction and public role',
 };
 
-function getNatalPlacement(chart: NatalChart, natalPlanet: string): PlanetPosition | null {
-  if (natalPlanet === 'midheaven') return null;
-  if (natalPlanet === 'ascendant') return null;
-  const placement = chart[natalPlanet as NatalKey];
-  if (!placement || typeof placement !== 'object' || !('house' in placement)) return null;
-  return placement as PlanetPosition;
+function getNatalPlacement(chart: NatalSummary, natalPlanet: string): NatalPlanetSummary | null {
+  if (natalPlanet === 'midheaven' || natalPlanet === 'ascendant') return null;
+  return chart.placementsByKey[natalPlanet] ?? null;
 }
 
-function getAreaOfLife(chart: NatalChart, natalPlanet: string): string {
+function getAreaOfLife(chart: NatalSummary, natalPlanet: string): string {
   if (natalPlanet === 'ascendant') return 'your identity, body, and the way you are meeting the world';
   if (natalPlanet === 'midheaven') return 'career direction, reputation, and what is publicly visible';
 
@@ -162,7 +161,7 @@ function getNatalTheme(natalPlanet: string): string {
   return PLANET_THEMES[natalPlanet] ?? 'a core pattern in your chart';
 }
 
-function buildTheme(domain: Domain, transit: Transit, chart: NatalChart): DomainTheme {
+function buildTheme(domain: Domain, transit: Transit, chart: NatalSummary): DomainTheme {
   const area = getAreaOfLife(chart, transit.natalPlanet);
   const natalTheme = getNatalTheme(transit.natalPlanet);
   const transitLabel = transit.transitPlanet;
@@ -215,7 +214,7 @@ function buildTheme(domain: Domain, transit: Transit, chart: NatalChart): Domain
   return themes[domain];
 }
 
-function scoreTransit(transit: Transit, domain: Domain, chart: NatalChart): TransitSignature | null {
+function scoreTransit(transit: Transit, domain: Domain, chart: NatalSummary): TransitSignature | null {
   if (!PLANET_DOMAINS[transit.transitPlanet]?.includes(domain)) return null;
 
   const placement = getNatalPlacement(chart, transit.natalPlanet);
@@ -271,7 +270,7 @@ function buildMessage(domain: Domain, signatures: TransitSignature[]): string {
 
 export function buildTransitOverview(
   transits: Transit[],
-  natalChart: NatalChart,
+  natalChart: NatalSummary,
 ): TransitOverview {
   const scored = transits
     .flatMap((transit) => {
@@ -312,7 +311,7 @@ export function buildTransitOverview(
 
 export function interpretTransits(
   transits: Transit[],
-  natalChart: NatalChart,
+  natalChart: NatalSummary,
 ): GuidanceResult[] {
   const domains: Domain[] = ['body', 'mind', 'spirit', 'relationships', 'career', 'home'];
 

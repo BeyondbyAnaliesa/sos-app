@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local ops scripts (machine-specific, not for repo)
+upload-slides-*.js
+
+# developer scratch / backups
+references/
+*.bak

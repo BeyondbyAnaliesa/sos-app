@@ -181,18 +181,7 @@ export default async function DailyReadingPage() {
         </section>
       )}
 
-      {paid && activeGuidance.length > 1 && (
-        <section className="mb-6">
-          <p className="mb-4 text-[10px] uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
-            What's Active
-          </p>
-          <div className="space-y-4">
-            {activeGuidance.slice(1).map((result) => (
-              <GuidanceCard key={result.domain} result={result} />
-            ))}
-          </div>
-        </section>
-      )}
+
 
       {quietGuidance.length > 0 && (
         <section className="mb-8">

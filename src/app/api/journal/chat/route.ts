@@ -3,14 +3,29 @@ export const runtime = 'nodejs'; // required for sweph native addon
 import OpenAI from 'openai';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { buildSystemPrompt } from '@/lib/prompt';
-import { toSimpleChart } from '@/lib/astrology/transform';
 import { calculateTransitsForDate, calculateTransitsForRange } from '@/lib/astrology/calculate-transits';
 import type { NatalChart as RichChart } from '@/lib/astrology/types';
-import { mockNatalChart } from '@/data/natal-chart';
+import { buildNatalSummary } from '@/lib/astrology/domain-types';
+import {
+  buildRecurringTransitContext,
+  createJournalLifeSignals,
+  ensureDailyTransitMemory,
+} from '@/lib/astrology/memory-pipeline';
+import { getRelevantTransitMemoryForToday } from '@/lib/astrology/memory-store';
+import { buildArcMemorySystemSection } from '@/lib/astrology/pure-fns';
+import type { DailyTransits } from '@/lib/astrology/domain-types';
+import { extractLifeSignals } from '@/lib/astrology/life-signal-extract';
 import { track } from '@/lib/analytics';
 import { logError } from '@/lib/logger';
+import { consumeAeonTurn, getAeonUsageStatus } from '@/lib/aeon/usage';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function getOpenAIClient() {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY is not configured');
+  }
+
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 export async function POST(request: Request) {
   try {
@@ -28,6 +43,17 @@ export async function POST(request: Request) {
     };
 
     const admin = createAdminClient();
+    const usageBefore = await getAeonUsageStatus(user.id);
+
+    if (!usageBefore.paid && usageBefore.totalTurnsRemaining <= 0) {
+      return new Response('You have used your free Aeon conversations for now. Upgrade to keep going deeper.', {
+        status: 402,
+        headers: {
+          'X-Aeon-Needs-Upgrade': 'true',
+          'X-Aeon-Turns-Remaining': '0',
+        },
+      });
+    }
 
     // --- Resolve or create journal entry ---
     let resolvedEntryId = entryId;
@@ -55,9 +81,25 @@ export async function POST(request: Request) {
       return new Response('entryText or entryId is required', { status: 400 });
     }
 
+    // Guard: when entryId is provided by the client (not a just-created entry),
+    // verify the entry exists and belongs to this user before proceeding.
+    // A valid UUID referencing a non-existent journal_entries row causes a FK
+    // constraint violation on the first journal_messages insert, which surfaces
+    // as an unguarded 500. This converts it to a clean 404 instead.
+    if (entryId && !entryText?.trim()) {
+      const { data: entryCheck } = await admin
+        .from('journal_entries')
+        .select('id')
+        .eq('id', resolvedEntryId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!entryCheck) {
+        return new Response('Journal entry not found', { status: 404 });
+      }
+    }
+
     // --- Load user's chart and context ---
-    let simpleChart = mockNatalChart;
-    let richChart: RichChart | null = null;
     let userContext: string | undefined;
 
     const [chartResult, profileResult] = await Promise.all([
@@ -65,34 +107,114 @@ export async function POST(request: Request) {
       admin.from('profiles').select('user_context').eq('id', user.id).single(),
     ]);
 
-    if (chartResult.data) {
-      richChart = {
-        placements: chartResult.data.placements_json,
-        angles:     chartResult.data.angles_json,
-        houses:     chartResult.data.houses_json ?? [],
-        aspects:    chartResult.data.aspects_json,
-        metadata:   chartResult.data.metadata_json,
-      };
-      simpleChart = toSimpleChart(richChart);
-    }
     if (profileResult.data?.user_context) {
       userContext = profileResult.data.user_context;
     }
 
+    if (!chartResult.data) {
+      return new Response('Complete onboarding to chat with Aeon.', { status: 409 });
+    }
+
+    const richChart: RichChart = {
+      placements: chartResult.data.placements_json,
+      angles:     chartResult.data.angles_json,
+      houses:     chartResult.data.houses_json ?? [],
+      aspects:    chartResult.data.aspects_json,
+      metadata:   chartResult.data.metadata_json,
+    };
+    const natalSummary = buildNatalSummary(richChart);
+
     // --- Calculate REAL transits ---
     const today = new Date();
-    const todayTransits = richChart
-      ? calculateTransitsForDate(today, richChart)
-      : { date: today.toISOString().split('T')[0], transits: [] };
+    const todayMemory = await ensureDailyTransitMemory({
+      userId: user.id,
+      richChart,
+      date: today,
+      source: 'journal',
+    });
+    const todayTransits = todayMemory.snapshot;
+    const currentExtractedSignals = entryText?.trim() ? extractLifeSignals(entryText.trim()) : [];
+    const journalMemoryAudit: Record<string, unknown> = {
+      transitDate: todayTransits.date,
+      extractedSignalCount: currentExtractedSignals.length,
+      extractedSignals: currentExtractedSignals.map((signal) => ({
+        text: signal.text,
+        signalKind: signal.signalKind,
+        lifeDomain: signal.lifeDomain,
+        themes: signal.themes,
+        emotions: signal.emotions,
+        confidence: signal.confidence,
+        matchedRuleCount: signal.matchedRuleCount,
+      })),
+      dailyMemory: {
+        snapshotCreated: todayMemory.snapshotCreated,
+        activeTransitCount: todayMemory.snapshot.transits.length,
+        arcsCreatedOrUpdated: todayMemory.arcsCreatedOrUpdated,
+        staleArcCount: todayMemory.staleArcCount,
+      },
+    };
 
-    // Calculate upcoming 7 days for future awareness
+    const { createdLifeSignalIds } = entryText?.trim()
+      ? await createJournalLifeSignals({
+        userId: user.id,
+        entryId: resolvedEntryId,
+        entryText: entryText.trim(),
+        snapshot: todayTransits,
+        signalTimestamp: today.toISOString(),
+      })
+      : { createdLifeSignalIds: [] };
+
+    // Compute upcoming 7-day transit range early — used by both the arc peak scan
+    // (injected into buildArcMemorySystemSection) and the raw upcomingContext block below.
+    // Non-fatal: calculateTransitsForRange is synchronous and pure; no I/O risk.
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const upcomingTransitsForScan: DailyTransits[] = calculateTransitsForRange(tomorrow, 7, richChart);
+
+    // Arc memory context: structured retrieval layer — injected into Aeon system prompt
+    // Non-fatal: if this fails, journal flow continues without arc context
+    const arcMemory = await getRelevantTransitMemoryForToday(user.id).catch(() => null);
+    const arcMemorySection = buildArcMemorySystemSection({
+      arcMemory,
+      currentSignals: currentExtractedSignals,
+      upcomingTransits: upcomingTransitsForScan,
+      nowMs: Date.now(),
+    });
+
+    const recurringTransitContext = await buildRecurringTransitContext({
+      userId: user.id,
+      snapshot: todayTransits,
+      currentSignals: currentExtractedSignals,
+      excludeLifeSignalId: createdLifeSignalIds[0],
+    });
+
+    journalMemoryAudit['createdLifeSignalIds'] = createdLifeSignalIds;
+    journalMemoryAudit['hasRecurringTransitContext'] = Boolean(recurringTransitContext.trim());
+
+    const recurringContextResultPreview = recurringTransitContext
+      .split('--- PRIOR MOMENTS UNDER SIMILAR TRANSITS ---')[1]
+      ?.trim()
+      ?.slice(0, 1200) ?? '';
+    journalMemoryAudit['recurringContextPreview'] = recurringContextResultPreview;
+
+    const journalAuditInsert = await admin.from('journal_messages').insert({
+      entry_id: resolvedEntryId,
+      role: 'assistant',
+      content: `[MEMORY_AUDIT]\n${JSON.stringify(journalMemoryAudit)}`,
+    }).select('id').single();
+
+    if (journalAuditInsert.error) {
+      throw journalAuditInsert.error;
+    }
+
+    const journalAuditEntry = journalAuditInsert.data;
+    journalMemoryAudit['journalMessagesAvailable'] = true;
+
+    // Build raw upcoming context string for Aeon — reuses upcomingTransitsForScan
+    // (already computed above for the arc peak scan; no second ephemeris call needed).
     let upcomingContext = '';
-    if (richChart) {
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const upcoming = calculateTransitsForRange(tomorrow, 7, richChart);
-
-      const notable = upcoming
+    {
+      const notable = upcomingTransitsForScan
         .filter((d) => d.transits.length > 0)
         .map((d) => {
           const top = d.transits
@@ -140,13 +262,19 @@ export async function POST(request: Request) {
     }
 
     // --- Build conversation ---
-    const systemPrompt = buildSystemPrompt(simpleChart, todayTransits, userContext) + upcomingContext + priorEntriesContext;
+    const systemPrompt = buildSystemPrompt(natalSummary, todayTransits, userContext) + arcMemorySection + recurringTransitContext + upcomingContext + priorEntriesContext;
 
-    const { data: existingMessages } = await admin
+    const existingMessagesResult = await admin
       .from('journal_messages')
       .select('role, content')
       .eq('entry_id', resolvedEntryId)
       .order('created_at', { ascending: true });
+
+    if (existingMessagesResult.error) {
+      throw existingMessagesResult.error;
+    }
+
+    const existingMessages = existingMessagesResult.data;
 
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
       { role: 'system', content: systemPrompt },
@@ -156,11 +284,15 @@ export async function POST(request: Request) {
       const userMsg = `Date: ${todayTransits.date}\n\nMy journal entry:\n${entryText.trim()}`;
       messages.push({ role: 'user', content: userMsg });
 
-      await admin.from('journal_messages').insert({
+      const userMessageInsert = await admin.from('journal_messages').insert({
         entry_id: resolvedEntryId,
         role:     'user',
         content:  userMsg,
       });
+
+      if (userMessageInsert.error) {
+        throw userMessageInsert.error;
+      }
     } else if (message?.trim()) {
       if (existingMessages) {
         for (const msg of existingMessages) {
@@ -169,14 +301,19 @@ export async function POST(request: Request) {
       }
       messages.push({ role: 'user', content: message.trim() });
 
-      await admin.from('journal_messages').insert({
+      const userMessageInsert = await admin.from('journal_messages').insert({
         entry_id: resolvedEntryId,
         role:     'user',
         content:  message.trim(),
       });
+
+      if (userMessageInsert.error) {
+        throw userMessageInsert.error;
+      }
     }
 
     // --- Stream the AI response ---
+    const openai = getOpenAIClient();
     const stream = await openai.chat.completions.create({
       model:    'gpt-4o',
       messages,
@@ -197,11 +334,33 @@ export async function POST(request: Request) {
             }
           }
 
-          await admin.from('journal_messages').insert({
+          const assistantInsert = await admin.from('journal_messages').insert({
             entry_id: resolvedEntryId,
             role:     'assistant',
             content:  fullResponse,
           });
+
+          await consumeAeonTurn(user.id);
+
+          if (assistantInsert.error) {
+            throw assistantInsert.error;
+          }
+
+          if (journalAuditEntry?.id) {
+            const auditUpdate = await admin
+              .from('journal_messages')
+              .update({
+                content: `[MEMORY_AUDIT_FINAL]\n${JSON.stringify({
+                  ...journalMemoryAudit,
+                  responseLength: fullResponse.length,
+                })}`,
+              })
+              .eq('id', journalAuditEntry.id);
+
+            if (auditUpdate.error) {
+              throw auditUpdate.error;
+            }
+          }
 
           controller.close();
         } catch (err) {

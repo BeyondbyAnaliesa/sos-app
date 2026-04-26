@@ -85,6 +85,7 @@ function JournalPageInner() {
   const [journalSubmitted, setJournalSubmitted] = useState(false);
   const [usage, setUsage] = useState<AeonUsageStatus | null>(null);
   const [usageError, setUsageError] = useState<string | null>(null);
+  const [followUpError, setFollowUpError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const seededStarters = searchParams.getAll('starter').filter(Boolean);
@@ -197,7 +198,11 @@ function JournalPageInner() {
 
   async function handleFollowUp(e: React.FormEvent) {
     e.preventDefault();
-    if (!input.trim() || streaming || !entryId || blocked) return;
+    if (!input.trim() || streaming || blocked) return;
+    if (!entryId) {
+      setFollowUpError('Something went wrong — start a new conversation to continue.');
+      return;
+    }
 
     const text = input.trim();
     setInput('');
@@ -350,6 +355,9 @@ function JournalPageInner() {
             <div ref={bottomRef} />
           </div>
 
+          {followUpError && (
+              <p className="mb-3 text-xs text-red-400">{followUpError}</p>
+            )}
           <form
             onSubmit={handleFollowUp}
             className="sticky bottom-[60px] border-t border-[var(--color-border-subtle)] bg-[var(--color-void)] pt-4 pb-4"
@@ -358,7 +366,7 @@ function JournalPageInner() {
               <input
                 type="text"
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => { setInput(e.target.value); setFollowUpError(null); }}
                 disabled={streaming || blocked}
                 placeholder={blocked ? 'Upgrade to keep going with Aeon' : 'Say something back...'}
                 className="h-[52px] flex-1 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-input)] px-4 text-base text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border)] focus:outline-none disabled:opacity-50"

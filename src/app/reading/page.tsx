@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import type { NatalReadingReport } from '@/lib/natal-reading-prompt';
-import { getHouse } from '@/lib/astrology/transform';
+import { getHouse } from '@/lib/astrology/domain-types';
 import { getSubscription, isActive } from '@/lib/subscription';
 import ReadingRefresh from '@/components/ReadingRefresh';
 import { track } from '@/lib/analytics';

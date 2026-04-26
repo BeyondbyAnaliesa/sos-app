@@ -46,3 +46,6 @@ upload-slides-*.js
 # developer scratch / backups
 references/
 *.bak
+
+# supabase CLI temp
+supabase/.temp/

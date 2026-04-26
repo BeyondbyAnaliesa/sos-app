@@ -3,13 +3,20 @@ export const runtime = 'nodejs';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { toSimpleChart } from '@/lib/astrology/transform';
 import { calculateTransitsForDate } from '@/lib/astrology/calculate-transits';
 import { interpretTransits, buildTransitOverview } from '@/lib/interpret';
 import type { NatalChart as RichChart } from '@/lib/astrology/types';
+import { buildNatalSummary } from '@/lib/astrology/domain-types';
 import { track } from '@/lib/analytics';
 import BottomNav from '@/components/BottomNav';
 import GuidanceCard from '@/components/GuidanceCard';
+import { getSubscription, isActive } from '@/lib/subscription';
+import { getRelevantTransitMemoryForToday } from '@/lib/astrology/memory-store';
+import { buildExplainabilityNote, buildDailyMemoryCue, describeHiddenDomains } from '@/lib/astrology/pure-fns';
+
+// DOMAIN_LABELS and describeHiddenDomains have been extracted to pure-fns.ts.
+// buildMemoryCue has been extracted to pure-fns.ts as buildDailyMemoryCue.
+// Delegating here preserves the same runtime behavior while enabling direct unit tests.
 
 export default async function DailyReadingPage() {
   const supabase = await createClient();
@@ -17,13 +24,25 @@ export default async function DailyReadingPage() {
 
   if (!user) redirect('/auth/login');
 
-  const { data: chartRow } = await supabase
-    .from('natal_charts')
-    .select('placements_json, angles_json, houses_json, aspects_json, metadata_json')
-    .eq('user_id', user.id)
-    .single();
+  const [chartResult, signalResult, sub] = await Promise.all([
+    supabase
+      .from('natal_charts')
+      .select('placements_json, angles_json, houses_json, aspects_json, metadata_json')
+      .eq('user_id', user.id)
+      .single(),
+    supabase
+      .from('life_signals')
+      .select('life_domain, themes_json, signal_timestamp')
+      .eq('user_id', user.id)
+      .order('signal_timestamp', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    getSubscription(user.id),
+  ]);
 
-  if (!chartRow) {
+  const paid = isActive(sub);
+
+  if (!chartResult.data) {
     return (
       <main className="mx-auto w-full max-w-xl px-5 pb-24 pt-10 text-center sm:px-6">
         <p className="text-sm text-[var(--color-text-muted)]">Complete onboarding to see your daily reading.</p>
@@ -35,20 +54,20 @@ export default async function DailyReadingPage() {
     );
   }
 
-  track('daily_reading_viewed', { userId: user.id });
+  track('daily_reading_viewed', { userId: user.id, paid: String(paid) });
 
   const richChart: RichChart = {
-    placements: chartRow.placements_json,
-    angles:     chartRow.angles_json,
-    houses:     chartRow.houses_json ?? [],
-    aspects:    chartRow.aspects_json,
-    metadata:   chartRow.metadata_json,
+    placements: chartResult.data.placements_json,
+    angles:     chartResult.data.angles_json,
+    houses:     chartResult.data.houses_json ?? [],
+    aspects:    chartResult.data.aspects_json,
+    metadata:   chartResult.data.metadata_json,
   };
 
-  const simpleChart = toSimpleChart(richChart);
+  const natalSummary = buildNatalSummary(richChart);
   const todayTransits = calculateTransitsForDate(new Date(), richChart);
-  const guidance = interpretTransits(todayTransits.transits, simpleChart);
-  const overview = buildTransitOverview(todayTransits.transits, simpleChart);
+  const guidance = interpretTransits(todayTransits.transits, natalSummary);
+  const overview = buildTransitOverview(todayTransits.transits, natalSummary);
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -57,16 +76,42 @@ export default async function DailyReadingPage() {
     day:     'numeric',
   });
 
-  // Filter to domains that actually have signal
   const activeGuidance = guidance.filter((g) => g.intensity !== 'low');
   const quietGuidance = guidance.filter((g) => g.intensity === 'low');
+  const visibleGuidance = paid ? activeGuidance : activeGuidance.slice(0, 1);
+  const hiddenGuidance = paid ? [] : activeGuidance.slice(1);
+  const hiddenTransitCount = Math.max(todayTransits.transits.length - visibleGuidance.length, 0);
+  const hiddenDomainText = describeHiddenDomains(hiddenGuidance.map((g) => g.domain));
+
+  // Arc memory: fetch structured transit memory context (non-fatal — falls back to signal-based cue)
+  const arcMemory = await getRelevantTransitMemoryForToday(user.id).catch(() => null);
+
+  const memoryCue = buildDailyMemoryCue({
+    signal: signalResult.data as { life_domain?: string | null; themes_json?: string[] | null } | null,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    arcMemory: arcMemory as any,
+    nowMs: Date.now(),
+  });
+
+  // Explainability note: deterministic "why am I seeing this?" evidence trail.
+  // Non-fatal: only rendered when arcMemory has qualifying arc evidence.
+  // Evidence-bounded: only reads recurrence_count, first_active_date, tightest_orb,
+  // state, signalCount, arcCount — all stored columns, no inference.
+  const explanationNote =
+    arcMemory && arcMemory.confidence !== 'none'
+      ? buildExplainabilityNote({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          activeArcs: (arcMemory.activeArcs ?? []) as any[],
+          recurringDomains: arcMemory.recurringDomains,
+        })
+      : null;
 
   return (
     <main className="mx-auto w-full max-w-xl px-5 pb-24 pt-10 sm:px-6 sm:pt-14">
       <header className="mb-10 text-center">
         <div className="mx-auto mb-6 h-px w-12 bg-gradient-to-r from-transparent via-[var(--color-copper-dim)] to-transparent" />
         <h1 className="text-3xl font-light tracking-[0.15em] text-[var(--color-text)]">
-          Daily Reading
+          {paid ? 'Advanced Daily Reading' : 'Daily Reading'}
         </h1>
         <time className="mt-2 block text-[10px] uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
           {today}
@@ -74,7 +119,6 @@ export default async function DailyReadingPage() {
         <div className="mt-6 h-px w-full bg-gradient-to-r from-transparent via-[var(--color-border-subtle)] to-transparent" />
       </header>
 
-      {/* Overview */}
       <section className="mb-8 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5 sm:px-6">
         <p className="mb-1 text-xs font-medium uppercase tracking-widest text-[var(--color-copper)]">
           ◑ Today's Sky
@@ -89,21 +133,67 @@ export default async function DailyReadingPage() {
         )}
       </section>
 
-      {/* Active domains */}
-      {activeGuidance.length > 0 && (
+      <section className="mb-6 rounded-[10px] border border-[var(--color-electric)]/40 bg-[linear-gradient(180deg,rgba(239,68,136,0.08),rgba(239,68,136,0.02))] px-5 py-4">
+        <p className="text-[10px] font-medium uppercase tracking-[0.25em] text-[var(--color-electric)]">
+          SOS noticed
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-[var(--color-text)]">
+          {memoryCue}
+        </p>
+        {explanationNote?.hasExplanation && (
+          <p className="mt-2 text-[10px] leading-relaxed text-[var(--color-text-muted)] opacity-50">
+            {explanationNote.explanationLine}
+          </p>
+        )}
+      </section>
+
+      {visibleGuidance.length > 0 && (
         <section className="mb-6">
           <p className="mb-4 text-[10px] uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
-            What's Active
+            {paid ? `What's Active` : 'Unlocked Today'}
           </p>
           <div className="space-y-4">
-            {activeGuidance.map((result) => (
+            {visibleGuidance.map((result) => (
               <GuidanceCard key={result.domain} result={result} />
             ))}
           </div>
         </section>
       )}
 
-      {/* Quiet domains */}
+      {!paid && hiddenTransitCount > 0 && (
+        <section className="mb-8 rounded-[10px] border border-[var(--color-electric)] bg-[linear-gradient(180deg,rgba(239,68,136,0.08),rgba(239,68,136,0.02))] px-5 py-5 sm:px-6">
+          <p className="text-xs font-medium uppercase tracking-widest text-[var(--color-electric)]">
+            ✦ More is active today
+          </p>
+          <p className="mt-3 text-sm leading-relaxed text-[var(--color-text)]">
+            {hiddenTransitCount} more transits are active today — affecting {hiddenDomainText}.
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">
+            Get full access to everything moving in your chart, not just the first thread.
+          </p>
+          <Link
+            href="/upgrade"
+            className="mt-5 flex items-center justify-between rounded-[10px] border border-[var(--color-electric)] bg-[var(--color-surface)] px-5 py-4 text-sm text-[var(--color-text)] hover:border-[var(--color-text)]"
+          >
+            <span>Unlock full access</span>
+            <span className="text-[var(--color-electric)]">→</span>
+          </Link>
+        </section>
+      )}
+
+      {paid && activeGuidance.length > 1 && (
+        <section className="mb-6">
+          <p className="mb-4 text-[10px] uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
+            What's Active
+          </p>
+          <div className="space-y-4">
+            {activeGuidance.slice(1).map((result) => (
+              <GuidanceCard key={result.domain} result={result} />
+            ))}
+          </div>
+        </section>
+      )}
+
       {quietGuidance.length > 0 && (
         <section className="mb-8">
           <p className="mb-4 text-[10px] uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
@@ -127,13 +217,12 @@ export default async function DailyReadingPage() {
         </section>
       )}
 
-      {/* Transit list */}
       <section className="mb-6 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5 sm:px-6">
         <p className="mb-4 text-xs font-medium uppercase tracking-widest text-[var(--color-copper)]">
           ✦ Active Transits
         </p>
         <div className="space-y-2">
-          {todayTransits.transits.slice(0, 10).map((t, i) => (
+          {todayTransits.transits.slice(0, paid ? 10 : 3).map((t, i) => (
             <div key={i} className="flex items-center justify-between text-sm">
               <span className="text-[var(--color-text)]">
                 {t.transitPlanet} <span className="text-[var(--color-text-muted)]">{t.aspect}</span> {t.natalPlanet}
@@ -146,13 +235,12 @@ export default async function DailyReadingPage() {
         </div>
       </section>
 
-      {/* CTA to journal */}
       <div className="pt-2">
         <Link
           href="/journal"
           className="flex items-center justify-between rounded-[10px] border border-[var(--color-border-subtle)] px-5 py-4 text-sm text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:text-[var(--color-text)]"
         >
-          <span>Bring this to your journal</span>
+          <span>Bring this to Chat with Aeon</span>
           <span className="text-[var(--color-copper-dim)]">→</span>
         </Link>
       </div>

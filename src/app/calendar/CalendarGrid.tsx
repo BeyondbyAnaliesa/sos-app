@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { DailyTransits, Aspect } from '@/data/transits';
+import type { DailyTransits, Aspect } from '@/lib/astrology/domain-types';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 

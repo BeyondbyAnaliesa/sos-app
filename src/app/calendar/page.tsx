@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import { calculateTransitsForRange } from '@/lib/astrology/calculate-transits';
 import { getSubscription, isActive } from '@/lib/subscription';
 import type { NatalChart as RichChart } from '@/lib/astrology/types';
-import type { DailyTransits } from '@/data/transits';
+import type { DailyTransits } from '@/lib/astrology/domain-types';
 import CalendarGrid from './CalendarGrid';
 import { track } from '@/lib/analytics';
 import BottomNav from '@/components/BottomNav';

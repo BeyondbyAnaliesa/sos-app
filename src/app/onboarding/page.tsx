@@ -38,6 +38,28 @@ function clearProgress() {
   try { localStorage.removeItem(STORAGE_KEY); } catch { /* noop */ }
 }
 
+function ReadingLoader() {
+  return (
+    <div className="py-20 text-center">
+      <div className="mx-auto mb-6 flex items-center justify-center gap-3">
+        <div className="relative flex h-12 w-12 items-center justify-center rounded-full border border-[var(--color-electric)]/40">
+          <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-[var(--color-electric)] animate-spin" />
+          <span className="text-lg text-[var(--color-electric)] animate-pulse">✦</span>
+        </div>
+        <div className="flex gap-1 text-[var(--color-electric)]">
+          <span className="animate-bounce [animation-delay:-0.3s]">✦</span>
+          <span className="animate-bounce [animation-delay:-0.15s]">✦</span>
+          <span className="animate-bounce">✦</span>
+        </div>
+      </div>
+      <p className="text-sm text-[var(--color-text)]">Building your first reading…</p>
+      <p className="mt-2 text-xs text-[var(--color-text-muted)]">
+        This usually takes under a minute. SOS is synthesizing your chart and your answers.
+      </p>
+    </div>
+  );
+}
+
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep]   = useState(0);
@@ -125,6 +147,14 @@ export default function OnboardingPage() {
   // Determine which question we're on (steps 3–10 map to questions 0–7)
   const questionIndex = step - 3;
   const currentQuestion = ONBOARDING_QUESTIONS[questionIndex];
+  const canGoBack = step >= 1 && step <= 10 && !loading;
+
+  function handleBack() {
+    if (step <= 0) return;
+    const prevStep = step - 1;
+    setStep(prevStep);
+    saveProgress(prevStep, answers, chartSummary);
+  }
 
   // When the last question is answered, trigger report generation
   function handleQuestionContinue() {
@@ -151,6 +181,21 @@ export default function OnboardingPage() {
 
   return (
     <main className="mx-auto w-full max-w-xl px-5 py-8 sm:px-6 sm:py-10">
+      {step > 0 && (
+        <div className="mb-4 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={handleBack}
+            disabled={!canGoBack}
+            className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-[var(--color-text-muted)] hover:text-[var(--color-electric)] disabled:cursor-not-allowed disabled:opacity-30"
+          >
+            <span>←</span>
+            <span>Back</span>
+          </button>
+          {step <= 10 && <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--color-text-muted)]">Onboarding</span>}
+        </div>
+      )}
+
       {step > 0 && <ProgressBar step={step} />}
 
       {error && (
@@ -186,22 +231,23 @@ export default function OnboardingPage() {
 
       {/* Step 11: Report */}
       {step === 11 && !report && (
-        <div className="py-20 text-center">
-          <p className="text-sm text-[var(--color-text-muted)]">
-            {loading ? 'Building your first reading…' : 'Ready to generate your reading.'}
-          </p>
-          <p className="mt-2 text-xs text-[var(--color-text-muted)] opacity-60">
-            {loading ? 'This takes a moment. SOS is synthesizing your chart and your answers.' : ''}
-          </p>
-          {!loading && error && (
-            <button
-              onClick={() => { setError(null); handleComplete(); }}
-              className="mt-6 rounded-[10px] border border-[var(--color-border-subtle)] px-6 py-3 text-sm text-[var(--color-copper)] hover:border-[var(--color-copper)]"
-            >
-              Try again
-            </button>
+        <>
+          {loading ? (
+            <ReadingLoader />
+          ) : (
+            <div className="py-20 text-center">
+              <p className="text-sm text-[var(--color-text-muted)]">Ready to generate your reading.</p>
+              {!loading && error && (
+                <button
+                  onClick={() => { setError(null); handleComplete(); }}
+                  className="mt-6 rounded-[10px] border border-[var(--color-border-subtle)] px-6 py-3 text-sm text-[var(--color-copper)] hover:border-[var(--color-copper)]"
+                >
+                  Try again
+                </button>
+              )}
+            </div>
           )}
-        </div>
+        </>
       )}
 
       {step === 11 && report && (

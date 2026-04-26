@@ -9,13 +9,20 @@ import { buildNatalReadingPrompt, type NatalReadingReport } from '@/lib/natal-re
 
 import { find as findTimezone } from 'geo-tz';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function getOpenAIClient() {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY is not configured');
+  }
+
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 // Fire-and-forget: generates the deep natal reading in the background
 // so it's ready by the time the user finishes onboarding questions.
 async function generateNatalReading(userId: string, chart: ReturnType<typeof generateNatalChart>, attempt = 0) {
   try {
     const { system, user } = buildNatalReadingPrompt(chart);
+    const openai = getOpenAIClient();
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
       response_format: { type: 'json_object' },

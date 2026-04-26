@@ -3,8 +3,11 @@ import type { NatalChart } from '@/lib/astrology/types';
 export interface OnboardingReport {
   chartReading: string;
   themes: string[];
-  practices: string[];
+  practices?: string[];
   lookAhead: string;
+  aeonBridgeHeadline?: string;
+  aeonBridgeBody?: string;
+  aeonStarterChips?: string[];
 }
 
 function describePlacements(chart: NatalChart): string {
@@ -48,19 +51,26 @@ ${describePlacements(chart)}
 --- KEY ASPECTS ---
 ${describeAspects(chart)}
 
---- PRACTICES INSTRUCTIONS ---
-The user has told you what they have already tried in their personal/spiritual development. READ THAT CAREFULLY.
+--- AEON BRIDGE INSTRUCTIONS ---
+The user should leave this reading wanting to talk to Aeon immediately.
 
-Do NOT suggest practices they already do or have done. If they meditate, don't tell them to meditate. If they journal, don't tell them to journal (they're already journaling HERE — in this app).
+Instead of giving a generic practices block, create a personalized bridge into Aeon that:
+- names one emotionally charged theme or tension that is specific to this user
+- connects that theme to their chart and what they wrote
+- explains why Aeon is the right next step for THIS person
+- offers 3 short, personal starter questions they could ask right now
 
-Instead, suggest practices that are:
-- SPECIFIC to their chart placements and current life situation
-- SURPRISING — something they haven't encountered before, or a twist on something familiar that makes it feel new
-- IMMEDIATELY actionable — not "consider reflecting on..." but "tonight, do X"
-- ASTROLOGICALLY GROUNDED — tied to a specific planet, sign, or transit, not generic wellness advice
+The bridge should feel like: "Aeon already sees the thread and knows where to start."
+Not: "Here is homework."
 
-Bad example: "Try journaling about your emotions for 10 minutes."
-Good example: "With your Moon in Pisces in the 5th house, your emotional clarity comes through creative play, not introspection. Spend 20 minutes making something ugly on purpose — collage, paint, clay — and notice what feelings surface when perfection isn't the point."
+Starter chips should be:
+- short enough to fit on UI chips
+- emotionally specific
+- tied to their actual life, not generic astrology
+- phrased like real questions a human would ask in vulnerable honesty
+
+Bad chip: "Tell me about my chart"
+Good chip: "How do I work with this love pattern?"
 
 --- RESPONSE FORMAT ---
 Respond ONLY with valid JSON matching this exact shape:
@@ -72,11 +82,16 @@ Respond ONLY with valid JSON matching this exact shape:
     "Theme 3 — another theme"
   ],
   "practices": [
-    "Practice 1 — specific, surprising, tied to their chart. See instructions above.",
-    "Practice 2 — different modality than practice 1",
-    "Practice 3 — different modality than practices 1 and 2"
+    "Optional fallback only if useful. Avoid generic self-help."
   ],
-  "lookAhead": "1-2 paragraphs. What they can expect from SOS going forward — how each journal entry teaches the system more about them, how the readings get sharper over time. Frame it as a partnership that grows. Make them want to come back tomorrow."
+  "lookAhead": "1-2 paragraphs. Make this feel urgent and alive. Explain what unlocks next inside SOS, what gets sharper once they keep using it, and why coming back tomorrow matters. This should create momentum, not just reassurance.",
+  "aeonBridgeHeadline": "One strong line that names the live emotional/chart tension Aeon should help with next.",
+  "aeonBridgeBody": "2-3 sentences explaining why Aeon is the right next step for this specific user, grounded in their chart and what they wrote.",
+  "aeonStarterChips": [
+    "Short personal question 1",
+    "Short personal question 2",
+    "Short personal question 3"
+  ]
 }`;
 
   const user = `Here are my onboarding answers:

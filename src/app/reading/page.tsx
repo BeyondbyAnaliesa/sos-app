@@ -120,6 +120,7 @@ export default async function ReadingPage() {
           </p>
           <ReadingRefresh />
         </div>
+        <BottomNav />
       </main>
     );
   }

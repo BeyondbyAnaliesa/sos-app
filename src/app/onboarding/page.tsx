@@ -236,7 +236,7 @@ export default function OnboardingPage() {
             <ReadingLoader />
           ) : (
             <div className="py-20 text-center">
-              <p className="text-sm text-[var(--color-text-muted)]">Ready to generate your reading.</p>
+              {!error && <p className="text-sm text-[var(--color-text-muted)]">Ready to generate your reading.</p>}
               {!loading && error && (
                 <button
                   onClick={() => { setError(null); handleComplete(); }}

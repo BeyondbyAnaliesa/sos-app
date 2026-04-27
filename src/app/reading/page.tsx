@@ -62,7 +62,9 @@ function ordinal(n: number): string {
   return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
 }
 
-function splitParagraphs(text: string) {
+// Guard against null/undefined from GPT-generated reading fields.
+function splitParagraphs(text: string | null | undefined): string[] {
+  if (!text) return [];
   return text.split('\n\n').filter(Boolean);
 }
 

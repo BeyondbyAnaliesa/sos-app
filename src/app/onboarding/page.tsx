@@ -217,6 +217,22 @@ export default function OnboardingPage() {
         <ChartRevealStep chart={chartSummary} onContinue={() => setStep(3)} />
       )}
 
+      {/* Step 2 fallback: chartSummary lost (bad localStorage restore — go back to step 1) */}
+      {step === 2 && !chartSummary && (
+        <div className="py-12 text-center">
+          <p className="text-sm text-[var(--color-text-muted)]">
+            Your birth data needs to be entered again.
+          </p>
+          <button
+            type="button"
+            onClick={() => { setStep(1); saveProgress(1, answers, null); }}
+            className="mt-6 rounded-[10px] border border-[var(--color-border-subtle)] px-6 py-3 text-sm text-[var(--color-copper)] hover:border-[var(--color-copper)]"
+          >
+            Re-enter birth data
+          </button>
+        </div>
+      )}
+
       {/* Steps 3–10: Questions (8 questions) */}
       {step >= 3 && step <= 10 && currentQuestion && (
         <QuestionStep

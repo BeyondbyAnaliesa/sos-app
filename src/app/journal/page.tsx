@@ -321,7 +321,15 @@ function JournalPageInner() {
           )}
 
           {usageError && (
-            <p className="mb-4 text-xs text-red-400">{usageError}</p>
+            <div className="mb-4 flex items-center gap-3">
+              <p className="text-xs text-red-400">{usageError}</p>
+              <button
+                onClick={refreshUsage}
+                className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text)] underline"
+              >
+                Retry
+              </button>
+            </div>
           )}
 
           <div className="flex-1 space-y-6 pb-4">

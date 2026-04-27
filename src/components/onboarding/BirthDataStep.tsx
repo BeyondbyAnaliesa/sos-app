@@ -20,6 +20,7 @@ interface Props {
 }
 
 export default function BirthDataStep({ onSubmit, loading }: Props) {
+  const today = new Date().toISOString().split('T')[0];
   const [birthDate, setBirthDate]       = useState('');
   const [birthTime, setBirthTime]       = useState('');
   const [timeUnknown, setTimeUnknown]   = useState(false);
@@ -126,6 +127,7 @@ export default function BirthDataStep({ onSubmit, loading }: Props) {
             type="date"
             value={birthDate}
             onChange={(e) => setBirthDate(e.target.value)}
+            max={today}
             required
             className="h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-input)] px-4 text-base text-[var(--color-text)] focus:border-[var(--color-border)] focus:outline-none"
           />

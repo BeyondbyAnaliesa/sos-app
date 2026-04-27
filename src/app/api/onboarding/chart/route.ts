@@ -65,6 +65,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'birthDate and locationText are required' }, { status: 400 });
     }
 
+    // Reject future birth dates — a future date produces a meaningless chart.
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    if (birthDate > todayStr) {
+      return NextResponse.json({ error: 'Birth date cannot be in the future.' }, { status: 400 });
+    }
+
     // Geocode location
     const geo = await geocodeLocation(locationText);
 

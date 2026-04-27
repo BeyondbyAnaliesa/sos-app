@@ -13,6 +13,7 @@ import GuidanceCard from '@/components/GuidanceCard';
 import { getSubscription, isActive } from '@/lib/subscription';
 import { getRelevantTransitMemoryForToday } from '@/lib/astrology/memory-store';
 import { buildExplainabilityNote, buildDailyMemoryCue, describeHiddenDomains } from '@/lib/astrology/pure-fns';
+import UnlockCTA from '@/components/UnlockCTA';
 
 // DOMAIN_LABELS and describeHiddenDomains have been extracted to pure-fns.ts.
 // buildMemoryCue has been extracted to pure-fns.ts as buildDailyMemoryCue.
@@ -171,13 +172,9 @@ export default async function DailyReadingPage() {
           <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">
             Get full access to everything moving in your chart, not just the first thread.
           </p>
-          <Link
-            href="/upgrade"
-            className="mt-5 flex items-center justify-between rounded-[10px] border border-[var(--color-electric)] bg-[var(--color-surface)] px-5 py-4 text-sm text-[var(--color-text)] hover:border-[var(--color-text)]"
-          >
-            <span>Unlock full access</span>
-            <span className="text-[var(--color-electric)]">→</span>
-          </Link>
+          <div className="mt-5">
+            <UnlockCTA />
+          </div>
         </section>
       )}
 

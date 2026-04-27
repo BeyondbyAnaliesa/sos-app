@@ -6,6 +6,7 @@ import { getHouse } from '@/lib/astrology/domain-types';
 import { getSubscription, isActive } from '@/lib/subscription';
 import ReadingRefresh from '@/components/ReadingRefresh';
 import { track } from '@/lib/analytics';
+import UnlockCTA from '@/components/UnlockCTA';
 import BottomNav from '@/components/BottomNav';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -367,6 +368,13 @@ export default async function ReadingPage() {
             <span className="text-[var(--color-copper-dim)]">→</span>
           </Link>
         </div>
+
+        {/* Global unlock CTA — shown at the bottom for free users on every locked surface */}
+        {!paid && (
+          <div className="pt-4">
+            <UnlockCTA label="Unlock your full chart" />
+          </div>
+        )}
 
       </div>
       <BottomNav />

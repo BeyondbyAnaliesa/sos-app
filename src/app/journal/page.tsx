@@ -4,6 +4,7 @@ import { Suspense, useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
+import UnlockCTA from '@/components/UnlockCTA';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -238,13 +239,9 @@ function JournalPageInner() {
                 {usageSummary.body}
               </p>
               {usageSummary.locked && (
-                <Link
-                  href="/upgrade"
-                  className="mt-4 flex items-center justify-between rounded-[10px] border border-[var(--color-electric)] bg-[var(--color-surface)] px-5 py-4 text-sm text-[var(--color-text)] hover:border-[var(--color-text)]"
-                >
-                  <span>Go deeper with Aeon</span>
-                  <span className="text-[var(--color-electric)]">→</span>
-                </Link>
+                <div className="mt-4">
+                  <UnlockCTA label="Go deeper with Aeon" />
+                </div>
               )}
             </div>
           )}
@@ -316,13 +313,9 @@ function JournalPageInner() {
                 {usageSummary.body}
               </p>
               {usageSummary.locked && (
-                <Link
-                  href="/upgrade"
-                  className="mt-4 flex items-center justify-between rounded-[10px] border border-[var(--color-electric)] bg-[var(--color-surface)] px-5 py-4 text-sm text-[var(--color-text)] hover:border-[var(--color-text)]"
-                >
-                  <span>Upgrade for unlimited conversations</span>
-                  <span className="text-[var(--color-electric)]">→</span>
-                </Link>
+                <div className="mt-4">
+                  <UnlockCTA label="Upgrade for unlimited conversations" />
+                </div>
               )}
             </div>
           )}

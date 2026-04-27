@@ -1,9 +1,16 @@
 import type { OnboardingReport } from '@/lib/onboarding-prompt';
 import AeonBridgeBox from '@/components/onboarding/AeonBridgeBox';
 
+// splitReport: safe paragraph splitter for report fields — handles null/undefined from GPT
+function splitReport(text: string | null | undefined): string[] {
+  if (!text) return [];
+  return text.split('\n\n').filter(Boolean);
+}
+
 function buildFallbackBridge(report: OnboardingReport) {
-  const headline = report.aeonBridgeHeadline ?? report.themes[0] ?? 'There is a live thread in your chart worth following right now.';
-  const body = report.aeonBridgeBody ?? report.lookAhead.split('\n\n')[0] ?? 'Aeon can help you work with what is active right now in your chart and your life.';
+  const headline = report.aeonBridgeHeadline ?? (Array.isArray(report.themes) ? report.themes[0] : undefined) ?? 'There is a live thread in your chart worth following right now.';
+  // Guard: lookAhead may be undefined if GPT dropped the field; fall through to static copy.
+  const body = report.aeonBridgeBody ?? (report.lookAhead ? report.lookAhead.split('\n\n')[0] : undefined) ?? 'Aeon can help you work with what is active right now in your chart and your life.';
   const starterChips = report.aeonStarterChips?.filter(Boolean)?.slice(0, 3) ?? report.practices?.filter(Boolean)?.slice(0, 3) ?? [
     'How do I work with this love pattern?',
     'What is my chart trying to show me?',
@@ -23,7 +30,7 @@ export default function NatalReading({ report }: { report: OnboardingReport }) {
           ◆ Your Chart Reading
         </p>
         <div className="space-y-3 text-sm leading-relaxed text-[var(--color-text-muted)]">
-          {report.chartReading.split('\n\n').map((paragraph, i) => (
+          {splitReport(report.chartReading).map((paragraph, i) => (
             <p key={i}>{paragraph}</p>
           ))}
         </div>
@@ -35,7 +42,7 @@ export default function NatalReading({ report }: { report: OnboardingReport }) {
           ◇ Themes to Watch
         </p>
         <ol className="space-y-3">
-          {report.themes.map((theme, i) => (
+          {(Array.isArray(report.themes) ? report.themes : []).map((theme, i) => (
             <li key={i} className="flex gap-3 text-sm leading-relaxed text-[var(--color-text-muted)]">
               <span className="mt-0.5 shrink-0 text-[10px] font-medium text-[var(--color-copper-dim)]">
                 {i + 1}
@@ -58,7 +65,7 @@ export default function NatalReading({ report }: { report: OnboardingReport }) {
           ◆ What Comes Next
         </p>
         <div className="space-y-3 text-sm leading-relaxed text-[var(--color-text)]">
-          {report.lookAhead.split('\n\n').map((paragraph, i) => (
+          {splitReport(report.lookAhead).map((paragraph, i) => (
             <p key={i}>{paragraph}</p>
           ))}
         </div>

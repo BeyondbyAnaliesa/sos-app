@@ -3,7 +3,7 @@ export const runtime = 'nodejs'; // required for sweph
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { calculateTransitsForDate } from '@/lib/astrology/calculate-transits';
+import { calculateTransitsForDate, calculateTransitsForRange } from '@/lib/astrology/calculate-transits';
 import { interpretTransits, buildTransitOverview } from '@/lib/interpret';
 import type { NatalChart as RichChart } from '@/lib/astrology/types';
 import { buildNatalSummary } from '@/lib/astrology/domain-types';
@@ -78,8 +78,14 @@ export default async function TransitRoomPage() {
 
   const natalSummary = buildNatalSummary(richChart);
   const todayTransits = calculateTransitsForDate(new Date(), richChart);
+  // DR-2: 72-hour look-ahead for calm-day context in the transit room.
+  const lookAheadTransits = calculateTransitsForRange(
+    new Date(Date.now() + 86_400_000),
+    3,
+    richChart,
+  );
   const guidance = interpretTransits(todayTransits.transits, natalSummary);
-  const overview = buildTransitOverview(todayTransits.transits, natalSummary);
+  const overview = buildTransitOverview(todayTransits.transits, natalSummary, { lookAheadTransits });
 
   // Free users: 1 visible, rest locked. (paid is always false here due to redirect above.)
   const { visible, locked, quiet } = partitionTransitRoomGuidance(guidance, paid);

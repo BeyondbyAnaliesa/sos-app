@@ -3,7 +3,7 @@ export const runtime = 'nodejs';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { calculateTransitsForDate } from '@/lib/astrology/calculate-transits';
+import { calculateTransitsForDate, calculateTransitsForRange } from '@/lib/astrology/calculate-transits';
 import { interpretTransits, buildTransitOverview } from '@/lib/interpret';
 import type { NatalChart as RichChart } from '@/lib/astrology/types';
 import { buildNatalSummary } from '@/lib/astrology/domain-types';
@@ -67,8 +67,15 @@ export default async function DailyReadingPage() {
 
   const natalSummary = buildNatalSummary(richChart);
   const todayTransits = calculateTransitsForDate(new Date(), richChart);
+  // DR-2: 72-hour look-ahead so buildTransitOverview can surface incoming transits
+  // on calm days instead of a generic "quiet sky" message.
+  const lookAheadTransits = calculateTransitsForRange(
+    new Date(Date.now() + 86_400_000), // tomorrow
+    3,
+    richChart,
+  );
   const guidance = interpretTransits(todayTransits.transits, natalSummary);
-  const overview = buildTransitOverview(todayTransits.transits, natalSummary);
+  const overview = buildTransitOverview(todayTransits.transits, natalSummary, { lookAheadTransits });
 
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',

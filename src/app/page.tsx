@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { buildTransitOverview, interpretTransits } from '@/lib/interpret';
 import type { GuidanceResult } from '@/lib/interpret';
-import { calculateTransitsForDate } from '@/lib/astrology/calculate-transits';
+import { calculateTransitsForDate, calculateTransitsForRange } from '@/lib/astrology/calculate-transits';
 import type { NatalChart as RichChart } from '@/lib/astrology/types';
 import { buildNatalSummary } from '@/lib/astrology/domain-types';
 import { getSubscription, isActive } from '@/lib/subscription';
@@ -84,8 +84,14 @@ export default async function Home() {
   const todayDate = todayTransits.date;
 
   const activeTransits = todayTransits.transits;
+  // DR-2: 72-hour look-ahead for calm-day context on the home screen.
+  const lookAheadTransits = calculateTransitsForRange(
+    new Date(Date.now() + 86_400_000),
+    3,
+    richChart,
+  );
   const guidance = interpretTransits(activeTransits, natalSummary);
-  const overview = buildTransitOverview(activeTransits, natalSummary);
+  const overview = buildTransitOverview(activeTransits, natalSummary, { lookAheadTransits });
   const lifeSegments = buildLifeSegments(guidance);
   const stateText = buildStateText(guidance);
   // Arc memory: fetch structured transit memory context (non-fatal — falls back to signal-based cue)

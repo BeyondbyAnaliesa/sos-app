@@ -51,7 +51,10 @@ export default async function TransitRoomPage() {
   // Paid users get the full transit calendar.
   if (paid) redirect('/calendar');
 
-  if (!chartResult.data) {
+  // Guard: no chart, or chart row exists with null/malformed columns (partial write, old migration).
+  // Both cases send the user to onboarding to generate a clean chart.
+  // Product decision: Option A (re-onboard). See sos-stability-audit-2026-04-27.md P1-4.
+  if (!chartResult.data || !chartResult.data.placements_json || !chartResult.data.angles_json) {
     return (
       <main className="mx-auto w-full max-w-xl px-5 pb-24 pt-10 text-center sm:px-6">
         <p className="text-sm text-[var(--color-text-muted)]">

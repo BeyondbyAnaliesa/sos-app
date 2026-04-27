@@ -26,7 +26,9 @@ export default async function CalendarPage() {
     .eq('user_id', user.id)
     .single();
 
-  if (!chartRow) {
+  // Guard: no chart, or chart row exists with null/malformed columns.
+  // See sos-stability-audit-2026-04-27.md P1-4.
+  if (!chartRow || !chartRow.placements_json || !chartRow.angles_json) {
     return (
       <main className="mx-auto w-full max-w-xl px-6 py-16 text-center">
         <p className="text-sm text-[var(--color-text-muted)]">Complete onboarding to see your transit calendar.</p>

@@ -168,7 +168,6 @@ function renderIcon(size, maskable) {
   }
 
   // Diagonal small dots (constellation feel)
-  const diagR = Math.max(1, size * 0.015);
   const diagDist = outerR * 1.3;
   const diagA = 140;
   for (const [dx, dy] of [[1, -1], [1, 1], [-1, 1], [-1, -1]]) {

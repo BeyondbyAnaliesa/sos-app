@@ -1,7 +1,6 @@
 'use client';
 
 import { Suspense, useState, useRef, useEffect } from 'react';
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
 import UnlockCTA from '@/components/UnlockCTA';

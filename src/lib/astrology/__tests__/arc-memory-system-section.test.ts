@@ -18,6 +18,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildArcMemorySystemSection } from '../pure-fns';
 import type { ArcMemoryInput, ActiveArcRow } from '../pure-fns';
+import type { DailyTransits } from '../domain-types';
 
 // ── Reference "now": 2026-04-25T12:00:00Z ────────────────────────────────────
 const NOW_MS = new Date('2026-04-25T12:00:00Z').getTime();
@@ -280,7 +281,7 @@ describe('buildArcMemorySystemSection — approaching arc peaks', () => {
         date: '2026-04-27',
         transits: [{ transitPlanet: 'Mars', aspect: 'square', natalPlanet: 'Sun', orb: 0.3 }],
       },
-    ];
+    ] satisfies DailyTransits[];
     const out = buildArcMemorySystemSection({ arcMemory: m, upcomingTransits, nowMs: NOW_MS });
     expect(out).toContain('Approaching arc peaks');
     expect(out).toContain('Mars square Sun');
@@ -298,7 +299,7 @@ describe('buildArcMemorySystemSection — approaching arc peaks', () => {
     const m = mem([testArc]);
     const upcomingTransits = [
       { date: '2026-04-26', transits: [{ transitPlanet: 'Mars', aspect: 'square', natalPlanet: 'Sun', orb: 1.5 }] },
-    ];
+    ] satisfies DailyTransits[];
     const out = buildArcMemorySystemSection({ arcMemory: m, upcomingTransits, nowMs: NOW_MS });
     expect(out).not.toContain('Approaching arc peaks');
   });

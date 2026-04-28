@@ -3,7 +3,7 @@ export const runtime = 'nodejs';
 import Stripe from 'stripe';
 import stripe from '@/lib/stripe';
 import { createAdminClient } from '@/lib/supabase/server';
-import { PLANS } from '@/lib/stripe';
+import { getCanonicalPlanKey, resolvePlanFromPriceId } from '@/lib/stripe';
 import { track } from '@/lib/analytics';
 import { logError } from '@/lib/logger';
 
@@ -35,28 +35,31 @@ export async function POST(request: Request) {
         if (session.mode !== 'subscription') break;
 
         const userId = session.metadata?.supabase_user_id;
-        const plan   = session.metadata?.plan;
         if (!userId) break;
 
         // Retrieve the full subscription object
         const stripeSubId = session.subscription as string;
         const stripeSub = await stripe.subscriptions.retrieve(stripeSubId);
 
+        const item = stripeSub.items.data[0];
+        const plan =
+          getCanonicalPlanKey(session.metadata?.plan) ??
+          resolvePlanFromPriceId(item?.price.id);
+
         track('checkout_complete', { userId: userId ?? undefined, plan: plan ?? undefined });
 
-        const item = stripeSub.items.data[0];
         await admin.from('subscriptions').upsert({
-          user_id:               userId,
-          stripe_customer_id:    session.customer as string,
+          user_id:                userId,
+          stripe_customer_id:     session.customer as string,
           stripe_subscription_id: stripeSubId,
-          stripe_price_id:       item?.price.id ?? null,
-          plan:                  plan ?? resolvePlan(item?.price.id),
-          status:                stripeSub.status,
-          current_period_end:    item?.current_period_end
+          stripe_price_id:        item?.price.id ?? null,
+          plan,
+          status:                 stripeSub.status,
+          current_period_end:     item?.current_period_end
             ? new Date(item.current_period_end * 1000).toISOString()
             : null,
-          cancel_at_period_end:  stripeSub.cancel_at_period_end,
-          updated_at:            new Date().toISOString(),
+          cancel_at_period_end:   stripeSub.cancel_at_period_end,
+          updated_at:             new Date().toISOString(),
         }, { onConflict: 'user_id' });
 
         break;
@@ -70,17 +73,17 @@ export async function POST(request: Request) {
 
         const subItem = sub.items.data[0];
         await admin.from('subscriptions').upsert({
-          user_id:               userId,
-          stripe_customer_id:    sub.customer as string,
+          user_id:                userId,
+          stripe_customer_id:     sub.customer as string,
           stripe_subscription_id: sub.id,
-          stripe_price_id:       subItem?.price.id ?? null,
-          plan:                  resolvePlan(subItem?.price.id),
-          status:                sub.status,
-          current_period_end:    subItem?.current_period_end
+          stripe_price_id:        subItem?.price.id ?? null,
+          plan:                   resolvePlanFromPriceId(subItem?.price.id),
+          status:                 sub.status,
+          current_period_end:     subItem?.current_period_end
             ? new Date(subItem.current_period_end * 1000).toISOString()
             : null,
-          cancel_at_period_end:  sub.cancel_at_period_end,
-          updated_at:            new Date().toISOString(),
+          cancel_at_period_end:   sub.cancel_at_period_end,
+          updated_at:             new Date().toISOString(),
         }, { onConflict: 'user_id' });
 
         break;
@@ -93,11 +96,11 @@ export async function POST(request: Request) {
         if (!userId) break;
 
         await admin.from('subscriptions').upsert({
-          user_id:               userId,
+          user_id:                userId,
           stripe_subscription_id: sub.id,
-          status:                'canceled',
-          cancel_at_period_end:  false,
-          updated_at:            new Date().toISOString(),
+          status:                 'canceled',
+          cancel_at_period_end:   false,
+          updated_at:             new Date().toISOString(),
         }, { onConflict: 'user_id' });
 
         break;
@@ -114,13 +117,4 @@ export async function POST(request: Request) {
   }
 
   return new Response('OK', { status: 200 });
-}
-
-/** Map a Stripe price ID back to our plan key. */
-function resolvePlan(priceId: string | undefined): string | null {
-  if (!priceId) return null;
-  for (const [key, plan] of Object.entries(PLANS)) {
-    if (plan.priceId === priceId) return key;
-  }
-  return null;
 }

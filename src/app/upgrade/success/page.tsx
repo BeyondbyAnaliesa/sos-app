@@ -11,7 +11,7 @@ export default async function SuccessPage() {
   if (!user) redirect('/auth/login');
 
   const sub = await getSubscription(user.id);
-  const planName = sub?.plan ? (PLANS[sub.plan as keyof typeof PLANS]?.name ?? 'Member') : 'Member';
+  const planName = sub?.plan ? (PLANS[sub.plan]?.name ?? 'Member') : 'Member';
 
   let renewalDate: string | null = null;
   if (sub?.currentPeriodEnd) {
@@ -36,7 +36,9 @@ export default async function SuccessPage() {
         <p className="mx-auto mt-4 max-w-sm text-sm leading-relaxed text-[var(--color-text-muted)]">
           {sub?.plan === 'charter_annual'
             ? 'Your Charter rate is locked in for life. This is the price you will pay for as long as SOS exists.'
-            : 'Your annual membership is active. Everything is now unlocked.'}
+            : sub?.billingInterval === 'month'
+              ? 'Your monthly membership is active. Everything is now unlocked.'
+              : 'Your annual membership is active. Everything is now unlocked.'}
         </p>
 
         {renewalDate && (

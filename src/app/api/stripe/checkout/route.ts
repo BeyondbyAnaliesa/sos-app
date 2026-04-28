@@ -2,7 +2,7 @@ export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
-import stripe, { PLANS, type PlanKey } from '@/lib/stripe';
+import stripe, { PLANS, resolveCheckoutPlan } from '@/lib/stripe';
 import { logError } from '@/lib/logger';
 
 export async function POST(request: Request) {
@@ -14,17 +14,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
-    const plan = body.plan as PlanKey;
+    const body = await request.json().catch(() => ({} as Record<string, unknown>));
+    const plan = resolveCheckoutPlan(
+      typeof body.plan === 'string' ? body.plan : null,
+      typeof body.interval === 'string' ? body.interval : null,
+    );
 
-    if (!PLANS[plan]) {
+    if (!plan) {
       return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
     }
 
     const planConfig = PLANS[plan];
     if (!planConfig.priceId) {
       return NextResponse.json(
-        { error: `Price ID for plan "${plan}" is not configured. Set STRIPE_PRICE_ID_CHARTER and STRIPE_PRICE_ID_STANDARD in .env.local.` },
+        { error: `Price ID for plan "${plan}" is not configured. Set STRIPE_PRICE_ID_CHARTER, STRIPE_PRICE_ID_STANDARD, and STRIPE_PRICE_ID_MEMBER_MONTHLY in .env.local.` },
         { status: 500 },
       );
     }
@@ -65,11 +68,13 @@ export async function POST(request: Request) {
       metadata: {
         supabase_user_id: user.id,
         plan,
+        interval: planConfig.interval,
       },
       subscription_data: {
         metadata: {
           supabase_user_id: user.id,
           plan,
+          interval: planConfig.interval,
         },
       },
       allow_promotion_codes: true,

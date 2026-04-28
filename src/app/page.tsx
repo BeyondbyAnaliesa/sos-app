@@ -80,10 +80,10 @@ export default async function Home() {
 
   const chartRow = chartResult.data;
   // Guard: row exists but columns are null/malformed (partial write, schema mismatch, or
-  // old migration) — redirect to onboarding so the user can regenerate a clean chart.
-  // Product decision: Option A (re-onboard). See sos-stability-audit-2026-04-27.md P1-4.
+  // old migration) — redirect to chart-error so the user can regenerate without re-entering
+  // birth data. Option B from sos-stability-audit-2026-04-27.md P1-4.
   if (!chartRow || !chartRow.placements_json || !chartRow.angles_json) {
-    redirect('/onboarding');
+    redirect('/chart-error');
   }
 
   const richChart: RichChart = {

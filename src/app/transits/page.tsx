@@ -1,6 +1,5 @@
 export const runtime = 'nodejs'; // required for sweph
 
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { calculateTransitsForDate, calculateTransitsForRange } from '@/lib/astrology/calculate-transits';
@@ -52,23 +51,12 @@ export default async function TransitRoomPage() {
   if (paid) redirect('/calendar');
 
   // Guard: no chart, or chart row exists with null/malformed columns (partial write, old migration).
-  // Both cases send the user to onboarding to generate a clean chart.
-  // Product decision: Option A (re-onboard). See sos-stability-audit-2026-04-27.md P1-4.
-  if (!chartResult.data || !chartResult.data.placements_json || !chartResult.data.angles_json) {
-    return (
-      <main className="mx-auto w-full max-w-xl px-5 pb-24 pt-10 text-center sm:px-6">
-        <p className="text-sm text-[var(--color-text-muted)]">
-          Complete onboarding to see your transits.
-        </p>
-        <Link
-          href="/onboarding"
-          className="mt-4 block text-xs text-[var(--color-copper-dim)] hover:text-[var(--color-copper)]"
-        >
-          Start onboarding →
-        </Link>
-        <BottomNav />
-      </main>
-    );
+  // No chart row → onboarding. Corrupted chart row → chart-error (Option B, P1-4).
+  if (!chartResult.data) {
+    redirect('/onboarding');
+  }
+  if (!chartResult.data.placements_json || !chartResult.data.angles_json) {
+    redirect('/chart-error');
   }
 
   const richChart: RichChart = {

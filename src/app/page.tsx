@@ -12,10 +12,21 @@ import { getSubscription, isActive } from '@/lib/subscription';
 import { getRelevantTransitMemoryForToday } from '@/lib/astrology/memory-store';
 import { buildHomeMemoryCue, buildStateText } from '@/lib/astrology/pure-fns';
 import Header from '@/components/Header';
+import GuidanceCard from '@/components/GuidanceCard';
 import LandingPage from '@/components/LandingPage';
 import LifeWheel from '@/components/LifeWheel';
 import type { LifeSegmentData, LifeSignal } from '@/components/LifeWheel';
 import BottomNav from '@/components/BottomNav';
+
+// H-1: Short life-area tags for locked transit rows. Matches existing domain taxonomy.
+const HOME_DOMAIN_TAGS = {
+  body:          'Body',
+  mind:          'Mind',
+  spirit:        'Spirit',
+  relationships: 'Relationships',
+  career:        'Career',
+  home:          'Home',
+} as const;
 
 function buildLifeSegments(guidance: GuidanceResult[]): LifeSegmentData[] {
   const g = Object.fromEntries(guidance.map((r) => [r.domain, r]));
@@ -87,10 +98,10 @@ export default async function Home() {
   const todayDate = todayTransits.date;
 
   const activeTransits = todayTransits.transits;
-  // DR-2: 72-hour look-ahead for calm-day context on the home screen.
+  // DR-2: 7-day look-ahead for calm-day context on the home screen.
   const lookAheadTransits = calculateTransitsForRange(
     new Date(Date.now() + 86_400_000),
-    3,
+    7,
     richChart,
   );
   const guidance = interpretTransits(activeTransits, natalSummary);
@@ -107,6 +118,10 @@ export default async function Home() {
     arcMemory: arcMemory as any,
     nowMs: Date.now(),
   });
+
+  // H-1: transit tease — one revealed, rest locked for free users.
+  const activeGuidanceForHome = guidance.filter((g) => g.intensity !== 'low');
+  const lockedGuidance = paid ? [] : activeGuidanceForHome.slice(1);
 
   const controls = [
     {
@@ -188,6 +203,54 @@ export default async function Home() {
           ))}
         </div>
       </section>
+
+      {/* H-1: Transit tease — one guidance card revealed, rest shown as a locked list */}
+      {activeGuidanceForHome.length > 0 && (
+        <section className="mt-8">
+          <p className="mb-4 text-[10px] uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
+            Unlocked Today
+          </p>
+          <GuidanceCard result={activeGuidanceForHome[0]} />
+          {!paid && lockedGuidance.length > 0 && (
+            <div className="mt-3 overflow-hidden rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)]">
+              {/* Lock badge + thirst copy at the TOP of the locked block */}
+              <div className="border-b border-[var(--color-border-subtle)] px-5 py-4">
+                <span className="text-[10px] font-medium uppercase tracking-widest text-[var(--color-electric)]">
+                  ◈ Member
+                </span>
+                <p className="mt-1.5 text-sm text-[var(--color-text-muted)]">
+                  {/* SHIPPED: count-based, concrete and specific */}
+                  {lockedGuidance.length} more {lockedGuidance.length === 1 ? 'transit is' : 'transits are'} active in your chart right now.
+                  {/* ALT: "The rest of your sky is moving. Unlock to see where." */}
+                  {/* ALT: "More is alive in your chart than this." */}
+                </p>
+                <Link
+                  href="/upgrade"
+                  className="mt-2 inline-block text-xs text-[var(--color-copper-dim)] hover:text-[var(--color-copper)]"
+                >
+                  Unlock full access →
+                </Link>
+              </div>
+              {/* Locked transit rows — title + life-area tag only, no explanation */}
+              <div className="pointer-events-none select-none opacity-50">
+                {lockedGuidance.map((g) => (
+                  <div
+                    key={g.domain}
+                    className="flex items-center justify-between border-b border-[var(--color-border-subtle)] px-5 py-3 last:border-b-0"
+                  >
+                    <span className="capitalize text-sm text-[var(--color-text)]">
+                      {g.summary}
+                    </span>
+                    <span className="ml-3 shrink-0 rounded-full border border-[var(--color-border-subtle)] px-2.5 py-0.5 text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">
+                      {HOME_DOMAIN_TAGS[g.domain as keyof typeof HOME_DOMAIN_TAGS] ?? g.domain}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       <div className="mt-8 text-center">
         {paid ? (

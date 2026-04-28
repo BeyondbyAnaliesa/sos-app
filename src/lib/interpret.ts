@@ -28,7 +28,7 @@ interface TransitSignature {
   domain: Domain;
 }
 
-interface IncomingHighlight {
+export interface IncomingHighlight {
   dateStr: string;
   daysFromNow: number;
   transitPlanet: string;
@@ -333,7 +333,7 @@ function buildQuietWindowDetail(transits: Transit[]): string {
  * Scan look-ahead DailyTransits for the first meaningful transit per day.
  * Returns up to 3 highlights (one per day), deduplicated by transit key.
  */
-function scanIncomingHighlights(
+export function scanIncomingHighlights(
   lookAheadTransits: DailyTransits[],
   natalChart: NatalSummary,
 ): IncomingHighlight[] {

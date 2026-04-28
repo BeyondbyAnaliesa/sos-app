@@ -18,6 +18,13 @@ import { extractLifeSignals } from '@/lib/astrology/life-signal-extract';
 import { track } from '@/lib/analytics';
 import { logError } from '@/lib/logger';
 import { consumeAeonTurn, getAeonUsageStatus } from '@/lib/aeon/usage';
+import {
+  createSecureJournalEntry,
+  insertSecureJournalMessage,
+  listSecureJournalEntries,
+  listSecureJournalMessages,
+  updateSecureJournalMessageContent,
+} from '@/lib/journal/secure-store';
 
 function getOpenAIClient() {
   if (!process.env.OPENAI_API_KEY) {
@@ -59,19 +66,11 @@ export async function POST(request: Request) {
     let resolvedEntryId = entryId;
 
     if (entryText?.trim()) {
-      const { data: entry, error } = await admin
-        .from('journal_entries')
-        .insert({
-          user_id:    user.id,
-          entry_text: entryText.trim(),
-          entry_date: new Date().toISOString().split('T')[0],
-        })
-        .select('id')
-        .single();
-
-      if (error || !entry) {
-        return new Response('Failed to save entry', { status: 500 });
-      }
+      const entry = await createSecureJournalEntry(admin, {
+        userId: user.id,
+        entryText: entryText.trim(),
+        entryDate: new Date().toISOString().split('T')[0],
+      });
       resolvedEntryId = entry.id;
 
       track('journal_entry_created', { userId: user.id, entryId: entry.id });
@@ -197,17 +196,11 @@ export async function POST(request: Request) {
       ?.slice(0, 1200) ?? '';
     journalMemoryAudit['recurringContextPreview'] = recurringContextResultPreview;
 
-    const journalAuditInsert = await admin.from('journal_messages').insert({
-      entry_id: resolvedEntryId,
+    const journalAuditEntry = await insertSecureJournalMessage(admin, {
+      entryId: resolvedEntryId,
       role: 'assistant',
       content: `[MEMORY_AUDIT]\n${JSON.stringify(journalMemoryAudit)}`,
-    }).select('id').single();
-
-    if (journalAuditInsert.error) {
-      throw journalAuditInsert.error;
-    }
-
-    const journalAuditEntry = journalAuditInsert.data;
+    });
     journalMemoryAudit['journalMessagesAvailable'] = true;
 
     // Build raw upcoming context string for Aeon — reuses upcomingTransitsForScan
@@ -231,14 +224,12 @@ export async function POST(request: Request) {
 
     // --- Fetch recent prior journal entries for Day 2+ callback ---
     let priorEntriesContext = '';
-    const { data: recentEntries } = await admin
-      .from('journal_entries')
-      .select('entry_text, entry_date')
-      .eq('user_id', user.id)
-      .order('entry_date', { ascending: false })
-      .limit(7);
+    const recentEntries = await listSecureJournalEntries(admin, {
+      userId: user.id,
+      limit: 7,
+    });
 
-    if (recentEntries && recentEntries.length > 0) {
+    if (recentEntries.length > 0) {
       // Exclude today's entry if it's the one we just created
       const todayStr = new Date().toISOString().split('T')[0];
       const prior = recentEntries.filter((e: { entry_text: string; entry_date: string }) => {
@@ -264,17 +255,9 @@ export async function POST(request: Request) {
     // --- Build conversation ---
     const systemPrompt = buildSystemPrompt(natalSummary, todayTransits, userContext) + arcMemorySection + recurringTransitContext + upcomingContext + priorEntriesContext;
 
-    const existingMessagesResult = await admin
-      .from('journal_messages')
-      .select('role, content')
-      .eq('entry_id', resolvedEntryId)
-      .order('created_at', { ascending: true });
-
-    if (existingMessagesResult.error) {
-      throw existingMessagesResult.error;
-    }
-
-    const existingMessages = existingMessagesResult.data;
+    const existingMessages = await listSecureJournalMessages(admin, {
+      entryId: resolvedEntryId,
+    });
 
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
       { role: 'system', content: systemPrompt },
@@ -284,15 +267,11 @@ export async function POST(request: Request) {
       const userMsg = `Date: ${todayTransits.date}\n\nMy journal entry:\n${entryText.trim()}`;
       messages.push({ role: 'user', content: userMsg });
 
-      const userMessageInsert = await admin.from('journal_messages').insert({
-        entry_id: resolvedEntryId,
-        role:     'user',
-        content:  userMsg,
+      await insertSecureJournalMessage(admin, {
+        entryId: resolvedEntryId,
+        role: 'user',
+        content: userMsg,
       });
-
-      if (userMessageInsert.error) {
-        throw userMessageInsert.error;
-      }
     } else if (message?.trim()) {
       if (existingMessages) {
         for (const msg of existingMessages) {
@@ -301,15 +280,11 @@ export async function POST(request: Request) {
       }
       messages.push({ role: 'user', content: message.trim() });
 
-      const userMessageInsert = await admin.from('journal_messages').insert({
-        entry_id: resolvedEntryId,
-        role:     'user',
-        content:  message.trim(),
+      await insertSecureJournalMessage(admin, {
+        entryId: resolvedEntryId,
+        role: 'user',
+        content: message.trim(),
       });
-
-      if (userMessageInsert.error) {
-        throw userMessageInsert.error;
-      }
     }
 
     // --- Stream the AI response ---
@@ -334,32 +309,22 @@ export async function POST(request: Request) {
             }
           }
 
-          const assistantInsert = await admin.from('journal_messages').insert({
-            entry_id: resolvedEntryId,
-            role:     'assistant',
-            content:  fullResponse,
-          });
-
           await consumeAeonTurn(user.id);
 
-          if (assistantInsert.error) {
-            throw assistantInsert.error;
-          }
+          await insertSecureJournalMessage(admin, {
+            entryId: resolvedEntryId,
+            role: 'assistant',
+            content: fullResponse,
+          });
 
           if (journalAuditEntry?.id) {
-            const auditUpdate = await admin
-              .from('journal_messages')
-              .update({
-                content: `[MEMORY_AUDIT_FINAL]\n${JSON.stringify({
-                  ...journalMemoryAudit,
-                  responseLength: fullResponse.length,
-                })}`,
-              })
-              .eq('id', journalAuditEntry.id);
-
-            if (auditUpdate.error) {
-              throw auditUpdate.error;
-            }
+            await updateSecureJournalMessageContent(admin, {
+              messageId: journalAuditEntry.id,
+              content: `[MEMORY_AUDIT_FINAL]\n${JSON.stringify({
+                ...journalMemoryAudit,
+                responseLength: fullResponse.length,
+              })}`,
+            });
           }
 
           controller.close();

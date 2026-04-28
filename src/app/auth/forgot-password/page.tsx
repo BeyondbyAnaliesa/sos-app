@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
+import { buildPasswordResetRedirectUrl, classifyForgotPasswordError } from '@/lib/auth/password-reset-flow';
 
 type State = 'idle' | 'loading' | 'sent' | 'error';
 
@@ -22,22 +23,12 @@ export default function ForgotPasswordPage() {
     );
 
     // redirectTo must be in Supabase Auth → URL Configuration → Redirect URLs allowlist.
-    // Supabase does NOT leak whether the email exists — it returns success regardless.
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
+      redirectTo: buildPasswordResetRedirectUrl(window.location.origin),
     });
 
     if (error) {
-      // Surface rate-limit errors; generic message for everything else.
-      const isRateLimit =
-        error.message.toLowerCase().includes('rate') ||
-        error.status === 429;
-
-      setErrorMsg(
-        isRateLimit
-          ? 'Too many requests. Please wait a few minutes before trying again.'
-          : 'Something went wrong. Please try again.',
-      );
+      setErrorMsg(classifyForgotPasswordError(error));
       setState('error');
       return;
     }
@@ -57,9 +48,8 @@ export default function ForgotPasswordPage() {
 
         <div className="space-y-4 text-center">
           <p className="text-sm text-[var(--color-text-muted)]">
-            If an account exists for{' '}
-            <span className="text-[var(--color-text)]">{email}</span>, you&apos;ll
-            receive a password reset link shortly.
+            If that email exists, we sent a reset link to{' '}
+            <span className="text-[var(--color-text)]">{email}</span>.
           </p>
           <p className="text-xs text-[var(--color-text-muted)]">
             The link expires in 1 hour. Check your spam folder if you don&apos;t
@@ -89,19 +79,28 @@ export default function ForgotPasswordPage() {
         Enter your email and we&apos;ll send you a reset link.
       </p>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          disabled={state === 'loading'}
-          className="h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-input)] px-4 text-base text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border)] focus:outline-none disabled:opacity-40"
-        />
+      <form onSubmit={handleSubmit} className="space-y-4" aria-describedby={state === 'error' && errorMsg ? 'forgot-password-error' : undefined}>
+        <div className="space-y-2">
+          <label htmlFor="email" className="block text-xs uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            autoComplete="email"
+            autoFocus
+            aria-invalid={state === 'error' && Boolean(errorMsg)}
+            disabled={state === 'loading'}
+            className="h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-input)] px-4 text-base text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border)] focus:outline-none disabled:opacity-40"
+          />
+        </div>
 
         {state === 'error' && errorMsg && (
-          <p className="text-xs text-red-400">{errorMsg}</p>
+          <p id="forgot-password-error" role="alert" aria-live="assertive" className="text-xs text-red-400">{errorMsg}</p>
         )}
 
         <button

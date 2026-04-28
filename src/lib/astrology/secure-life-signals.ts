@@ -5,7 +5,11 @@ type RpcSingleResult<T> = { data: T | null; error: { message?: string; code?: st
 type RpcMultiResult<T> = { data: T[] | null; error: { message?: string; code?: string } | null };
 
 type SupabaseRpcClient = {
-  rpc: (fn: string, args?: Record<string, unknown>) => any;
+  rpc: (fn: string, args?: Record<string, unknown>) => {
+    single?: () => Promise<RpcSingleResult<Record<string, unknown>>>;
+    maybeSingle?: () => Promise<RpcSingleResult<Record<string, unknown>>>;
+    then?: never;
+  } | Promise<RpcMultiResult<Record<string, unknown>>>;
 };
 
 export { JOURNAL_ENCRYPTION_MISSING_KEY };

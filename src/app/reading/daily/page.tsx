@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { calculateTransitsForDate, calculateTransitsForRange } from '@/lib/astrology/calculate-transits';
-import { interpretTransits, buildTransitOverview } from '@/lib/interpret';
+import { interpretTransits, buildTransitOverview, scanIncomingHighlights } from '@/lib/interpret';
+import type { IncomingHighlight } from '@/lib/interpret';
 import type { NatalChart as RichChart } from '@/lib/astrology/types';
 import { buildNatalSummary } from '@/lib/astrology/domain-types';
 import { track } from '@/lib/analytics';
@@ -70,11 +71,11 @@ export default async function DailyReadingPage() {
 
   const natalSummary = buildNatalSummary(richChart);
   const todayTransits = calculateTransitsForDate(new Date(), richChart);
-  // DR-2: 72-hour look-ahead so buildTransitOverview can surface incoming transits
-  // on calm days instead of a generic "quiet sky" message.
+  // DR-2: 7-day look-ahead so buildTransitOverview (and the quiet-sky section below)
+  // can surface incoming transits on calm days instead of a generic empty state.
   const lookAheadTransits = calculateTransitsForRange(
     new Date(Date.now() + 86_400_000), // tomorrow
-    3,
+    7,
     richChart,
   );
   const guidance = interpretTransits(todayTransits.transits, natalSummary);
@@ -157,6 +158,49 @@ export default async function DailyReadingPage() {
           </p>
         )}
       </section>
+
+      {/* DR-2: Quiet-sky section — when no major transits are active today, show upcoming */}
+      {activeGuidance.length === 0 && (() => {
+        const upcoming: IncomingHighlight[] = scanIncomingHighlights(lookAheadTransits, natalSummary);
+        return (
+          <section className="mb-6 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5 sm:px-6">
+            {upcoming.length > 0 ? (
+              <>
+                <p className="mb-3 text-xs font-medium uppercase tracking-widest text-[var(--color-text-muted)]">
+                  {/* SOS voice: concrete, not vibes-speak */}
+                  A quiet day in your chart. Coming up:
+                </p>
+                <div className="space-y-2">
+                  {upcoming.map((h, i) => {
+                    const title = [
+                      h.transitPlanet,
+                      h.aspect,
+                      h.natalPlanet.charAt(0).toUpperCase() + h.natalPlanet.slice(1),
+                    ].join(' ');
+                    const dateLabel = new Date(`${h.dateStr}T12:00:00Z`).toLocaleDateString(
+                      'en-US',
+                      { month: 'short', day: 'numeric', timeZone: 'UTC' },
+                    );
+                    return (
+                      <div key={i} className="flex items-center justify-between">
+                        <span className="text-sm text-[var(--color-text)]">{title}</span>
+                        <span className="ml-3 shrink-0 tabular-nums text-[11px] text-[var(--color-text-muted)] opacity-70">
+                          {dateLabel}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-[var(--color-text-muted)]">
+                {/* Hard fall-through: no upcoming transits in the look-ahead window */}
+                Nothing building in the next few days. A genuine pause in the pattern.
+              </p>
+            )}
+          </section>
+        );
+      })()}
 
       {visibleGuidance.length > 0 && (
         <section className="mb-6">

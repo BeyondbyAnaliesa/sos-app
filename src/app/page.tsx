@@ -11,6 +11,7 @@ import { buildNatalSummary } from '@/lib/astrology/domain-types';
 import { getSubscription, isActive } from '@/lib/subscription';
 import { getRelevantTransitMemoryForToday } from '@/lib/astrology/memory-store';
 import { buildHomeMemoryCue, buildStateText } from '@/lib/astrology/pure-fns';
+import { listSecureLifeSignals } from '@/lib/astrology/secure-life-signals';
 import Header from '@/components/Header';
 import GuidanceCard from '@/components/GuidanceCard';
 import LandingPage from '@/components/LandingPage';
@@ -69,13 +70,7 @@ export default async function Home() {
       .select('report_json')
       .eq('user_id', user.id)
       .single(),
-    supabase
-      .from('life_signals')
-      .select('life_domain, content_text, themes_json, signal_timestamp')
-      .eq('user_id', user.id)
-      .order('signal_timestamp', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+    listSecureLifeSignals(supabase, { userId: user.id, limit: 1 }).then((rows) => rows[0] ?? null),
   ]);
 
   const chartRow = chartResult.data;
@@ -112,7 +107,7 @@ export default async function Home() {
   const arcMemory = await getRelevantTransitMemoryForToday(user.id).catch(() => null);
 
   const memoryCue = buildHomeMemoryCue({
-    signal: signalResult.data as { life_domain?: string | null; content_text?: string | null; themes_json?: string[] | null } | null,
+    signal: signalResult as { life_domain?: string | null; content_text?: string | null; themes_json?: string[] | null } | null,
     report: (reportResult.data?.report_json ?? null) as { themes?: string[] | null } | null,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     arcMemory: arcMemory as any,

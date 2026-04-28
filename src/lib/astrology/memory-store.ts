@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { logWarn } from '@/lib/logger';
 import type { DailyTransits } from './domain-types';
 import { buildArcTombstone, computeConfidenceTier, inferNewArcState, inferOrbDirection, inferUpdatedArcState } from './pure-fns';
+import { createSecureLifeSignal, listSecureLifeSignals } from './secure-life-signals';
 import type {
   LifeSignalRecord,
   LifeSignalTransitTagRecord,
@@ -79,11 +80,11 @@ export async function listActiveTransitArcs(userId: string) {
 
 export async function createLifeSignal(signal: LifeSignalRecord) {
   const admin = createAdminClient();
-  return admin
-    .from('life_signals')
-    .insert(signal)
-    .select('*')
-    .single();
+  const created = await createSecureLifeSignal(admin, signal);
+  return {
+    data: { id: created.id },
+    error: null,
+  };
 }
 
 export async function getTransitDailySnapshot(userId: string, snapshotDate: string) {
@@ -1015,11 +1016,11 @@ export async function getUserMemoryExport(userId: string) {
   const [arcsQ, snapshotsQ, signalsQ] = await Promise.all([
     admin.from('transit_arcs').select('*').eq('user_id', userId).order('first_active_date'),
     admin.from('transit_daily_snapshots').select('*').eq('user_id', userId).order('snapshot_date'),
-    admin.from('life_signals').select('*').eq('user_id', userId).order('signal_timestamp'),
+    Promise.resolve(listSecureLifeSignals(admin, { userId })),
   ]);
 
   const arcIds = (arcsQ.data ?? []).map((a) => a.id);
-  const signalIds = (signalsQ.data ?? []).map((s) => s.id);
+  const signalIds = (signalsQ ?? []).map((s) => s.id);
 
   const [eventsQ, tagsQ] = await Promise.all([
     arcIds.length > 0
@@ -1044,13 +1045,13 @@ export async function getUserMemoryExport(userId: string) {
     transit_arcs:            arcsQ.data ?? [],
     transit_arc_events:      eventsQ.data ?? [],
     transit_daily_snapshots: snapshotsQ.data ?? [],
-    life_signals:            signalsQ.data ?? [],
+    life_signals:            signalsQ ?? [],
     life_signal_transit_tags: tagsQ.data ?? [],
     counts: {
       transit_arcs:            (arcsQ.data ?? []).length,
       transit_arc_events:      (eventsQ.data ?? []).length,
       transit_daily_snapshots: (snapshotsQ.data ?? []).length,
-      life_signals:            (signalsQ.data ?? []).length,
+      life_signals:            (signalsQ ?? []).length,
       life_signal_transit_tags: (tagsQ.data ?? []).length,
     },
   };

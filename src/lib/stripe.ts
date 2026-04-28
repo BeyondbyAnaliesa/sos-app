@@ -30,7 +30,7 @@ export const PLANS = {
   charter_annual: {
     priceId:     process.env.STRIPE_PRICE_ID_CHARTER ?? '',
     name:        'Charter Member',
-    price:       79,
+    price:       49,
     interval:    'year' as const,
     description: 'Locked in for life — this rate never increases.',
   },
@@ -40,6 +40,13 @@ export const PLANS = {
     price:       99,
     interval:    'year' as const,
     description: 'Full access, billed annually.',
+  },
+  member_monthly: {
+    priceId:     process.env.STRIPE_PRICE_ID_MEMBER_MONTHLY ?? '',
+    name:        'Member',
+    price:       12.99,
+    interval:    'month' as const,
+    description: 'Full access, billed monthly.',
   },
 } as const;
 

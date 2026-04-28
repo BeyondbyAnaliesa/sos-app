@@ -68,7 +68,9 @@ export default function ResetPasswordPage() {
       },
     );
 
-    verifySession();
+    queueMicrotask(() => {
+      void verifySession();
+    });
 
     return () => subscription.unsubscribe();
   }, [verifySession, supabase]);

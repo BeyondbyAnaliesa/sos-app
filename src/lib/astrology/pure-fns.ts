@@ -11,7 +11,6 @@
 
 import { createHash } from 'crypto';
 import type { Transit, DailyTransits } from './domain-types';
-import type { TransitArcState } from './memory-types';
 
 // ── Tombstone formatting ──────────────────────────────────────────────────────
 

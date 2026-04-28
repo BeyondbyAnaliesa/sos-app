@@ -65,17 +65,20 @@ export default async function DailyReadingPage() {
 
   const natalSummary = buildNatalSummary(richChart);
   const todayTransits = calculateTransitsForDate(new Date(), richChart);
+  const todayRef = new Date(`${todayTransits.date}T12:00:00Z`);
+  const tomorrowRef = new Date(todayRef);
+  tomorrowRef.setUTCDate(tomorrowRef.getUTCDate() + 1);
   // DR-2: 7-day look-ahead so buildTransitOverview (and the quiet-sky section below)
   // can surface incoming transits on calm days instead of a generic empty state.
   const lookAheadTransits = calculateTransitsForRange(
-    new Date(Date.now() + 86_400_000), // tomorrow
+    tomorrowRef,
     7,
     richChart,
   );
   const guidance = interpretTransits(todayTransits.transits, natalSummary);
   const overview = buildTransitOverview(todayTransits.transits, natalSummary, { lookAheadTransits });
 
-  const today = new Date().toLocaleDateString('en-US', {
+  const today = todayRef.toLocaleDateString('en-US', {
     weekday: 'long',
     year:    'numeric',
     month:   'long',
@@ -94,9 +97,8 @@ export default async function DailyReadingPage() {
 
   const memoryCue = buildDailyMemoryCue({
     signal: signalResult.data as { life_domain?: string | null; themes_json?: string[] | null } | null,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    arcMemory: arcMemory as any,
-    nowMs: Date.now(),
+    arcMemory,
+    nowMs: todayRef.getTime(),
   });
 
   // Explainability note: deterministic "why am I seeing this?" evidence trail.
@@ -106,9 +108,9 @@ export default async function DailyReadingPage() {
   const explanationNote =
     arcMemory && arcMemory.confidence !== 'none'
       ? buildExplainabilityNote({
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          activeArcs: (arcMemory.activeArcs ?? []) as any[],
+          activeArcs: arcMemory.activeArcs ?? [],
           recurringDomains: arcMemory.recurringDomains,
+          asOfDate: todayTransits.date,
         })
       : null;
 
@@ -127,7 +129,7 @@ export default async function DailyReadingPage() {
 
       <section className="mb-8 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5 sm:px-6">
         <p className="mb-1 text-xs font-medium uppercase tracking-widest text-[var(--color-copper)]">
-          ◑ Today's Sky
+          ◑ Today&apos;s Sky
         </p>
         <p className="mt-3 text-sm leading-relaxed text-[var(--color-text)]">
           {overview.summary}
@@ -199,7 +201,7 @@ export default async function DailyReadingPage() {
       {visibleGuidance.length > 0 && (
         <section className="mb-6">
           <p className="mb-4 text-[10px] uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
-            {paid ? `What's Active` : 'Unlocked Today'}
+            {paid ? 'What’s Active' : 'Unlocked Today'}
           </p>
           <div className="space-y-4">
             {visibleGuidance.map((result) => (

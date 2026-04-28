@@ -2,12 +2,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { createBrowserClient } from '@supabase/ssr';
 import { validatePasswordReset } from '@/lib/auth/password-validation';
+import { classifyPasswordUpdateError, resolveRecoverySessionState } from '@/lib/auth/password-reset-flow';
 
 type PageState = 'verifying' | 'ready' | 'submitting' | 'success' | 'expired' | 'error';
 
 export default function ResetPasswordPage() {
+  const router = useRouter();
   const [pageState, setPageState] = useState<PageState>('verifying');
   const [password, setPassword]   = useState('');
   const [confirm, setConfirm]     = useState('');
@@ -33,26 +36,25 @@ export default function ResetPasswordPage() {
       const params = new URLSearchParams(window.location.search);
       const code   = params.get('code');
 
+      let exchangeError = false;
+
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
-        if (error) {
-          setPageState('expired');
-          return;
+        exchangeError = Boolean(error);
+        if (!error) {
+          window.history.replaceState({}, '', window.location.pathname);
         }
-        // Remove the code from the URL so it isn't reused
-        window.history.replaceState({}, '', window.location.pathname);
       }
 
       // Check for an active recovery session (set either from code exchange
       // above or from the hash-based tokens the browser client auto-detects)
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-      if (sessionError || !session) {
-        setPageState('expired');
-        return;
-      }
-
-      setPageState('ready');
+      setPageState(resolveRecoverySessionState({
+        exchangeError,
+        sessionError: Boolean(sessionError),
+        hasSession: Boolean(session),
+      }));
     } catch {
       setPageState('error');
     }
@@ -63,14 +65,19 @@ export default function ResetPasswordPage() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event) => {
         if (event === 'PASSWORD_RECOVERY') {
-          setPageState('ready');
+          setPageState(resolveRecoverySessionState({ authEvent: event, hasSession: true }));
         }
       },
     );
 
-    verifySession();
+    const verifyTimer = window.setTimeout(() => {
+      void verifySession();
+    }, 0);
 
-    return () => subscription.unsubscribe();
+    return () => {
+      window.clearTimeout(verifyTimer);
+      subscription.unsubscribe();
+    };
   }, [verifySession, supabase]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -88,10 +95,10 @@ export default function ResetPasswordPage() {
     const { error } = await supabase.auth.updateUser({ password });
 
     if (error) {
-      const msg = error.message.toLowerCase();
-      if (msg.includes('weak') || msg.includes('policy')) {
+      const errorType = classifyPasswordUpdateError(error.message);
+      if (errorType === 'weak') {
         setErrorMsg('That password is too weak. Please choose a stronger one.');
-      } else if (msg.includes('expired') || msg.includes('invalid')) {
+      } else if (errorType === 'expired') {
         setPageState('expired');
         return;
       } else {
@@ -106,6 +113,9 @@ export default function ResetPasswordPage() {
     await supabase.auth.signOut({ scope: 'others' });
 
     setPageState('success');
+    window.setTimeout(() => {
+      router.replace('/');
+    }, 1200);
   }
 
   // ── Render states ──────────────────────────────────────────────────────────
@@ -182,20 +192,10 @@ export default function ResetPasswordPage() {
           </p>
         </div>
 
-        <div className="space-y-4 text-center">
+        <div className="space-y-4 text-center" aria-live="polite">
           <p className="text-sm text-[var(--color-text-muted)]">
-            Your password has been updated. You can now log in with your new
-            password.
+            Your password is updated. Taking you home…
           </p>
-        </div>
-
-        <div className="mt-8">
-          <Link
-            href="/auth/login"
-            className="block h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] text-center text-sm font-medium uppercase leading-[52px] tracking-widest text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:text-[var(--color-text)]"
-          >
-            Log In
-          </Link>
         </div>
       </>
     );
@@ -211,28 +211,45 @@ export default function ResetPasswordPage() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <input
-          type="password"
-          placeholder="New password (8+ characters)"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={8}
-          disabled={pageState === 'submitting'}
-          className="h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-input)] px-4 text-base text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border)] focus:outline-none disabled:opacity-40"
-        />
-        <input
-          type="password"
-          placeholder="Confirm new password"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          required
-          disabled={pageState === 'submitting'}
-          className="h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-input)] px-4 text-base text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border)] focus:outline-none disabled:opacity-40"
-        />
+      <form onSubmit={handleSubmit} className="space-y-4" aria-describedby={errorMsg ? 'reset-password-error' : undefined}>
+        <div className="space-y-2">
+          <label htmlFor="new-password" className="block text-xs uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+            New password
+          </label>
+          <input
+            id="new-password"
+            type="password"
+            placeholder="At least 8 characters"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={8}
+            autoComplete="new-password"
+            autoFocus
+            aria-invalid={Boolean(errorMsg)}
+            disabled={pageState === 'submitting'}
+            className="h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-input)] px-4 text-base text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border)] focus:outline-none disabled:opacity-40"
+          />
+        </div>
+        <div className="space-y-2">
+          <label htmlFor="confirm-password" className="block text-xs uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+            Confirm password
+          </label>
+          <input
+            id="confirm-password"
+            type="password"
+            placeholder="Repeat your new password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            required
+            autoComplete="new-password"
+            aria-invalid={Boolean(errorMsg)}
+            disabled={pageState === 'submitting'}
+            className="h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-input)] px-4 text-base text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border)] focus:outline-none disabled:opacity-40"
+          />
+        </div>
 
-        {errorMsg && <p className="text-xs text-red-400">{errorMsg}</p>}
+        {errorMsg && <p id="reset-password-error" role="alert" aria-live="assertive" className="text-xs text-red-400">{errorMsg}</p>}
 
         <button
           type="submit"

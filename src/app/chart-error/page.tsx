@@ -91,7 +91,6 @@ export default function ChartErrorPage() {
       </p>
       <button
         onClick={handleRegenerate}
-        disabled={state === 'loading'}
         className="mt-8 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-6 py-3 text-xs font-semibold uppercase tracking-widest text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:text-[var(--color-text)] disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Regenerate chart

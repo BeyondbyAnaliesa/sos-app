@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import ProgressBar from '@/components/onboarding/ProgressBar';
 import WelcomeStep from '@/components/onboarding/WelcomeStep';

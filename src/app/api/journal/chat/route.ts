@@ -3,7 +3,7 @@ export const runtime = 'nodejs'; // required for sweph native addon
 import OpenAI from 'openai';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { buildSystemPrompt } from '@/lib/prompt';
-import { calculateTransitsForDate, calculateTransitsForRange } from '@/lib/astrology/calculate-transits';
+import { calculateTransitsForRange } from '@/lib/astrology/calculate-transits';
 import type { NatalChart as RichChart } from '@/lib/astrology/types';
 import { buildNatalSummary } from '@/lib/astrology/domain-types';
 import {

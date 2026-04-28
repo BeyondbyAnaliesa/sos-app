@@ -91,11 +91,14 @@ export default async function Home() {
   const natalSummary = buildNatalSummary(richChart);
   const todayTransits = calculateTransitsForDate(new Date(), richChart);
   const todayDate = todayTransits.date;
+  const todayRef = new Date(`${todayDate}T12:00:00Z`);
+  const tomorrowRef = new Date(todayRef);
+  tomorrowRef.setUTCDate(tomorrowRef.getUTCDate() + 1);
 
   const activeTransits = todayTransits.transits;
   // DR-2: 7-day look-ahead for calm-day context on the home screen.
   const lookAheadTransits = calculateTransitsForRange(
-    new Date(Date.now() + 86_400_000),
+    tomorrowRef,
     7,
     richChart,
   );
@@ -109,9 +112,8 @@ export default async function Home() {
   const memoryCue = buildHomeMemoryCue({
     signal: signalResult as { life_domain?: string | null; content_text?: string | null; themes_json?: string[] | null } | null,
     report: (reportResult.data?.report_json ?? null) as { themes?: string[] | null } | null,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    arcMemory: arcMemory as any,
-    nowMs: Date.now(),
+    arcMemory,
+    nowMs: todayRef.getTime(),
   });
 
   // H-1: transit tease — one revealed, rest locked for free users.

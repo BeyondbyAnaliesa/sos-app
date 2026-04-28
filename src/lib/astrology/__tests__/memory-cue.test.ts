@@ -34,25 +34,27 @@
 import { describe, it, expect } from 'vitest';
 import { buildDailyMemoryCue } from '../pure-fns';
 
+type DailyMemoryCueParams = Parameters<typeof buildDailyMemoryCue>[0];
+type DailyMemoryCueArcMemory = NonNullable<DailyMemoryCueParams['arcMemory']>;
+
 // Reference "now" for all deterministic tests: 2026-04-25T12:00:00Z
 // This is 1 day after the arc started on 2026-04-24.
 const NOW_MS = new Date('2026-04-25T12:00:00Z').getTime();
 
 // Arc started 5 days ago relative to NOW_MS (2026-04-20)
 const START_5_DAYS_AGO = '2026-04-20';
-// Arc started 1 day ago (2026-04-24)
-const START_1_DAY_AGO = '2026-04-24';
-// Arc started 3 days ago (2026-04-22) → daysActive = 4
-const START_3_DAYS_AGO = '2026-04-22';
 // Arc started 2 days ago (2026-04-23) → daysActive = 3
 const START_2_DAYS_AGO = '2026-04-23';
 // Arc started 1 day ago = TODAY - 1 (2026-04-24) → daysActive = 2
 const START_TODAY_MINUS_1 = '2026-04-24';
 
-const CONFIDENT_MEMORY = (arcs: object[], domains: object[] = []) => ({
-  confidence: 'medium' as const,
-  activeArcs: arcs as Parameters<typeof buildDailyMemoryCue>[0]['arcMemory'] extends NonNullable<infer T> ? T['activeArcs'] : never,
-  recurringDomains: domains as Array<{ domain: string; signalCount: number; arcCount: number }>,
+const CONFIDENT_MEMORY = (
+  arcs: NonNullable<DailyMemoryCueArcMemory['activeArcs']>,
+  domains: DailyMemoryCueArcMemory['recurringDomains'] = [],
+): DailyMemoryCueArcMemory => ({
+  confidence: 'medium',
+  activeArcs: arcs,
+  recurringDomains: domains,
 });
 
 // ── Priority 1: Returning arc (recurrence_count > 1) ────────────────────────

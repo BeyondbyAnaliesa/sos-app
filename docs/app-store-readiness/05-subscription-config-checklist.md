@@ -18,14 +18,13 @@ The live audited codebase does **not** match that target yet.
 - Free signup/auth exists via Supabase email/password
 - Stripe checkout exists for subscription purchase
 - Subscription gating exists in product logic
-- Two Stripe annual plan keys exist:
-  - `charter_annual` = `$79/year`
-  - `standard_annual` = `$99/year`
+- Paid Stripe plan keys now exist:
+  - `charter_annual` = `$49/year`
+  - `member_annual` = `$99/year`
+  - `member_monthly` = `$12.99/month`
 - `allow_promotion_codes: true` is enabled in Stripe Checkout
 
 ### What does not exist today
-- No `$49/year` Charter plan in code
-- No `$12.99/month` plan in code
 - No App Store IAP / StoreKit products in code
 - No StoreKit 2 purchase flow
 - No native receipt validation flow

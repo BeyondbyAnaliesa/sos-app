@@ -1,12 +1,11 @@
 export const runtime = 'nodejs'; // required for sweph
 
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { calculateTransitsForRange } from '@/lib/astrology/calculate-transits';
 import { getSubscription, isActive } from '@/lib/subscription';
 import type { NatalChart as RichChart } from '@/lib/astrology/types';
-import type { DailyTransits } from '@/data/transits';
+import type { DailyTransits } from '@/lib/astrology/domain-types';
 import CalendarGrid from './CalendarGrid';
 import { track } from '@/lib/analytics';
 import BottomNav from '@/components/BottomNav';
@@ -26,15 +25,13 @@ export default async function CalendarPage() {
     .eq('user_id', user.id)
     .single();
 
+  // Guard: no chart, or chart row exists with null/malformed columns.
+  // No chart row → onboarding. Corrupted chart row → chart-error (Option B, P1-4).
   if (!chartRow) {
-    return (
-      <main className="mx-auto w-full max-w-xl px-6 py-16 text-center">
-        <p className="text-sm text-[var(--color-text-muted)]">Complete onboarding to see your transit calendar.</p>
-        <Link href="/" className="mt-4 block text-xs text-[var(--color-copper-dim)] hover:text-[var(--color-copper)]">
-          ← Back to home
-        </Link>
-      </main>
-    );
+    redirect('/onboarding');
+  }
+  if (!chartRow.placements_json || !chartRow.angles_json) {
+    redirect('/chart-error');
   }
 
   track('calendar_viewed', { userId: user.id });

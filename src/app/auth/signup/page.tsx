@@ -21,10 +21,13 @@ export default function SignupPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     );
 
+    const emailRedirectTo = `${window.location.origin}/auth/callback`;
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
+        emailRedirectTo,
         data: { onboarding_complete: false },
       },
     });

@@ -95,7 +95,23 @@ export default async function UpgradePage() {
           <ul className="mt-5 space-y-2 text-sm text-[var(--color-text-muted)]">
             <li className="flex items-start gap-2">
               <span className="mt-0.5 text-[var(--color-text-muted)]">✓</span>
-              <span>Everything in Founding Member</span>
+              <span>Full natal chart — all 10 planets, houses, aspects</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-0.5 text-[var(--color-text-muted)]">✓</span>
+              <span>Transit calendar — 30-day view of what&apos;s coming</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-0.5 text-[var(--color-text-muted)]">✓</span>
+              <span>Daily AI guidance tailored to your chart</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-0.5 text-[var(--color-text-muted)]">✓</span>
+              <span>Unlimited journaling with astrological context</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-0.5 text-[var(--color-text-muted)]">✓</span>
+              <span>Full membership at standard rate</span>
             </li>
           </ul>
 

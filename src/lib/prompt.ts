@@ -1,5 +1,4 @@
-import type { NatalChart } from '@/data/natal-chart';
-import type { DailyTransits } from '@/data/transits';
+import type { NatalSummary, DailyTransits } from '@/lib/astrology/domain-types';
 import { buildTransitOverview, interpretTransits } from '@/lib/interpret';
 
 const ASPECT_FEEL: Record<string, string> = {
@@ -21,10 +20,12 @@ const PLANET_THEMES: Record<string, string> = {
   Uranus:  'disruption, freedom, surprise, innovation',
   Neptune: 'dreams, confusion, spirituality, illusion',
   Pluto:   'transformation, power, depth, letting go',
+  'North Node': 'fated growth, direction, karmic development',
 };
 
-function describeTransitsNarrative(transits: DailyTransits['transits']): string {
-  if (transits.length === 0) return 'A quiet sky today — no major planetary activations.';
+// Export for testing (banned-register guardrail).
+export function describeTransitsNarrative(transits: DailyTransits['transits']): string {
+  if (transits.length === 0) return 'No transit-to-natal contacts within standard orbs today.';
 
   // Top 6 most significant transits (already sorted by orb)
   const top = transits.slice(0, 6);
@@ -39,21 +40,31 @@ function describeTransitsNarrative(transits: DailyTransits['transits']): string 
     .join('\n');
 }
 
-function describeChart(chart: NatalChart): string {
+function describeChart(chart: NatalSummary): string {
+  const placement = (key: string, label: string) => {
+    const p = chart.placementsByKey[key];
+    return p ? `${label} in ${p.sign} (House ${p.house})` : null;
+  };
+
   return [
-    `Sun in ${chart.sun.sign} (House ${chart.sun.house})`,
-    `Moon in ${chart.moon.sign} (House ${chart.moon.house})`,
+    placement('sun', 'Sun'),
+    placement('moon', 'Moon'),
     `Rising (Ascendant) in ${chart.ascendant.sign}`,
-    `Mercury in ${chart.mercury.sign} (House ${chart.mercury.house})`,
-    `Venus in ${chart.venus.sign} (House ${chart.venus.house})`,
-    `Mars in ${chart.mars.sign} (House ${chart.mars.house})`,
-    `Jupiter in ${chart.jupiter.sign} (House ${chart.jupiter.house})`,
-    `Saturn in ${chart.saturn.sign} (House ${chart.saturn.house})`,
-  ].join('\n');
+    placement('mercury', 'Mercury'),
+    placement('venus', 'Venus'),
+    placement('mars', 'Mars'),
+    placement('jupiter', 'Jupiter'),
+    placement('saturn', 'Saturn'),
+    placement('uranus', 'Uranus'),
+    placement('neptune', 'Neptune'),
+    placement('pluto', 'Pluto'),
+    placement('northNode', 'North Node'),
+    `Midheaven in ${chart.midheaven.sign}`,
+  ].filter(Boolean).join('\n');
 }
 
 export function buildSystemPrompt(
-  natalChart: NatalChart,
+  natalChart: NatalSummary,
   dailyTransits: DailyTransits,
   userContext?: string,
 ): string {
@@ -80,6 +91,14 @@ HOW YOU DON'T TALK:
 - No generic wellness advice. Nothing that could appear on a motivational poster.
 - Never start with "Hey!" or "Hi there!" — just talk, mid-thought, like a real friend would
 - Don't use emojis
+- HARD BANNED PHRASES (never use these, ever): "trust the pause", "sit with the stillness", "the sky is quiet today", "the sky is quiet", "the sky is still", "lean into the quiet", "embrace the calm", or any abstract meditation-app register. These are slop. SOS is not slop.
+
+WHEN TODAY IS LOW-INTENSITY OR CALM:
+- Never tell someone "nothing is happening" or "the sky is quiet" — planets are always in conversation.
+- Name the actual state concretely: what IS in orb, what's wide, what's separating vs. approaching.
+- If today is calm, say so plainly using real astrological terms, then pivot to what's incoming OR why this window is practically useful.
+- Example of wrong tone: "The sky is quiet. Trust this pause and rest."
+- Example of right tone: "Saturn's square to your Sun is still in orb at 4.2 degrees — it's wide, not pressing today. Jupiter builds into your Venus axis this week."
 
 YOUR FIRST RESPONSE to a journal entry should:
 - Acknowledge what they wrote — show you actually read it and felt it

@@ -1,6 +1,27 @@
 import type { OnboardingReport } from '@/lib/onboarding-prompt';
+import AeonBridgeBox from '@/components/onboarding/AeonBridgeBox';
+
+// splitReport: safe paragraph splitter for report fields — handles null/undefined from GPT
+function splitReport(text: string | null | undefined): string[] {
+  if (!text) return [];
+  return text.split('\n\n').filter(Boolean);
+}
+
+function buildFallbackBridge(report: OnboardingReport) {
+  const headline = report.aeonBridgeHeadline ?? (Array.isArray(report.themes) ? report.themes[0] : undefined) ?? 'There is a live thread in your chart worth following right now.';
+  // Guard: lookAhead may be undefined if GPT dropped the field; fall through to static copy.
+  const body = report.aeonBridgeBody ?? (report.lookAhead ? report.lookAhead.split('\n\n')[0] : undefined) ?? 'Aeon can help you work with what is active right now in your chart and your life.';
+  const starterChips = report.aeonStarterChips?.filter(Boolean)?.slice(0, 3) ?? report.practices?.filter(Boolean)?.slice(0, 3) ?? [
+    'How do I work with this love pattern?',
+    'What is my chart trying to show me?',
+    'Where should I start with Aeon?',
+  ];
+
+  return { headline, body, starterChips };
+}
 
 export default function NatalReading({ report }: { report: OnboardingReport }) {
+  const bridge = buildFallbackBridge(report);
   return (
     <div className="space-y-6">
       {/* Chart Reading */}
@@ -9,7 +30,7 @@ export default function NatalReading({ report }: { report: OnboardingReport }) {
           ◆ Your Chart Reading
         </p>
         <div className="space-y-3 text-sm leading-relaxed text-[var(--color-text-muted)]">
-          {report.chartReading.split('\n\n').map((paragraph, i) => (
+          {splitReport(report.chartReading).map((paragraph, i) => (
             <p key={i}>{paragraph}</p>
           ))}
         </div>
@@ -21,7 +42,7 @@ export default function NatalReading({ report }: { report: OnboardingReport }) {
           ◇ Themes to Watch
         </p>
         <ol className="space-y-3">
-          {report.themes.map((theme, i) => (
+          {(Array.isArray(report.themes) ? report.themes : []).map((theme, i) => (
             <li key={i} className="flex gap-3 text-sm leading-relaxed text-[var(--color-text-muted)]">
               <span className="mt-0.5 shrink-0 text-[10px] font-medium text-[var(--color-copper-dim)]">
                 {i + 1}
@@ -32,30 +53,19 @@ export default function NatalReading({ report }: { report: OnboardingReport }) {
         </ol>
       </div>
 
-      {/* Practices */}
-      <div className="rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-6 py-5">
-        <p className="mb-4 text-[10px] font-medium uppercase tracking-[0.25em] text-[var(--color-copper)]">
-          ✦ First Practices
-        </p>
-        <ol className="space-y-3">
-          {report.practices.map((practice, i) => (
-            <li key={i} className="flex gap-3 text-sm leading-relaxed text-[var(--color-text-muted)]">
-              <span className="mt-0.5 shrink-0 text-[10px] font-medium text-[var(--color-copper-dim)]">
-                {i + 1}
-              </span>
-              <span>{practice}</span>
-            </li>
-          ))}
-        </ol>
-      </div>
+      <AeonBridgeBox
+        headline={bridge.headline}
+        body={bridge.body}
+        starterChips={bridge.starterChips}
+      />
 
       {/* Look Ahead */}
-      <div className="rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-6 py-5">
-        <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.25em] text-[var(--color-copper)]">
+      <div className="rounded-[10px] border border-[var(--color-electric)] bg-[linear-gradient(180deg,rgba(239,68,136,0.08),rgba(239,68,136,0.02))] px-6 py-5 shadow-[0_0_0_1px_rgba(239,68,136,0.12)]">
+        <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.25em] text-[var(--color-electric)]">
           ◆ What Comes Next
         </p>
-        <div className="space-y-3 text-sm leading-relaxed text-[var(--color-text-muted)]">
-          {report.lookAhead.split('\n\n').map((paragraph, i) => (
+        <div className="space-y-3 text-sm leading-relaxed text-[var(--color-text)]">
+          {splitReport(report.lookAhead).map((paragraph, i) => (
             <p key={i}>{paragraph}</p>
           ))}
         </div>

@@ -6,7 +6,13 @@ import type { NatalChart } from '@/lib/astrology/types';
 import { track } from '@/lib/analytics';
 import { logError } from '@/lib/logger';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function getOpenAIClient() {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY is not configured');
+  }
+
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 export async function POST(request: Request) {
   try {
@@ -55,6 +61,7 @@ export async function POST(request: Request) {
     // 3. Build prompt and call GPT-4o
     const { system, user: userMsg } = buildOnboardingReportPrompt(chart, answers);
 
+    const openai = getOpenAIClient();
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
       response_format: { type: 'json_object' },
@@ -72,7 +79,7 @@ export async function POST(request: Request) {
       user_id:        user.id,
       report_json:    report,
       model:          'gpt-4o',
-      prompt_version: 'v1',
+      prompt_version: 'v2-aeon-bridge',
     }, { onConflict: 'user_id' });
 
     // 5. Build initial user context summary

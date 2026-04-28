@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 const NAV_ITEMS = [
   { href: '/',        glyph: '◑', label: 'Home' },
   { href: '/reading', glyph: '◈', label: 'Reading' },
-  { href: '/journal', glyph: '◆', label: 'Companion' },
+  { href: '/journal', glyph: '◆', label: 'Aeon' },
   { href: '/more', glyph: '⋯', label: 'More' },
 ];
 

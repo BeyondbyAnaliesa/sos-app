@@ -2,10 +2,11 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import type { NatalReadingReport } from '@/lib/natal-reading-prompt';
-import { getHouse } from '@/lib/astrology/transform';
+import { getHouse } from '@/lib/astrology/domain-types';
 import { getSubscription, isActive } from '@/lib/subscription';
 import ReadingRefresh from '@/components/ReadingRefresh';
 import { track } from '@/lib/analytics';
+import UnlockCTA from '@/components/UnlockCTA';
 import BottomNav from '@/components/BottomNav';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -61,7 +62,9 @@ function ordinal(n: number): string {
   return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
 }
 
-function splitParagraphs(text: string) {
+// Guard against null/undefined from GPT-generated reading fields.
+function splitParagraphs(text: string | null | undefined): string[] {
+  if (!text) return [];
   return text.split('\n\n').filter(Boolean);
 }
 
@@ -120,6 +123,7 @@ export default async function ReadingPage() {
           </p>
           <ReadingRefresh />
         </div>
+        <BottomNav />
       </main>
     );
   }
@@ -366,6 +370,13 @@ export default async function ReadingPage() {
             <span className="text-[var(--color-copper-dim)]">→</span>
           </Link>
         </div>
+
+        {/* Global unlock CTA — shown at the bottom for free users on every locked surface */}
+        {!paid && (
+          <div className="pt-4">
+            <UnlockCTA label="Unlock your full chart" />
+          </div>
+        )}
 
       </div>
       <BottomNav />

@@ -9,5 +9,15 @@
         { "key": "Cache-Control", "value": "no-store" }
       ]
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/astrology/memory-sync",
+      "schedule": "5 10 * * *"
+    },
+    {
+      "path": "/api/astrology/memory-sync",
+      "schedule": "5 22 * * *"
+    }
   ]
 }

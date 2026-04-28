@@ -1,18 +1,19 @@
 import { calc_ut, constants, julday } from 'sweph';
 import type { NatalChart } from './types';
-import type { Transit, DailyTransits, Aspect } from '@/data/transits';
+import type { Transit, DailyTransits, Aspect } from './domain-types';
 
 const transitPlanets = [
-  { key: 'sun',     label: 'Sun',     id: constants.SE_SUN     },
-  { key: 'moon',    label: 'Moon',    id: constants.SE_MOON    },
-  { key: 'mercury', label: 'Mercury', id: constants.SE_MERCURY },
-  { key: 'venus',   label: 'Venus',   id: constants.SE_VENUS   },
-  { key: 'mars',    label: 'Mars',    id: constants.SE_MARS    },
-  { key: 'jupiter', label: 'Jupiter', id: constants.SE_JUPITER },
-  { key: 'saturn',  label: 'Saturn',  id: constants.SE_SATURN  },
-  { key: 'uranus',  label: 'Uranus',  id: constants.SE_URANUS  },
-  { key: 'neptune', label: 'Neptune', id: constants.SE_NEPTUNE },
-  { key: 'pluto',   label: 'Pluto',   id: constants.SE_PLUTO   },
+  { key: 'sun',       label: 'Sun',        id: constants.SE_SUN       },
+  { key: 'moon',      label: 'Moon',       id: constants.SE_MOON      },
+  { key: 'mercury',   label: 'Mercury',    id: constants.SE_MERCURY   },
+  { key: 'venus',     label: 'Venus',      id: constants.SE_VENUS     },
+  { key: 'mars',      label: 'Mars',       id: constants.SE_MARS      },
+  { key: 'jupiter',   label: 'Jupiter',    id: constants.SE_JUPITER   },
+  { key: 'saturn',    label: 'Saturn',     id: constants.SE_SATURN    },
+  { key: 'uranus',    label: 'Uranus',     id: constants.SE_URANUS    },
+  { key: 'neptune',   label: 'Neptune',    id: constants.SE_NEPTUNE   },
+  { key: 'pluto',     label: 'Pluto',      id: constants.SE_PLUTO     },
+  { key: 'northNode', label: 'North Node', id: constants.SE_TRUE_NODE },
 ] as const;
 
 // Transit orbs are tighter than natal orbs

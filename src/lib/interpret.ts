@@ -1,5 +1,4 @@
-import type { Transit } from '@/data/transits';
-import type { NatalChart, PlanetPosition } from '@/data/natal-chart';
+import type { Transit, NatalSummary, NatalPlanetSummary, DailyTransits } from '@/lib/astrology/domain-types';
 
 export type Domain = 'body' | 'mind' | 'spirit' | 'relationships' | 'career' | 'home';
 export type Intensity = 'high' | 'medium' | 'low';
@@ -12,7 +11,6 @@ export interface GuidanceResult {
   summary: string;
 }
 
-type NatalKey = keyof NatalChart;
 
 interface DomainTheme {
   focus: string;
@@ -27,6 +25,17 @@ interface TransitSignature {
   intensity: Intensity;
   theme: DomainTheme;
   transit: Transit;
+  domain: Domain;
+}
+
+export interface IncomingHighlight {
+  dateStr: string;
+  daysFromNow: number;
+  transitPlanet: string;
+  aspect: string;
+  natalPlanet: string;
+  domain: Domain;
+  weight: number;
 }
 
 interface TransitOverview {
@@ -47,6 +56,15 @@ const PLANET_DOMAINS: Record<string, Domain[]> = {
   Uranus: ['mind', 'career', 'spirit'],
   Neptune: ['spirit', 'relationships', 'mind'],
   Pluto: ['mind', 'spirit', 'relationships'],
+};
+
+// Aspect labels for look-ahead copy (verb form, fits "Jupiter ___ natal Sun")
+const ASPECT_SIMPLE: Record<string, string> = {
+  conjunction: 'conjunct',
+  opposition: 'opposite',
+  square: 'squaring',
+  trine: 'trine',
+  sextile: 'sextile',
 };
 
 const ASPECT_INTENSITY: Record<string, Intensity> = {
@@ -137,19 +155,20 @@ const PLANET_THEMES: Record<string, string> = {
   mars: 'your drive and anger',
   jupiter: 'your beliefs and growth edge',
   saturn: 'your boundaries and responsibilities',
+  uranus: 'your liberation edge and disruptions',
+  neptune: 'your dreams, dissolving, and spiritual sensitivity',
+  pluto: 'your transformation, power, and underworld material',
+  northNode: 'your growth edge and karmic pull forward',
   ascendant: 'how life is meeting you directly',
   midheaven: 'your direction and public role',
 };
 
-function getNatalPlacement(chart: NatalChart, natalPlanet: string): PlanetPosition | null {
-  if (natalPlanet === 'midheaven') return null;
-  if (natalPlanet === 'ascendant') return null;
-  const placement = chart[natalPlanet as NatalKey];
-  if (!placement || typeof placement !== 'object' || !('house' in placement)) return null;
-  return placement as PlanetPosition;
+function getNatalPlacement(chart: NatalSummary, natalPlanet: string): NatalPlanetSummary | null {
+  if (natalPlanet === 'midheaven' || natalPlanet === 'ascendant') return null;
+  return chart.placementsByKey[natalPlanet] ?? null;
 }
 
-function getAreaOfLife(chart: NatalChart, natalPlanet: string): string {
+function getAreaOfLife(chart: NatalSummary, natalPlanet: string): string {
   if (natalPlanet === 'ascendant') return 'your identity, body, and the way you are meeting the world';
   if (natalPlanet === 'midheaven') return 'career direction, reputation, and what is publicly visible';
 
@@ -162,7 +181,7 @@ function getNatalTheme(natalPlanet: string): string {
   return PLANET_THEMES[natalPlanet] ?? 'a core pattern in your chart';
 }
 
-function buildTheme(domain: Domain, transit: Transit, chart: NatalChart): DomainTheme {
+function buildTheme(domain: Domain, transit: Transit, chart: NatalSummary): DomainTheme {
   const area = getAreaOfLife(chart, transit.natalPlanet);
   const natalTheme = getNatalTheme(transit.natalPlanet);
   const transitLabel = transit.transitPlanet;
@@ -215,7 +234,7 @@ function buildTheme(domain: Domain, transit: Transit, chart: NatalChart): Domain
   return themes[domain];
 }
 
-function scoreTransit(transit: Transit, domain: Domain, chart: NatalChart): TransitSignature | null {
+function scoreTransit(transit: Transit, domain: Domain, chart: NatalSummary): TransitSignature | null {
   if (!PLANET_DOMAINS[transit.transitPlanet]?.includes(domain)) return null;
 
   const placement = getNatalPlacement(chart, transit.natalPlanet);
@@ -239,15 +258,163 @@ function scoreTransit(transit: Transit, domain: Domain, chart: NatalChart): Tran
     intensity: ASPECT_INTENSITY[transit.aspect] ?? 'low',
     theme: buildTheme(domain, transit, chart),
     transit,
+    domain,
   };
 }
+
+// ── Calm-day logic (#DR-2) ───────────────────────────────────────────────────
+// Planets are always talking. Never render "the sky is quiet" or any
+// abstract wellness-speak. Name what's real: actual planets, actual orbs,
+// actual incoming transits with their life-domain impact.
+//
+// Banned copy (hard guardrail — if any of these appear in output, a test fails):
+//   "trust the pause" | "sit with the stillness" | "the sky is quiet" |
+//   "the sky is still" | "lean into the quiet"
+
+/**
+ * Concrete description of today's sky when no transit scored above the
+ * significance threshold. Names the actual tightest contact rather than
+ * declaring the sky empty or quiet.
+ */
+function buildCalmTodaySummary(transits: Transit[]): string {
+  if (transits.length === 0) {
+    return 'No planetary contacts within standard orbs today — a genuinely rare open window in the chart.';
+  }
+  const top = transits[0]; // already sorted by orb, tightest first
+  const feel = ASPECT_SIMPLE[top.aspect] ?? top.aspect;
+  const natalLabel = top.natalPlanet.charAt(0).toUpperCase() + top.natalPlanet.slice(1);
+  return `${top.transitPlanet} is ${feel} natal ${natalLabel} today (${top.orb}\u00b0 orb) — active contacts in the chart, but nothing tight enough to demand a big reaction.`;
+}
+
+/**
+ * Format a look-ahead day label: "tomorrow (Monday)", "Tuesday", "Wednesday".
+ */
+function formatLookAheadWhen(daysFromNow: number, dateStr: string): string {
+  const d = new Date(`${dateStr}T12:00:00Z`);
+  const dayName = d.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
+  if (daysFromNow === 1) return `tomorrow (${dayName})`;
+  return dayName;
+}
+
+/**
+ * Build the look-ahead detail line from incoming highlights.
+ * Names real planets, real days, real life-area domains.
+ */
+function buildLookAheadDetail(highlights: IncomingHighlight[]): string {
+  const top = highlights.slice(0, 2);
+  const parts = top.map((h) => {
+    const aspectLabel = ASPECT_SIMPLE[h.aspect] ?? h.aspect;
+    const natalLabel = h.natalPlanet.charAt(0).toUpperCase() + h.natalPlanet.slice(1);
+    const when = formatLookAheadWhen(h.daysFromNow, h.dateStr);
+    const domainLabel = DOMAIN_TITLES[h.domain];
+    return `${h.transitPlanet} ${aspectLabel} natal ${natalLabel} picks up ${when} — ${domainLabel}.`;
+  });
+  return `Incoming: ${parts.join(' ')} Today is the calm before that.`;
+}
+
+/**
+ * Build the detail line when no significant transits are coming in the
+ * next 3 days either. Concrete and positive — no meditation-speak.
+ */
+function buildQuietWindowDetail(transits: Transit[]): string {
+  if (transits.length === 0) {
+    return 'Nothing is building in the 72-hour window either. A structural pause between transit waves — genuinely rare.';
+  }
+  const planetNames = [...new Set(transits.slice(0, 4).map((t) => t.transitPlanet))];
+  const planetList =
+    planetNames.length === 1
+      ? planetNames[0]
+      : planetNames.slice(0, -1).join(', ') + ' and ' + planetNames[planetNames.length - 1];
+  const verb = planetNames.length === 1 ? 'is' : 'are';
+  return `${planetList} ${verb} all in wide-orb contacts — no tight build-up in the next 3 days. A full-rest window before the next wave.`;
+}
+
+/**
+ * Scan look-ahead DailyTransits for the first meaningful transit per day.
+ * Returns up to 3 highlights (one per day), deduplicated by transit key.
+ */
+export function scanIncomingHighlights(
+  lookAheadTransits: DailyTransits[],
+  natalChart: NatalSummary,
+): IncomingHighlight[] {
+  const results: IncomingHighlight[] = [];
+  const seen = new Set<string>();
+
+  for (let i = 0; i < lookAheadTransits.length; i++) {
+    const day = lookAheadTransits[i];
+
+    const dayTop = day.transits
+      .flatMap((transit) => {
+        const domains = PLANET_DOMAINS[transit.transitPlanet] ?? [];
+        return domains
+          .map((domain) => {
+            const sig = scoreTransit(transit, domain, natalChart);
+            return sig ? { sig, domain } : null;
+          })
+          .filter((x): x is { sig: TransitSignature; domain: Domain } => x != null);
+      })
+      .sort((a, b) => b.sig.weight - a.sig.weight);
+
+    for (const { sig, domain } of dayTop) {
+      const key = `${sig.transit.transitPlanet}:${sig.transit.aspect}:${sig.transit.natalPlanet}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        results.push({
+          dateStr: day.date,
+          daysFromNow: i + 1,
+          transitPlanet: sig.transit.transitPlanet,
+          aspect: sig.transit.aspect,
+          natalPlanet: sig.transit.natalPlanet,
+          domain,
+          weight: sig.weight,
+        });
+        break; // one highlight per day is enough
+      }
+    }
+
+    if (results.length >= 3) break;
+  }
+
+  return results;
+}
+
+/**
+ * Build a calm-day TransitOverview. No "empty sky" framing — always names
+ * real contacts and either previews what's incoming or confirms the full window.
+ */
+function buildCalmDayOverview(
+  transits: Transit[],
+  incomingHighlights: IncomingHighlight[],
+): TransitOverview {
+  const todaySummary = buildCalmTodaySummary(transits);
+
+  if (incomingHighlights.length > 0) {
+    return {
+      summary: todaySummary,
+      detail: buildLookAheadDetail(incomingHighlights),
+      intensity: 'low',
+      topTransits: [],
+    };
+  }
+
+  return {
+    summary: todaySummary,
+    detail: buildQuietWindowDetail(transits),
+    intensity: 'low',
+    topTransits: [],
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 function buildMessage(domain: Domain, signatures: TransitSignature[]): string {
   const primary = signatures[0];
   const secondary = signatures[1];
 
   if (!primary) {
-    return 'The pattern here is relatively quiet today. Stay observant, move gently, and let the signal reveal itself before you force action.';
+    // No significant activations scored for this domain today.
+    // Name the absence concretely — no wellness-speak.
+    return 'No significant activations in this area today. Wide-orb or no contacts — the signal here is low.';
   }
 
   const lines = [primary.theme.focus];
@@ -269,9 +436,24 @@ function buildMessage(domain: Domain, signatures: TransitSignature[]): string {
   return lines.join(' ');
 }
 
+/**
+ * Build a transit overview for the given day.
+ *
+ * When today is low-intensity (no transit scores above the significance
+ * threshold), the function uses the optional look-ahead window to produce
+ * a concrete calm-day reading instead of a generic "quiet sky" message.
+ *
+ * @param transits        Today's transit list (from calculateTransitsForDate)
+ * @param natalChart      Natal summary for the user
+ * @param options.lookAheadTransits  Pre-computed DailyTransits for the next
+ *                        1–3 days (use calculateTransitsForRange starting
+ *                        tomorrow). Optional but strongly recommended — without
+ *                        it, calm days fall back to the quiet-window copy.
+ */
 export function buildTransitOverview(
   transits: Transit[],
-  natalChart: NatalChart,
+  natalChart: NatalSummary,
+  options?: { lookAheadTransits?: DailyTransits[] },
 ): TransitOverview {
   const scored = transits
     .flatMap((transit) => {
@@ -288,12 +470,11 @@ export function buildTransitOverview(
   }).slice(0, 3);
 
   if (uniqueTop.length === 0) {
-    return {
-      summary: 'The sky is relatively quiet today.',
-      detail: 'Nothing dominant is demanding a big reaction. This is better for noticing than forcing.',
-      intensity: 'low',
-      topTransits: [],
-    };
+    // DR-2: calm-day logic — never show "the sky is quiet" or empty-state framing.
+    // Always name real transits and either preview what's incoming or confirm the window.
+    const lookAhead = options?.lookAheadTransits ?? [];
+    const incoming = scanIncomingHighlights(lookAhead, natalChart);
+    return buildCalmDayOverview(transits, incoming);
   }
 
   const primary = uniqueTop[0];
@@ -312,7 +493,7 @@ export function buildTransitOverview(
 
 export function interpretTransits(
   transits: Transit[],
-  natalChart: NatalChart,
+  natalChart: NatalSummary,
 ): GuidanceResult[] {
   const domains: Domain[] = ['body', 'mind', 'spirit', 'relationships', 'career', 'home'];
 
@@ -325,7 +506,7 @@ export function interpretTransits(
     const top = scored[0];
     const summary = top
       ? `${top.transit.transitPlanet} ${top.transit.aspect} ${top.transit.natalPlanet}`
-      : 'Quiet sky';
+      : 'No significant transits';
 
     return {
       domain,

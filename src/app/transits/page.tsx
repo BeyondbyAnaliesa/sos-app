@@ -1,0 +1,226 @@
+export const runtime = 'nodejs'; // required for sweph
+
+import { redirect } from 'next/navigation';
+import { createClient } from '@/lib/supabase/server';
+import { calculateTransitsForDate, calculateTransitsForRange } from '@/lib/astrology/calculate-transits';
+import { interpretTransits, buildTransitOverview } from '@/lib/interpret';
+import type { NatalChart as RichChart } from '@/lib/astrology/types';
+import { buildNatalSummary } from '@/lib/astrology/domain-types';
+import { getSubscription, isActive } from '@/lib/subscription';
+import {
+  partitionTransitRoomGuidance,
+  getTransitDomainLabel,
+} from '@/lib/astrology/transit-domain-map';
+import GuidanceCard from '@/components/GuidanceCard';
+import UnlockCTA from '@/components/UnlockCTA';
+import BottomNav from '@/components/BottomNav';
+
+/**
+ * Transit Room — the free-user thirst trap for the Transits card.
+ *
+ * Free users: one current transit fully read + all other active domains
+ *   visible but locked with their life-domain label. UnlockCTA at bottom.
+ *
+ * Paid users: redirected to /calendar (the full transit calendar).
+ *   Redirect happens before any expensive computation.
+ *
+ * H-1 spec: https://github.com/BeyondbyAnaliesa/SOS-App (sos-decisions-2026-04-27.md)
+ */
+export default async function TransitRoomPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect('/auth/login');
+
+  const [chartResult, sub] = await Promise.all([
+    supabase
+      .from('natal_charts')
+      .select(
+        'placements_json, angles_json, houses_json, aspects_json, metadata_json',
+      )
+      .eq('user_id', user.id)
+      .single(),
+    getSubscription(user.id),
+  ]);
+
+  const paid = isActive(sub);
+
+  // Paid users get the full transit calendar.
+  if (paid) redirect('/calendar');
+
+  // Guard: no chart, or chart row exists with null/malformed columns (partial write, old migration).
+  // No chart row → onboarding. Corrupted chart row → chart-error (Option B, P1-4).
+  if (!chartResult.data) {
+    redirect('/onboarding');
+  }
+  if (!chartResult.data.placements_json || !chartResult.data.angles_json) {
+    redirect('/chart-error');
+  }
+
+  const richChart: RichChart = {
+    placements: chartResult.data.placements_json,
+    angles: chartResult.data.angles_json,
+    houses: chartResult.data.houses_json ?? [],
+    aspects: chartResult.data.aspects_json,
+    metadata: chartResult.data.metadata_json,
+  };
+
+  const natalSummary = buildNatalSummary(richChart);
+  const todayTransits = calculateTransitsForDate(new Date(), richChart);
+  // DR-2: 72-hour look-ahead for calm-day context in the transit room.
+  const lookAheadTransits = calculateTransitsForRange(
+    new Date(Date.now() + 86_400_000),
+    3,
+    richChart,
+  );
+  const guidance = interpretTransits(todayTransits.transits, natalSummary);
+  const overview = buildTransitOverview(todayTransits.transits, natalSummary, { lookAheadTransits });
+
+  // Free users: 1 visible, rest locked. (paid is always false here due to redirect above.)
+  const { visible, locked, quiet } = partitionTransitRoomGuidance(guidance, paid);
+
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const lockedDomainLabels = locked.map((r) => getTransitDomainLabel(r.domain));
+
+  return (
+    <main className="mx-auto w-full max-w-xl px-5 pb-24 pt-10 sm:px-6 sm:pt-14">
+      <header className="mb-10 text-center">
+        <div className="mx-auto mb-6 h-px w-12 bg-gradient-to-r from-transparent via-[var(--color-copper-dim)] to-transparent" />
+        <h1 className="text-3xl font-light tracking-[0.15em] text-[var(--color-text)]">
+          Transits
+        </h1>
+        <time className="mt-2 block text-[10px] uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
+          {today}
+        </time>
+        <div className="mt-6 h-px w-full bg-gradient-to-r from-transparent via-[var(--color-border-subtle)] to-transparent" />
+      </header>
+
+      {/* Sky overview */}
+      <section className="mb-8 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5 sm:px-6">
+        <p className="mb-1 text-xs font-medium uppercase tracking-widest text-[var(--color-copper)]">
+          ◎ Today&apos;s Sky
+        </p>
+        <p className="mt-3 text-sm leading-relaxed text-[var(--color-text)]">
+          {overview.summary}
+        </p>
+        {overview.detail && (
+          <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">
+            {overview.detail}
+          </p>
+        )}
+      </section>
+
+      {/* Free unlocked transit — full depth reading */}
+      {visible.length > 0 && (
+        <section className="mb-6">
+          <p className="mb-4 text-[10px] uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
+            Unlocked for you
+          </p>
+          <div className="space-y-4">
+            {visible.map((result) => (
+              <GuidanceCard key={result.domain} result={result} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Locked transits — thirst trap: visible label, content hidden */}
+      {locked.length > 0 && (
+        <section className="mb-8">
+          <p className="mb-4 text-[10px] uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
+            Also active today
+          </p>
+          <div className="space-y-3">
+            {locked.map((result) => (
+              <div
+                key={result.domain}
+                data-testid="locked-transit-card"
+                className="flex items-center justify-between rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-4"
+              >
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-widest text-[var(--color-text-muted)]">
+                    {getTransitDomainLabel(result.domain)}
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-[var(--color-text-muted)] opacity-50">
+                    {result.summary}
+                  </p>
+                </div>
+                <span
+                  className="ml-4 shrink-0 text-[var(--color-text-muted)] opacity-30"
+                  aria-label="Locked"
+                >
+                  ◈
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Quiet domains */}
+      {quiet.length > 0 && (
+        <section className="mb-8">
+          <p className="mb-4 text-[10px] uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
+            Quieter Today
+          </p>
+          <div className="space-y-3">
+            {quiet.map((result) => (
+              <div
+                key={result.domain}
+                className="rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-4"
+              >
+                <p className="text-xs font-medium uppercase tracking-widest text-[var(--color-text-muted)]">
+                  {result.title}
+                </p>
+                <p className="mt-1 text-[11px] text-[var(--color-text-muted)] opacity-60">
+                  {result.summary}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Upgrade CTA — always shown at bottom of Transit Room for free users.
+          The page only renders for free users (paid users are redirected to /calendar above). */}
+      <section
+        data-testid="transit-room-unlock-cta"
+        className="mb-8 rounded-[10px] border border-[var(--color-electric)] bg-[linear-gradient(180deg,rgba(239,68,136,0.08),rgba(239,68,136,0.02))] px-5 py-5 sm:px-6"
+      >
+        <p className="text-xs font-medium uppercase tracking-widest text-[var(--color-electric)]">
+          ✦ Full access unlocks everything
+        </p>
+        {lockedDomainLabels.length > 0 && (
+          <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">
+            {lockedDomainLabels.length} more life{' '}
+            {lockedDomainLabels.length === 1 ? 'area is' : 'areas are'} active in your
+            chart today —{' '}
+            {lockedDomainLabels.length === 1
+              ? lockedDomainLabels[0]
+              : lockedDomainLabels.length === 2
+              ? `${lockedDomainLabels[0]} and ${lockedDomainLabels[1]}`
+              : `${lockedDomainLabels.slice(0, -1).join(', ')}, and ${lockedDomainLabels[lockedDomainLabels.length - 1]}`}
+            .
+          </p>
+        )}
+        <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">
+          Get the full 30-day transit calendar, your complete chart, and everything
+          moving in your sky.
+        </p>
+        <div className="mt-5">
+          <UnlockCTA />
+        </div>
+      </section>
+
+      <BottomNav />
+    </main>
+  );
+}

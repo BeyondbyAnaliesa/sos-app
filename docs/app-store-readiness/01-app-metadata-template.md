@@ -134,7 +134,7 @@ Estimated total including commas: 99 chars.
 
 - Current in-repo web metadata says `SOS — Spiritual Operating System` with description `Your daily guidance, decoded from the cosmos.` (`src/app/layout.tsx`, `src/app/manifest.ts`).
 - Current public pricing in code is not yet aligned to the requested App Store plan structure:
-  - landing page shows `$79/year` founding (`src/components/LandingPage.tsx`)
-  - Stripe plan config has `founding_annual = 79` and `standard_annual = 99` (`src/lib/stripe.ts`)
+  - landing page shows `$79/year` Charter (`src/components/LandingPage.tsx`)
+  - Stripe plan config has `charter_annual = 79` and `standard_annual = 99` (`src/lib/stripe.ts`)
   - no `$12.99/mo` plan exists in code yet
 - Final App Store description should be updated only after pricing + IAP naming are finalized so metadata matches the product exactly.

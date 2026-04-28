@@ -27,9 +27,9 @@ export default stripe;
 
 // Plan metadata
 export const PLANS = {
-  founding_annual: {
-    priceId:     process.env.STRIPE_PRICE_ID_FOUNDING ?? '',
-    name:        'Founding Member',
+  charter_annual: {
+    priceId:     process.env.STRIPE_PRICE_ID_CHARTER ?? '',
+    name:        'Charter Member',
     price:       79,
     interval:    'year' as const,
     description: 'Locked in for life — this rate never increases.',

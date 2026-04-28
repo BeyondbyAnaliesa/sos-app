@@ -30,22 +30,22 @@ export default async function UpgradePage() {
       {/* Plan cards */}
       <div className="space-y-4">
 
-        {/* Founding Member */}
+        {/* Charter Member */}
         <div className="rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-6">
           <div className="mb-1 flex items-center justify-between">
             <p className="text-xs font-medium uppercase tracking-widest text-[var(--color-copper)]">
-              Founding Member
+              Charter Member
             </p>
             <span className="rounded-[10px] border border-[var(--color-border-subtle)] px-2 py-0.5 text-[10px] uppercase tracking-wider text-[var(--color-copper)]">
               Best value
             </span>
           </div>
           <p className="mt-3 flex items-baseline gap-2">
-            <span className="text-4xl font-light text-[var(--color-text)]">${PLANS.founding_annual.price}</span>
+            <span className="text-4xl font-light text-[var(--color-text)]">${PLANS.charter_annual.price}</span>
             <span className="text-sm text-[var(--color-text-muted)]">/ year</span>
           </p>
           <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-            {PLANS.founding_annual.description}
+            {PLANS.charter_annual.description}
           </p>
 
           <ul className="mt-5 space-y-2 text-sm text-[var(--color-text-muted)]">
@@ -72,8 +72,8 @@ export default async function UpgradePage() {
           </ul>
 
           <CheckoutButton
-            plan="founding_annual"
-            label={`Start for $${PLANS.founding_annual.price}/yr`}
+            plan="charter_annual"
+            label={`Start for $${PLANS.charter_annual.price}/yr`}
             className="mt-6 h-[52px] w-full rounded-[10px] border border-[var(--color-border)] bg-transparent text-sm font-medium uppercase tracking-widest text-[var(--color-copper)] hover:border-[var(--color-copper)] disabled:cursor-not-allowed disabled:opacity-40"
           />
         </div>

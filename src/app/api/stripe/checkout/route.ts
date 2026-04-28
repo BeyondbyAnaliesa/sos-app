@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     const planConfig = PLANS[plan];
     if (!planConfig.priceId) {
       return NextResponse.json(
-        { error: `Price ID for plan "${plan}" is not configured. Set STRIPE_PRICE_ID_FOUNDING and STRIPE_PRICE_ID_STANDARD in .env.local.` },
+        { error: `Price ID for plan "${plan}" is not configured. Set STRIPE_PRICE_ID_CHARTER and STRIPE_PRICE_ID_STANDARD in .env.local.` },
         { status: 500 },
       );
     }

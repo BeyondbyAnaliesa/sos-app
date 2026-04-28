@@ -34,8 +34,8 @@ export default async function SuccessPage() {
         </h1>
 
         <p className="mx-auto mt-4 max-w-sm text-sm leading-relaxed text-[var(--color-text-muted)]">
-          {sub?.plan === 'founding_annual'
-            ? 'Your founding rate is locked in for life. This is the price you will pay for as long as SOS exists.'
+          {sub?.plan === 'charter_annual'
+            ? 'Your Charter rate is locked in for life. This is the price you will pay for as long as SOS exists.'
             : 'Your annual membership is active. Everything is now unlocked.'}
         </p>
 

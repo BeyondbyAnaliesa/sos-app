@@ -12,7 +12,7 @@ export interface Subscription {
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
   stripePriceId: string | null;
-  plan: string | null;          // 'founding_annual' | 'standard_annual' | null
+  plan: string | null;          // 'charter_annual' | 'standard_annual' | null
   status: SubscriptionStatus;
   currentPeriodEnd: string | null;  // ISO datetime
   cancelAtPeriodEnd: boolean;

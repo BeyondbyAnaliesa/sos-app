@@ -19,7 +19,7 @@ The live audited codebase does **not** match that target yet.
 - Stripe checkout exists for subscription purchase
 - Subscription gating exists in product logic
 - Two Stripe annual plan keys exist:
-  - `founding_annual` = `$79/year`
+  - `charter_annual` = `$79/year`
   - `standard_annual` = `$99/year`
 - `allow_promotion_codes: true` is enabled in Stripe Checkout
 

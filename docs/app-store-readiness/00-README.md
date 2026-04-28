@@ -58,7 +58,7 @@ Requested target:
 - Free
 
 Current code:
-- Founding `$79/yr`
+- Charter `$79/yr`
 - Member `$99/yr`
 - no monthly plan in code
 - Stripe web checkout only

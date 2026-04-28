@@ -88,13 +88,13 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Founding member CTA ── */}
+      {/* ── Charter member CTA ── */}
       <section className="mx-auto max-w-xl px-6 pb-20 pt-4">
         <div className="mb-12 h-px w-full bg-gradient-to-r from-transparent via-[var(--color-border-subtle)] to-transparent" />
 
         <div className="rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-6 py-8 text-center">
           <p className="text-[10px] uppercase tracking-[0.3em] text-[var(--color-copper)]">
-            Founding members
+            Charter members
           </p>
 
           <p className="mt-4 flex items-baseline justify-center gap-2">
@@ -129,7 +129,7 @@ export default function LandingPage() {
             href="/auth/signup"
             className="mt-8 inline-flex h-[52px] items-center rounded-[10px] border border-[var(--color-border)] bg-transparent px-8 text-sm font-medium uppercase tracking-widest text-[var(--color-copper)] hover:border-[var(--color-copper)]"
           >
-            Become a founding member
+            Claim your Charter spot
           </Link>
 
           <p className="mt-4 text-xs text-[var(--color-text-muted)] opacity-50">

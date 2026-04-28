@@ -252,7 +252,7 @@ export default async function Home() {
       <div className="mt-8 text-center">
         {paid ? (
           <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-50">
-            {sub?.plan === 'founding_annual' ? 'Founding Member' : 'Member'}
+            {sub?.plan === 'charter_annual' ? 'Charter Member' : 'Member'}
           </p>
         ) : (
           <Link

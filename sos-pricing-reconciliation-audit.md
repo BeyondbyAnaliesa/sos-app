@@ -265,7 +265,12 @@ Recommended target names (not yet implemented in code because work stopped befor
 - `sos-pricing-reconciliation-audit.md` (repo mirror for commitability)
 
 ## Commits
-- Pending commit of this audit doc
+- `e30ed19` — `docs: audit pricing reconciliation scope`
+- current branch HEAD records the blocker/status update for this audit doc
+
+## Test count delta
+- Not run / not measurable in this branch state.
+- Current branch snapshot does not expose a `test` script or visible tracked test harness, so no defensible before/after test-count claim can be made from this environment.
 
 ## Final defensible state
 - Audit completed against the live SOS repo in an isolated worktree on `feat/pricing-reconciliation`

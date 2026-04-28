@@ -69,9 +69,12 @@ export default async function TransitRoomPage() {
 
   const natalSummary = buildNatalSummary(richChart);
   const todayTransits = calculateTransitsForDate(new Date(), richChart);
+  const todayRef = new Date(`${todayTransits.date}T12:00:00Z`);
+  const tomorrowRef = new Date(todayRef);
+  tomorrowRef.setUTCDate(tomorrowRef.getUTCDate() + 1);
   // DR-2: 72-hour look-ahead for calm-day context in the transit room.
   const lookAheadTransits = calculateTransitsForRange(
-    new Date(Date.now() + 86_400_000),
+    tomorrowRef,
     3,
     richChart,
   );
@@ -81,7 +84,7 @@ export default async function TransitRoomPage() {
   // Free users: 1 visible, rest locked. (paid is always false here due to redirect above.)
   const { visible, locked, quiet } = partitionTransitRoomGuidance(guidance, paid);
 
-  const today = new Date().toLocaleDateString('en-US', {
+  const today = todayRef.toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',

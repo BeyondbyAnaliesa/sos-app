@@ -24,13 +24,13 @@ export default function LandingPage() {
         <div className="mt-10 flex flex-col gap-3 sm:flex-row">
           <Link
             href="/auth/signup"
-            className="h-[52px] rounded-[10px] border border-[var(--color-border)] bg-transparent px-8 text-sm font-medium uppercase tracking-widest text-[var(--color-copper)] flex items-center justify-center hover:border-[var(--color-copper)]"
+            className="flex h-[52px] items-center justify-center rounded-[10px] border border-[var(--color-border)] bg-transparent px-8 text-sm font-medium uppercase tracking-widest text-[var(--color-copper)] hover:border-[var(--color-copper)]"
           >
             Get started free
           </Link>
           <Link
             href="/auth/login"
-            className="h-[52px] rounded-[10px] border border-[var(--color-border-subtle)] bg-transparent px-8 text-sm font-medium uppercase tracking-widest text-[var(--color-text-muted)] flex items-center justify-center hover:border-[var(--color-border)]"
+            className="flex h-[52px] items-center justify-center rounded-[10px] border border-[var(--color-border-subtle)] bg-transparent px-8 text-sm font-medium uppercase tracking-widest text-[var(--color-text-muted)] hover:border-[var(--color-border)]"
           >
             Log in
           </Link>
@@ -88,22 +88,26 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Founding member CTA ── */}
+      {/* ── Charter CTA ── */}
       <section className="mx-auto max-w-xl px-6 pb-20 pt-4">
         <div className="mb-12 h-px w-full bg-gradient-to-r from-transparent via-[var(--color-border-subtle)] to-transparent" />
 
         <div className="rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-6 py-8 text-center">
           <p className="text-[10px] uppercase tracking-[0.3em] text-[var(--color-copper)]">
-            Founding members
+            Charter
+          </p>
+
+          <p className="mt-2 text-xs uppercase tracking-[0.2em] text-[var(--color-copper-dim)] opacity-80">
+            First 100 spots remaining
           </p>
 
           <p className="mt-4 flex items-baseline justify-center gap-2">
-            <span className="text-5xl font-light text-[var(--color-text)]">$79</span>
+            <span className="text-5xl font-light text-[var(--color-text)]">$49</span>
             <span className="text-sm text-[var(--color-text-muted)]">/ year</span>
           </p>
 
           <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-            Rate locked for life. Never increases.
+            Locked forever. Never increases.
           </p>
 
           <ul className="mx-auto mt-6 max-w-xs space-y-2.5 text-left text-sm text-[var(--color-text-muted)]">
@@ -123,17 +127,21 @@ export default function LandingPage() {
               <span className="mt-0.5 text-[var(--color-copper)]">✓</span>
               <span>30-day transit calendar</span>
             </li>
+            <li className="flex items-start gap-2.5">
+              <span className="mt-0.5 text-[var(--color-copper)]">✓</span>
+              <span>Your $49 rate stays yours for as long as SOS exists</span>
+            </li>
           </ul>
 
           <Link
             href="/auth/signup"
             className="mt-8 inline-flex h-[52px] items-center rounded-[10px] border border-[var(--color-border)] bg-transparent px-8 text-sm font-medium uppercase tracking-widest text-[var(--color-copper)] hover:border-[var(--color-copper)]"
           >
-            Become a founding member
+            Claim Charter Spot
           </Link>
 
           <p className="mt-4 text-xs text-[var(--color-text-muted)] opacity-50">
-            Free to sign up. Upgrade when you&apos;re ready.
+            Start free. Upgrade when you&apos;re ready.
           </p>
         </div>
       </section>

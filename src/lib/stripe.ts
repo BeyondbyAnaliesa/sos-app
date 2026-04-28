@@ -25,22 +25,97 @@ const stripe = new Proxy({} as Stripe, {
 
 export default stripe;
 
-// Plan metadata
+export type BillingInterval = 'month' | 'year';
+export type MembershipTier = 'charter' | 'member';
+
+const LEGACY_PLAN_ALIASES = {
+  founding_annual: 'charter_annual',
+  standard_annual: 'member_annual',
+} as const;
+
 export const PLANS = {
-  founding_annual: {
-    priceId:     process.env.STRIPE_PRICE_ID_FOUNDING ?? '',
-    name:        'Founding Member',
-    price:       79,
-    interval:    'year' as const,
-    description: 'Locked in for life — this rate never increases.',
+  charter_annual: {
+    priceId:         process.env.STRIPE_PRICE_ID_CHARTER ?? '',
+    name:            'Charter Member',
+    price:           49,
+    interval:        'year' as const,
+    tier:            'charter' as const,
+    description:     'Locked in for life — this rate never increases.',
+    checkoutLabel:   '$49/year',
   },
-  standard_annual: {
-    priceId:     process.env.STRIPE_PRICE_ID_STANDARD ?? '',
-    name:        'Member',
-    price:       99,
-    interval:    'year' as const,
-    description: 'Full access, billed annually.',
+  member_annual: {
+    priceId:         process.env.STRIPE_PRICE_ID_STANDARD ?? '',
+    name:            'Member',
+    price:           99,
+    interval:        'year' as const,
+    tier:            'member' as const,
+    description:     'Full access, billed annually.',
+    checkoutLabel:   '$99/year',
+  },
+  member_monthly: {
+    priceId:         process.env.STRIPE_PRICE_ID_MEMBER_MONTHLY ?? '',
+    name:            'Member',
+    price:           12.99,
+    interval:        'month' as const,
+    tier:            'member' as const,
+    description:     'Full access, billed monthly.',
+    checkoutLabel:   '$12.99/month',
   },
 } as const;
 
 export type PlanKey = keyof typeof PLANS;
+export type LegacyPlanKey = keyof typeof LEGACY_PLAN_ALIASES;
+
+export function isPlanKey(value: string): value is PlanKey {
+  return value in PLANS;
+}
+
+export function getCanonicalPlanKey(plan: string | null | undefined): PlanKey | null {
+  if (!plan) return null;
+  if (isPlanKey(plan)) return plan;
+  if (plan in LEGACY_PLAN_ALIASES) {
+    return LEGACY_PLAN_ALIASES[plan as LegacyPlanKey];
+  }
+  return null;
+}
+
+export function getPlan(plan: string | null | undefined) {
+  const canonicalPlan = getCanonicalPlanKey(plan);
+  return canonicalPlan ? PLANS[canonicalPlan] : null;
+}
+
+export function getBillingIntervalForPlan(plan: string | null | undefined): BillingInterval | null {
+  return getPlan(plan)?.interval ?? null;
+}
+
+export function getMembershipTierForPlan(plan: string | null | undefined): MembershipTier | null {
+  return getPlan(plan)?.tier ?? null;
+}
+
+function normalizeInterval(interval: string | null | undefined): BillingInterval {
+  return interval === 'month' || interval === 'monthly' ? 'month' : 'year';
+}
+
+export function resolveCheckoutPlan(plan: string | null | undefined, interval?: string | null): PlanKey | null {
+  const canonicalPlan = getCanonicalPlanKey(plan);
+  if (canonicalPlan) return canonicalPlan;
+
+  switch (plan) {
+    case 'charter':
+    case 'founding':
+      return 'charter_annual';
+    case 'member':
+    case 'standard':
+      return normalizeInterval(interval) === 'month' ? 'member_monthly' : 'member_annual';
+    default:
+      return null;
+  }
+}
+
+export function resolvePlanFromPriceId(priceId: string | undefined): PlanKey | null {
+  if (!priceId) return null;
+  for (const [key, plan] of Object.entries(PLANS) as [PlanKey, (typeof PLANS)[PlanKey]][]) {
+    if (plan.priceId === priceId) return key;
+  }
+  return null;
+}

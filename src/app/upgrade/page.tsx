@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getLoginRedirectPath } from '@/lib/auth/redirects';
@@ -29,10 +30,18 @@ export default async function UpgradePage() {
 
       <UpgradePricing />
 
-      <p className="mt-8 text-center text-xs leading-relaxed text-[var(--color-text-muted)] opacity-50">
-        Monthly or annual billing. Cancel anytime — you keep access until the period ends.
-        <br />Secure checkout via Stripe. We never store your card details.
-      </p>
+      <div className="mt-8 space-y-3 text-center text-xs leading-relaxed text-[var(--color-text-muted)]">
+        <p className="opacity-50">
+          Monthly or annual billing. Cancel anytime — you keep access until the period ends.
+          <br />Secure checkout via Stripe. We never store your card details.
+        </p>
+        <p>
+          Have an invite code?{' '}
+          <Link href="/access" className="text-[var(--color-copper)] hover:underline">
+            Unlock tester access
+          </Link>
+        </p>
+      </div>
       <BottomNav />
     </main>
   );

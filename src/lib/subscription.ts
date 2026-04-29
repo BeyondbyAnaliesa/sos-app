@@ -5,6 +5,7 @@ import {
   getMembershipTierForPlan,
   type BillingInterval,
   type MembershipTier,
+  resolvePlanFromPriceId,
   type PlanKey,
 } from '@/lib/stripe';
 
@@ -42,13 +43,14 @@ export async function getSubscription(userId: string): Promise<Subscription | nu
 
   if (error || !data) return null;
 
-  const plan = getCanonicalPlanKey(data.plan ?? null);
+  const stripePriceId = data.stripe_price_id ?? data.price_id ?? null;
+  const plan = getCanonicalPlanKey(data.plan ?? null) ?? resolvePlanFromPriceId(stripePriceId ?? undefined);
 
   return {
     userId:               data.user_id,
     stripeCustomerId:     data.stripe_customer_id ?? null,
     stripeSubscriptionId: data.stripe_subscription_id ?? null,
-    stripePriceId:        data.stripe_price_id ?? null,
+    stripePriceId,
     plan,
     tier:                 getMembershipTierForPlan(plan),
     billingInterval:      getBillingIntervalForPlan(plan),

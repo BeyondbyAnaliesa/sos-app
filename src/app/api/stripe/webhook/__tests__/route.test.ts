@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const ORIGINAL_ENV = { ...process.env };
 
 const constructEventMock = vi.fn();
+const retrieveSubscriptionMock = vi.fn();
 const upsertMock = vi.fn();
 const fromMock = vi.fn(() => ({ upsert: upsertMock }));
 const logErrorMock = vi.fn();
@@ -13,7 +14,7 @@ vi.mock('@/lib/stripe', () => ({
       constructEvent: constructEventMock,
     },
     subscriptions: {
-      retrieve: vi.fn(),
+      retrieve: retrieveSubscriptionMock,
     },
   },
   getCanonicalPlanKey: vi.fn((plan: string | null | undefined) => plan ?? null),
@@ -80,6 +81,40 @@ describe('/api/stripe/webhook', () => {
     expect(await response.text()).toBe('Webhook is not configured');
     expect(constructEventMock).not.toHaveBeenCalled();
     expect(logErrorMock).toHaveBeenCalledWith(expect.any(Error), { route: '/api/stripe/webhook' });
+  });
+
+  it('mirrors checkout completions into the current subscriptions schema', async () => {
+    constructEventMock.mockReturnValue({
+      id:   'evt_checkout',
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          mode:         'subscription',
+          customer:     'cus_test',
+          subscription: 'sub_test',
+          metadata:     { supabase_user_id: 'user_test', plan: 'member_annual' },
+        },
+      },
+    });
+    retrieveSubscriptionMock.mockResolvedValue({
+      status: 'active',
+      items:  { data: [{ price: { id: 'price_member_annual' } }] },
+    });
+    upsertMock.mockResolvedValue({ error: null });
+    const { POST } = await loadRoute();
+
+    const response = await POST(request('{"id":"evt_checkout"}', 'signed'));
+
+    expect(response.status).toBe(200);
+    expect(fromMock).toHaveBeenCalledWith('subscriptions');
+    expect(upsertMock).toHaveBeenCalledWith({
+      user_id:                'user_test',
+      stripe_customer_id:     'cus_test',
+      stripe_subscription_id: 'sub_test',
+      price_id:               'price_member_annual',
+      status:                 'active',
+      updated_at:             expect.any(String),
+    }, { onConflict: 'user_id' });
   });
 
   it('accepts a valid signed unhandled event without touching subscriptions', async () => {

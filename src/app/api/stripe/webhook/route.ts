@@ -56,13 +56,8 @@ export async function POST(request: Request) {
           user_id:                userId,
           stripe_customer_id:     session.customer as string,
           stripe_subscription_id: stripeSubId,
-          stripe_price_id:        item?.price.id ?? null,
-          plan,
+          price_id:               item?.price.id ?? null,
           status:                 stripeSub.status,
-          current_period_end:     item?.current_period_end
-            ? new Date(item.current_period_end * 1000).toISOString()
-            : null,
-          cancel_at_period_end:   stripeSub.cancel_at_period_end,
           updated_at:             new Date().toISOString(),
         }, { onConflict: 'user_id' });
 
@@ -80,13 +75,8 @@ export async function POST(request: Request) {
           user_id:                userId,
           stripe_customer_id:     sub.customer as string,
           stripe_subscription_id: sub.id,
-          stripe_price_id:        subItem?.price.id ?? null,
-          plan:                   resolvePlanFromPriceId(subItem?.price.id),
+          price_id:               subItem?.price.id ?? null,
           status:                 sub.status,
-          current_period_end:     subItem?.current_period_end
-            ? new Date(subItem.current_period_end * 1000).toISOString()
-            : null,
-          cancel_at_period_end:   sub.cancel_at_period_end,
           updated_at:             new Date().toISOString(),
         }, { onConflict: 'user_id' });
 
@@ -103,7 +93,6 @@ export async function POST(request: Request) {
           user_id:                userId,
           stripe_subscription_id: sub.id,
           status:                 'canceled',
-          cancel_at_period_end:   false,
           updated_at:             new Date().toISOString(),
         }, { onConflict: 'user_id' });
 

@@ -2,6 +2,28 @@ import { NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { logError } from '@/lib/logger';
 
+const FEEDBACK_TYPES = new Set(['bug', 'confusion', 'suggestion', 'love']);
+const MAX_FEEDBACK_LENGTH = 2000;
+
+function normalizeFeedback(body: Record<string, unknown>) {
+  const type = typeof body.type === 'string' ? body.type.trim() : '';
+  const message = typeof body.message === 'string' ? body.message.trim() : '';
+
+  if (!FEEDBACK_TYPES.has(type)) {
+    return { error: 'Choose a valid feedback type.' };
+  }
+
+  if (!message) {
+    return { error: 'Message required.' };
+  }
+
+  if (message.length > MAX_FEEDBACK_LENGTH) {
+    return { error: 'Keep feedback under 2,000 characters.' };
+  }
+
+  return { type, message };
+}
+
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
@@ -11,10 +33,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { type, message } = await request.json();
+    const body = await request.json().catch(() => ({} as Record<string, unknown>));
+    const feedback = normalizeFeedback(body);
 
-    if (!type || !message?.trim()) {
-      return NextResponse.json({ error: 'Type and message required' }, { status: 400 });
+    if ('error' in feedback) {
+      return NextResponse.json({ error: feedback.error }, { status: 400 });
     }
 
     const admin = createAdminClient();
@@ -24,8 +47,8 @@ export async function POST(request: Request) {
       .from('feedback')
       .insert({
         user_id:  user.id,
-        type,
-        message:  message.trim(),
+        type:     feedback.type,
+        message:  feedback.message,
         metadata: {
           user_agent: request.headers.get('user-agent'),
           timestamp:  new Date().toISOString(),
@@ -38,9 +61,9 @@ export async function POST(request: Request) {
         _event: 'feedback',
         userId: user.id,
         email:  user.email,
-        type,
-        message: message.trim(),
-        _ts: Date.now(),
+        type:   feedback.type,
+        message: feedback.message,
+        _ts:    Date.now(),
       }));
     }
 

@@ -14,6 +14,14 @@ describe('getMemorySyncAuthType', () => {
     expect(getMemorySyncAuthType(request({ authorization: 'Bearer wrong' }), 'correct')).toBe(false);
   });
 
+  it('classifies bearer-authenticated Vercel cron requests for scheduler observability', () => {
+    expect(getMemorySyncAuthType(request({
+      authorization: 'Bearer correct',
+      'x-vercel-cron': '1',
+      'x-vercel-deployment-url': 'www.getsos.app',
+    }), 'correct')).toBe('vercel_cron');
+  });
+
   it('does not allow spoofed Vercel cron headers when CRON_SECRET is configured', () => {
     expect(getMemorySyncAuthType(request({
       'x-vercel-cron': '1',

@@ -29,12 +29,10 @@ export async function POST(request: Request) {
     const admin = createAdminClient();
     const { error } = await admin.from('subscriptions').upsert(
       {
-        user_id:                user.id,
-        status:                 'active',
-        price_id:               TESTER_ACCESS_PRICE_ID,
-        stripe_customer_id:     null,
-        stripe_subscription_id: null,
-        updated_at:             new Date().toISOString(),
+        user_id:    user.id,
+        status:     'active',
+        price_id:   TESTER_ACCESS_PRICE_ID,
+        updated_at: new Date().toISOString(),
       },
       { onConflict: 'user_id' },
     );

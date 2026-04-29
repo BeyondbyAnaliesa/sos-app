@@ -34,6 +34,11 @@ export default async function proxy(request: NextRequest) {
     return supabaseResponse;
   }
 
+  // Public web app assets must stay reachable before auth
+  if (path === '/sw.js' || path === '/manifest.webmanifest') {
+    return supabaseResponse;
+  }
+
   // Allow auth routes through
   if (path.startsWith('/auth')) {
     if (user) {

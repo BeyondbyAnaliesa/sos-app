@@ -4,14 +4,12 @@
  * Caches the app shell so it loads instantly and works on slow connections.
  */
 
-const CACHE_NAME = 'sos-v1';
+// Bump the cache when navigation shell behavior changes so old clients drop stale pages.
+const CACHE_NAME = 'sos-v2';
 
-// Static assets to pre-cache on install
+// Pre-cache only stable static assets.
+// Avoid pre-caching document routes so auth/public page changes don't get masked by old HTML.
 const PRECACHE_URLS = [
-  '/',
-  '/journal',
-  '/reading',
-  '/calendar',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/apple-touch-icon.png',

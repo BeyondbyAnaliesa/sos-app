@@ -19,6 +19,13 @@ const LINKS = [
     paid:  false,
   },
   {
+    href:  '/access',
+    glyph: '✧',
+    title: 'Tester Access',
+    desc:  'Enter an invite code',
+    paid:  false,
+  },
+  {
     href:  '/feedback',
     glyph: '✦',
     title: 'Send Feedback',

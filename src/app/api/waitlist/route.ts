@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 
 const BEEHIIV_API_URL = 'https://api.beehiiv.com/v2';
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: Request) {
   const apiKey = process.env.BEEHIIV_API_KEY;
@@ -28,6 +29,10 @@ export async function POST(request: Request) {
 
   if (!email) {
     return NextResponse.json({ error: 'Email is required.' }, { status: 400 });
+  }
+
+  if (!EMAIL_PATTERN.test(email)) {
+    return NextResponse.json({ error: 'Enter a valid email address.' }, { status: 400 });
   }
 
   const response = await fetch(

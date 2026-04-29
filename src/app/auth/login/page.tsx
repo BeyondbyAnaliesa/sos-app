@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
+import { getSafePostLoginRedirect } from '@/lib/auth/redirects';
 
 export default function LoginPage() {
   const [email, setEmail]       = useState('');
@@ -32,7 +33,7 @@ export default function LoginPage() {
     }
 
     const next = new URLSearchParams(window.location.search).get('next');
-    window.location.href = next?.startsWith('/') ? next : '/';
+    window.location.href = getSafePostLoginRedirect(next);
   }
 
   return (

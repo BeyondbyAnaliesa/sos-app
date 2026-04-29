@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { getLoginRedirectPath } from '@/lib/auth/redirects';
 import { getSubscription, isActive } from '@/lib/subscription';
 import UpgradePricing from '@/components/UpgradePricing';
 import BottomNav from '@/components/BottomNav';
@@ -8,7 +9,7 @@ export default async function UpgradePage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) redirect('/auth/login');
+  if (!user) redirect(getLoginRedirectPath('/upgrade'));
 
   const sub = await getSubscription(user.id);
   if (isActive(sub)) redirect('/');

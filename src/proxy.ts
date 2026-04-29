@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { getLoginRedirectPath } from '@/lib/auth/redirects';
 
 export default async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -55,7 +56,9 @@ export default async function proxy(request: NextRequest) {
 
   // Not logged in — send protected routes to login
   if (!user) {
-    return NextResponse.redirect(new URL('/auth/login', request.url));
+    return NextResponse.redirect(
+      new URL(getLoginRedirectPath(path, request.nextUrl.search), request.url),
+    );
   }
 
   // Logged in — check onboarding status from user metadata

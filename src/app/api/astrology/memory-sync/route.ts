@@ -6,6 +6,8 @@ export const runtime = 'nodejs';
  * Cron-triggered and manually callable route that runs the daily transit
  * memory sync for all users (or a targeted batch).
  *
+ * Vercel Cron calls this route with GET. Manual/operator calls may use POST.
+ *
  * Authentication:
  *   Bearer ${CRON_SECRET}  — primary secret for manual and external scheduler calls
  *   Vercel Cron headers     — accepted when CRON_SECRET is not set (Vercel-native)
@@ -31,7 +33,7 @@ import { getMemorySyncAuthType } from '@/lib/astrology/memory-sync-auth';
 import { logError } from '@/lib/logger';
 import { warnIfCronSecretMissing } from '@/lib/env-check';
 
-export async function POST(request: Request) {
+async function handleMemorySync(request: Request) {
   const startedAt = Date.now();
   warnIfCronSecretMissing('/api/astrology/memory-sync');
 
@@ -214,4 +216,12 @@ export async function POST(request: Request) {
     logError(err, { route: '/api/astrology/memory-sync' });
     return new Response('Something went wrong', { status: 500 });
   }
+}
+
+export async function POST(request: Request) {
+  return handleMemorySync(request);
+}
+
+export async function GET(request: Request) {
+  return handleMemorySync(request);
 }

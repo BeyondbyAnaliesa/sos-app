@@ -7,14 +7,18 @@ import { getCanonicalPlanKey, resolvePlanFromPriceId } from '@/lib/stripe';
 import { track } from '@/lib/analytics';
 import { logError } from '@/lib/logger';
 
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
-
 export async function POST(request: Request) {
   const body = await request.text();
   const signature = request.headers.get('stripe-signature');
 
   if (!signature) {
     return new Response('Missing stripe-signature header', { status: 400 });
+  }
+
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    logError(new Error('STRIPE_WEBHOOK_SECRET is not configured'), { route: '/api/stripe/webhook' });
+    return new Response('Webhook is not configured', { status: 500 });
   }
 
   let event: Stripe.Event;

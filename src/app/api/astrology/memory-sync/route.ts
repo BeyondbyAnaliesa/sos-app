@@ -27,39 +27,16 @@ import { createAdminClient } from '@/lib/supabase/server';
 import { createMemorySyncRun, getMemorySyncRunByDate, updateMemorySyncRun } from '@/lib/astrology/memory-store';
 import { runTransitMemorySync, runBackfillForUser } from '@/lib/astrology/run-transit-memory-sync';
 import { validateBackfillParams } from '@/lib/astrology/pure-fns';
+import { getMemorySyncAuthType } from '@/lib/astrology/memory-sync-auth';
 import { logError } from '@/lib/logger';
 import { warnIfCronSecretMissing } from '@/lib/env-check';
-
-/**
- * Returns the auth path that succeeded, or false if the request is unauthorized.
- * 'bearer'     — explicit CRON_SECRET match (manual operator trigger or external scheduler)
- * 'vercel_cron' — Vercel-native cron invocation (x-vercel-cron + x-vercel-deployment-url)
- *
- * Distinguishing these in metrics_json lets operators confirm the Vercel scheduler
- * is actually firing vs every run being a manual trigger.
- */
-function getAuthType(request: Request): 'bearer' | 'vercel_cron' | false {
-  const authHeader  = request.headers.get('authorization');
-  const bearer      = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  const cronSecret  = process.env.CRON_SECRET;
-
-  // Explicit secret match — preferred for all environments
-  if (cronSecret && bearer === cronSecret) return 'bearer';
-
-  // Vercel Cron native authentication (both headers must be present)
-  const vercelCron       = request.headers.get('x-vercel-cron');
-  const vercelDeployment = request.headers.get('x-vercel-deployment-url');
-  if (vercelCron && vercelDeployment) return 'vercel_cron';
-
-  return false;
-}
 
 export async function POST(request: Request) {
   const startedAt = Date.now();
   warnIfCronSecretMissing('/api/astrology/memory-sync');
 
   try {
-    const authType = getAuthType(request);
+    const authType = getMemorySyncAuthType(request, process.env.CRON_SECRET);
     if (!authType) {
       return new Response('Unauthorized', { status: 401 });
     }

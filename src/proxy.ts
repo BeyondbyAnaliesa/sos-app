@@ -60,8 +60,9 @@ export default async function proxy(request: NextRequest) {
 
   // Logged in — check onboarding status from user metadata
   const onboardingComplete = user.user_metadata?.onboarding_complete === true;
+  const isPreOnboardingAllowedRoute = path.startsWith('/onboarding') || path.startsWith('/upgrade');
 
-  if (!onboardingComplete && !path.startsWith('/onboarding')) {
+  if (!onboardingComplete && !isPreOnboardingAllowedRoute) {
     return NextResponse.redirect(new URL('/onboarding', request.url));
   }
 

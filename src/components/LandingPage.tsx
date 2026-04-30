@@ -4,22 +4,32 @@ export default function LandingPage() {
   return (
     <main className="min-h-dvh">
       {/* ── Hero ── */}
-      <section className="flex min-h-[85dvh] flex-col items-center justify-center px-6 text-center">
-        <div className="mb-10 h-px w-20 bg-gradient-to-r from-transparent via-[var(--color-copper-dim)] to-transparent" />
+      <section className="relative flex min-h-[85dvh] flex-col items-center justify-center overflow-hidden px-6 text-center">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0"
+        >
+          <div className="absolute left-1/2 top-0 h-[38rem] w-[56rem] -translate-x-1/2 rounded-full bg-[radial-gradient(circle_at_center,rgba(239,68,136,0.03)_0%,rgba(239,68,136,0.012)_38%,transparent_72%)]" />
+        </div>
 
-        <p className="text-[10px] uppercase tracking-[0.4em] text-[var(--color-copper)]">
+        <div className="relative z-10 mb-10 flex flex-col items-center gap-3">
+          <div className="h-px w-28 bg-gradient-to-r from-transparent via-[rgba(201,162,122,0.72)] to-transparent" />
+          <div className="h-5 w-px bg-gradient-to-b from-[rgba(201,162,122,0.68)] to-transparent" />
+        </div>
+
+        <p className="relative z-10 text-[10px] uppercase tracking-[0.4em] text-[var(--color-copper)]">
           Timing for real life
         </p>
 
-        <h1 className="mt-6 max-w-2xl text-4xl font-light leading-[1.15] tracking-[0.04em] text-[var(--color-text)] sm:text-6xl">
+        <h1 className="relative z-10 mt-6 max-w-2xl text-4xl font-light leading-[1.15] tracking-[0.04em] text-[var(--color-text)] sm:text-6xl">
           SOS reads your chart timing with your real life.
         </h1>
 
-        <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-[var(--color-text-muted)]">
+        <p className="relative z-10 mx-auto mt-6 max-w-xl text-lg leading-relaxed text-[var(--color-text-muted)]">
           The planets give the timing. Your lived experience gives the context. SOS reads both together, so guidance changes with what is actually happening.
         </p>
 
-        <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+        <div className="relative z-10 mt-10 flex flex-col gap-3 sm:flex-row">
           <Link
             href="/auth/signup"
             className="flex h-[52px] items-center justify-center rounded-[10px] border border-[var(--color-border)] bg-transparent px-8 text-sm font-medium uppercase tracking-widest text-[var(--color-copper)] hover:border-[var(--color-copper)]"
@@ -34,7 +44,7 @@ export default function LandingPage() {
           </a>
         </div>
 
-        <div className="mt-16 animate-bounce text-[var(--color-text-muted)] opacity-30">
+        <div className="relative z-10 mt-16 animate-bounce text-[var(--color-text-muted)] opacity-30">
           <span className="text-xs">↓</span>
         </div>
       </section>
@@ -49,7 +59,7 @@ export default function LandingPage() {
 
         <div className="space-y-10">
           <div className="text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-[10px] border border-[var(--color-border-subtle)] text-lg text-[var(--color-copper)]">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-[10px] border border-[var(--color-border-subtle)] text-lg text-[rgba(201,162,122,0.7)]">
               ✦
             </div>
             <h3 className="text-base font-light tracking-wide text-[var(--color-text)]">
@@ -61,7 +71,7 @@ export default function LandingPage() {
           </div>
 
           <div className="text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-[10px] border border-[var(--color-border-subtle)] text-lg text-[var(--color-copper)]">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-[10px] border border-[var(--color-border-subtle)] text-lg text-[rgba(201,162,122,0.82)]">
               ◆
             </div>
             <h3 className="text-base font-light tracking-wide text-[var(--color-text)]">
@@ -73,8 +83,8 @@ export default function LandingPage() {
           </div>
 
           <div className="text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-[10px] border border-[var(--color-border-subtle)] text-lg text-[var(--color-copper)]">
-              ◇
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-[10px] border border-[rgba(201,162,122,0.26)] bg-[linear-gradient(180deg,rgba(201,162,122,0.14),rgba(201,162,122,0.04))] text-lg text-[var(--color-copper)] shadow-[0_0_24px_rgba(201,162,122,0.08)]">
+              ◆
             </div>
             <h3 className="text-base font-light tracking-wide text-[var(--color-text)]">
               The reading changes with both
@@ -140,13 +150,10 @@ export default function LandingPage() {
               <p className="text-[10px] uppercase tracking-[0.25em] text-[var(--color-electric)]">
                 SOS noticed
               </p>
-              <p className="mt-3 text-sm leading-relaxed text-[var(--color-text)]">
-                The reading connects today’s timing to the pattern you keep returning to.
+              <p className="mt-3 text-sm italic leading-relaxed text-[var(--color-text)]">
+                Today&apos;s Saturn pressure around work is landing on the launch decision you keep circling, so the heaviness makes sense.
               </p>
             </div>
-            <p className="mt-4 text-sm font-medium leading-relaxed text-[var(--color-text)]">
-              This is the product: chart timing and lived context read together.
-            </p>
           </div>
         </div>
       </section>
@@ -209,7 +216,7 @@ export default function LandingPage() {
           </Link>
 
           <p className="mt-4 text-xs text-[var(--color-text-muted)] opacity-50">
-            Start free. Upgrade when you&apos;re ready. Charter keeps the $49/year rate.
+            Start free. Claim Charter now to lock $49/year forever. This rate closes after the 100 spots are gone.
           </p>
         </div>
       </section>

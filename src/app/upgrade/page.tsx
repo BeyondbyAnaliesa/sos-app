@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { getLoginRedirectPath } from '@/lib/auth/redirects';
@@ -7,6 +8,8 @@ import UpgradePricing from '@/components/UpgradePricing';
 import BottomNav from '@/components/BottomNav';
 
 export default async function UpgradePage() {
+  const headersList = await headers();
+  const isNativeIOS = headersList.get('user-agent')?.includes('SOSNativeIOS') ?? false;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -28,12 +31,21 @@ export default async function UpgradePage() {
         <div className="mt-6 h-px w-full bg-gradient-to-r from-transparent via-[var(--color-border-subtle)] to-transparent" />
       </header>
 
-      <UpgradePricing />
+      <UpgradePricing nativeIOS={isNativeIOS} />
 
       <div className="mt-8 space-y-3 text-center text-xs leading-relaxed text-[var(--color-text-muted)]">
         <p className="opacity-50">
-          Monthly or annual billing. Cancel anytime — you keep access until the period ends.
-          <br />Secure checkout via Stripe. We never store your card details.
+          {isNativeIOS ? (
+            <>
+              Paid memberships are not available inside this iOS build yet.
+              <br />Use an invite code for tester access.
+            </>
+          ) : (
+            <>
+              Monthly or annual billing. Cancel anytime — you keep access until the period ends.
+              <br />Secure checkout via Stripe. We never store your card details.
+            </>
+          )}
         </p>
         <p>
           Have an invite code?{' '}

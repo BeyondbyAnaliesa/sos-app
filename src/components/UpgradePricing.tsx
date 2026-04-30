@@ -4,7 +4,11 @@ import { useState } from 'react';
 import CheckoutButton from '@/components/CheckoutButton';
 import { PLANS, type BillingInterval, type PlanKey } from '@/lib/stripe';
 
-export default function UpgradePricing() {
+type UpgradePricingProps = {
+  nativeIOS?: boolean;
+};
+
+export default function UpgradePricing({ nativeIOS = false }: UpgradePricingProps) {
   const [memberInterval, setMemberInterval] = useState<BillingInterval>('year');
 
   const memberPlan: PlanKey = memberInterval === 'month' ? 'member_monthly' : 'member_annual';
@@ -55,11 +59,17 @@ export default function UpgradePricing() {
           </li>
         </ul>
 
-        <CheckoutButton
-          plan="charter_annual"
-          label="Claim Charter Spot"
-          className="mt-6 h-[52px] w-full rounded-[10px] border border-[var(--color-border)] bg-transparent text-sm font-medium uppercase tracking-widest text-[var(--color-copper)] hover:border-[var(--color-copper)] disabled:cursor-not-allowed disabled:opacity-40"
-        />
+        {nativeIOS ? (
+          <p className="mt-6 rounded-[10px] border border-[var(--color-border-subtle)] px-4 py-3 text-center text-xs leading-relaxed text-[var(--color-text-muted)]">
+            Charter checkout is temporarily unavailable in this iOS build while App Store purchases are being configured.
+          </p>
+        ) : (
+          <CheckoutButton
+            plan="charter_annual"
+            label="Claim Charter Spot"
+            className="mt-6 h-[52px] w-full rounded-[10px] border border-[var(--color-border)] bg-transparent text-sm font-medium uppercase tracking-widest text-[var(--color-copper)] hover:border-[var(--color-copper)] disabled:cursor-not-allowed disabled:opacity-40"
+          />
+        )}
       </div>
 
       <div className="rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-6 py-6">
@@ -121,11 +131,17 @@ export default function UpgradePricing() {
           </li>
         </ul>
 
-        <CheckoutButton
-          plan={memberPlan}
-          label="Get Started"
-          className="mt-6 h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-transparent text-sm font-medium uppercase tracking-widest text-[var(--color-text-muted)] hover:border-[var(--color-border)] disabled:cursor-not-allowed disabled:opacity-40"
-        />
+        {nativeIOS ? (
+          <p className="mt-6 rounded-[10px] border border-[var(--color-border-subtle)] px-4 py-3 text-center text-xs leading-relaxed text-[var(--color-text-muted)]">
+            Member checkout is temporarily unavailable in this iOS build while App Store purchases are being configured.
+          </p>
+        ) : (
+          <CheckoutButton
+            plan={memberPlan}
+            label="Get Started"
+            className="mt-6 h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-transparent text-sm font-medium uppercase tracking-widest text-[var(--color-text-muted)] hover:border-[var(--color-border)] disabled:cursor-not-allowed disabled:opacity-40"
+          />
+        )}
       </div>
     </div>
   );

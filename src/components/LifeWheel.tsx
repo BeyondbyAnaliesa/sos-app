@@ -61,7 +61,7 @@ export default function LifeWheel({ segments }: { segments: LifeSegmentData[] })
     <svg
       viewBox="-20 -20 340 340"
       aria-hidden="true"
-      className="mx-auto w-full max-w-[272px]"
+      className="mx-auto w-full max-w-[320px]"
     >
       {/* Outer atmospheric ring */}
       <circle

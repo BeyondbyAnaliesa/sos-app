@@ -141,7 +141,7 @@ export default async function DailyReadingPage() {
         )}
       </section>
 
-      <section className="mb-6 rounded-[10px] border border-[var(--color-electric)]/60 bg-[linear-gradient(180deg,rgba(239,68,136,0.12),rgba(239,68,136,0.02))] px-5 py-4">
+      <section className="mb-6 rounded-[10px] border border-[var(--color-electric)]/60 bg-[linear-gradient(180deg,rgba(239,68,136,0.12),rgba(239,68,136,0.02))] px-5 py-5">
         <p className="text-xs font-medium uppercase tracking-[0.25em] text-[var(--color-electric)]">
           SOS noticed
         </p>

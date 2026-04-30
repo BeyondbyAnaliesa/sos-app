@@ -157,7 +157,7 @@ export default async function Home() {
 
       <section className="flex flex-col items-center pb-8 pt-2">
         <LifeWheel segments={lifeSegments} />
-        <p className="mt-5 max-w-[260px] text-center text-xs leading-relaxed text-[var(--color-text-muted)]">
+        <p className="mt-5 max-w-[280px] text-center text-sm leading-relaxed text-[var(--color-text-muted)]">
           {stateText}
         </p>
         {overview.detail && (
@@ -167,12 +167,12 @@ export default async function Home() {
         )}
       </section>
 
-      <div className="rounded-[10px] border border-[var(--color-electric)]/60 bg-[linear-gradient(180deg,rgba(239,68,136,0.12),rgba(239,68,136,0.02))] px-5 py-4">
+      <div className="rounded-[10px] border border-[var(--color-electric)]/60 bg-[linear-gradient(180deg,rgba(239,68,136,0.12),rgba(239,68,136,0.02))] px-5 py-5">
         <p className="text-xs font-medium uppercase tracking-[0.25em] text-[var(--color-electric)]">
           SOS noticed
         </p>
         <p className="mt-2 text-[15px] text-[var(--color-text)]">{memoryCue.headline}</p>
-        <p className="mt-2 text-xs leading-relaxed text-[var(--color-text-muted)]">{memoryCue.body}</p>
+        <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">{memoryCue.body}</p>
       </div>
 
       <div className="mt-8 h-px bg-gradient-to-r from-transparent via-[var(--color-border-subtle)] to-transparent" />

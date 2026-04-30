@@ -1,12 +1,12 @@
 import type { GuidanceResult, Domain, Intensity } from '@/lib/interpret';
 
-const DOMAIN_CONFIG: Record<Domain, { icon: string; accentClass: string }> = {
-  body:          { icon: '◑', accentClass: 'text-[var(--color-copper)]' },
-  mind:          { icon: '✦', accentClass: 'text-[var(--color-copper)]' },
-  spirit:        { icon: '◎', accentClass: 'text-[var(--color-copper)]' },
-  relationships: { icon: '◆', accentClass: 'text-[var(--color-copper)]' },
-  career:        { icon: '◇', accentClass: 'text-[var(--color-copper)]' },
-  home:          { icon: '⌂', accentClass: 'text-[var(--color-copper)]' },
+const DOMAIN_CONFIG: Record<Domain, { icon: string; accentClass: string; borderClass: string }> = {
+  body:          { icon: '◑', accentClass: 'text-[var(--color-copper)]', borderClass: 'border-l-[rgba(201,162,122,0.42)]' },
+  mind:          { icon: '✦', accentClass: 'text-[var(--color-copper)]', borderClass: 'border-l-[rgba(201,162,122,0.58)]' },
+  spirit:        { icon: '◎', accentClass: 'text-[var(--color-copper)]', borderClass: 'border-l-[rgba(239,68,136,0.3)]' },
+  relationships: { icon: '◆', accentClass: 'text-[var(--color-copper)]', borderClass: 'border-l-[var(--color-copper)]' },
+  career:        { icon: '◇', accentClass: 'text-[var(--color-copper)]', borderClass: 'border-l-[var(--color-border)]' },
+  home:          { icon: '⌂', accentClass: 'text-[var(--color-copper)]', borderClass: 'border-l-[var(--color-copper-dim)]' },
 };
 
 const INTENSITY_CONFIG: Record<Intensity, { label: string; dotClass: string }> = {
@@ -20,7 +20,7 @@ export default function GuidanceCard({ result }: { result: GuidanceResult }) {
   const intensity = INTENSITY_CONFIG[result.intensity];
 
   return (
-    <div className="rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-6 py-5">
+    <div className={`rounded-[10px] border border-l-2 border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-6 py-5 ${domain.borderClass}`}>
       <div className="mb-4 flex items-center justify-between">
         <div
           className={`flex items-center gap-2 text-xs font-semibold uppercase tracking-widest ${domain.accentClass}`}

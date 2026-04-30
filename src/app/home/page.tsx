@@ -167,11 +167,11 @@ export default async function Home() {
         )}
       </section>
 
-      <div className="rounded-[10px] border border-[var(--color-electric)]/40 bg-[linear-gradient(180deg,rgba(239,68,136,0.08),rgba(239,68,136,0.02))] px-5 py-4">
-        <p className="text-[10px] font-medium uppercase tracking-[0.25em] text-[var(--color-electric)]">
+      <div className="rounded-[10px] border border-[var(--color-electric)]/60 bg-[linear-gradient(180deg,rgba(239,68,136,0.12),rgba(239,68,136,0.02))] px-5 py-4">
+        <p className="text-xs font-medium uppercase tracking-[0.25em] text-[var(--color-electric)]">
           SOS noticed
         </p>
-        <p className="mt-2 text-sm text-[var(--color-text)]">{memoryCue.headline}</p>
+        <p className="mt-2 text-[15px] text-[var(--color-text)]">{memoryCue.headline}</p>
         <p className="mt-2 text-xs leading-relaxed text-[var(--color-text-muted)]">{memoryCue.body}</p>
       </div>
 

@@ -68,7 +68,7 @@ xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer dire
 - Open `ios/App/App.xcodeproj` and set signing team.
 - Confirm/register bundle ID `app.getsos.sos` in Apple Developer.
 - Decide iPhone-only vs universal/iPad support.
-- Replace default Capacitor app icon/splash with final SOS App Store assets.
+- Replace temporary SOS-derived AppIcon render and default splash with final SOS App Store assets.
 - Decide remote-wrapper review posture before external TestFlight/App Store submission.
 - Implement StoreKit/IAP or keep native paid purchase paths unavailable for tester-only builds.
 

@@ -4,11 +4,17 @@ import { useEffect } from 'react';
 
 export default function ServiceWorkerRegistrar() {
   useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker
-        .register('/sw.js', { scope: '/', updateViaCache: 'none' })
-        .catch((err) => console.error('SW registration failed:', err));
-    }
+    if (!('serviceWorker' in navigator)) return;
+
+    navigator.serviceWorker
+      .getRegistrations()
+      .then((registrations) => Promise.all(registrations.map((registration) => registration.unregister())))
+      .then(() => {
+        if ('caches' in window) {
+          return caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key))));
+        }
+      })
+      .catch((err) => console.error('SW cleanup failed:', err));
   }, []);
 
   return null;

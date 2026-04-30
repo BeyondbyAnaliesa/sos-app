@@ -16,7 +16,7 @@ export default function CancelPage() {
 
         <div className="mt-10 space-y-3">
           <Link
-            href="/"
+            href="/home"
             className="flex items-center justify-between rounded-[10px] border border-[var(--color-border-subtle)] px-5 py-4 text-sm text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:text-[var(--color-text)]"
           >
             <span>Back to home</span>

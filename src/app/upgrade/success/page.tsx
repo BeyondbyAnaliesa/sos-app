@@ -74,7 +74,7 @@ export default async function SuccessPage() {
             </>
           ) : (
             <Link
-              href="/"
+              href="/home"
               className="flex items-center justify-center rounded-[10px] border border-[var(--color-border-subtle)] px-5 py-4 text-sm text-[var(--color-text-muted)] hover:border-[var(--color-border)]"
             >
               Go to home

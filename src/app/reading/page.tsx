@@ -109,7 +109,7 @@ export default async function ReadingPage() {
     return (
       <main className="mx-auto w-full max-w-xl px-5 py-10 sm:px-6">
         <Link
-          href="/"
+          href="/home"
           className="mb-8 flex items-center gap-1.5 py-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-copper)]"
         >
           <span>←</span>

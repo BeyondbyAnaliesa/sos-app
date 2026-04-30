@@ -1,13 +1,14 @@
 begin;
 
 create extension if not exists supabase_vault cascade;
+create extension if not exists pgcrypto with schema extensions;
 create schema if not exists private;
 
 create or replace function private.require_journal_encryption_key()
 returns text
 language plpgsql
 security definer
-set search_path = vault, public, pg_catalog
+set search_path = vault, public, extensions, pg_catalog
 as $$
 declare
   secret_value text;
@@ -36,17 +37,17 @@ begin
   alter table public.journal_reflections add column if not exists ai_response_encrypted bytea;
 
   update public.journal_entries
-     set entry_text_encrypted = pgp_sym_encrypt(entry_text, private.require_journal_encryption_key())
+     set entry_text_encrypted = extensions.pgp_sym_encrypt(entry_text, private.require_journal_encryption_key())
    where entry_text_encrypted is null
      and entry_text is not null;
 
   update public.journal_messages
-     set content_encrypted = pgp_sym_encrypt(content, private.require_journal_encryption_key())
+     set content_encrypted = extensions.pgp_sym_encrypt(content, private.require_journal_encryption_key())
    where content_encrypted is null
      and content is not null;
 
   update public.journal_reflections
-     set ai_response_encrypted = pgp_sym_encrypt(ai_response, private.require_journal_encryption_key())
+     set ai_response_encrypted = extensions.pgp_sym_encrypt(ai_response, private.require_journal_encryption_key())
    where ai_response_encrypted is null
      and ai_response is not null;
 
@@ -68,7 +69,7 @@ create or replace function public.journal_create_entry(
 returns table (id uuid)
 language plpgsql
 security definer
-set search_path = public, private, vault, pg_catalog
+set search_path = public, private, vault, extensions, pg_catalog
 as $$
 begin
   if p_entry_text is null or btrim(p_entry_text) = '' then
@@ -77,7 +78,7 @@ begin
 
   return query
   insert into public.journal_entries (user_id, entry_date, entry_text_encrypted)
-  values (p_user_id, p_entry_date, pgp_sym_encrypt(p_entry_text, private.require_journal_encryption_key()))
+  values (p_user_id, p_entry_date, extensions.pgp_sym_encrypt(p_entry_text, private.require_journal_encryption_key()))
   returning journal_entries.id;
 end;
 $$;
@@ -95,14 +96,14 @@ returns table (
 )
 language sql
 security definer
-set search_path = public, private, vault, pg_catalog
+set search_path = public, private, vault, extensions, pg_catalog
 as $$
   select
     je.id,
     je.user_id,
     je.entry_date,
     je.created_at,
-    pgp_sym_decrypt(je.entry_text_encrypted, private.require_journal_encryption_key()) as entry_text
+    extensions.pgp_sym_decrypt(je.entry_text_encrypted, private.require_journal_encryption_key()) as entry_text
   from public.journal_entries je
   where je.user_id = p_user_id
   order by je.entry_date desc, je.created_at desc
@@ -117,7 +118,7 @@ create or replace function public.journal_insert_message(
 returns table (id uuid)
 language plpgsql
 security definer
-set search_path = public, private, vault, pg_catalog
+set search_path = public, private, vault, extensions, pg_catalog
 as $$
 begin
   if p_content is null or btrim(p_content) = '' then
@@ -126,7 +127,7 @@ begin
 
   return query
   insert into public.journal_messages (entry_id, role, content_encrypted)
-  values (p_entry_id, p_role, pgp_sym_encrypt(p_content, private.require_journal_encryption_key()))
+  values (p_entry_id, p_role, extensions.pgp_sym_encrypt(p_content, private.require_journal_encryption_key()))
   returning journal_messages.id;
 end;
 $$;
@@ -143,13 +144,13 @@ returns table (
 )
 language sql
 security definer
-set search_path = public, private, vault, pg_catalog
+set search_path = public, private, vault, extensions, pg_catalog
 as $$
   select
     jm.id,
     jm.entry_id,
     jm.role,
-    pgp_sym_decrypt(jm.content_encrypted, private.require_journal_encryption_key()) as content,
+    extensions.pgp_sym_decrypt(jm.content_encrypted, private.require_journal_encryption_key()) as content,
     jm.created_at
   from public.journal_messages jm
   where jm.entry_id = p_entry_id
@@ -163,7 +164,7 @@ create or replace function public.journal_update_message_content(
 returns table (id uuid)
 language plpgsql
 security definer
-set search_path = public, private, vault, pg_catalog
+set search_path = public, private, vault, extensions, pg_catalog
 as $$
 begin
   if p_content is null or btrim(p_content) = '' then
@@ -172,7 +173,7 @@ begin
 
   return query
   update public.journal_messages
-     set content_encrypted = pgp_sym_encrypt(p_content, private.require_journal_encryption_key())
+     set content_encrypted = extensions.pgp_sym_encrypt(p_content, private.require_journal_encryption_key())
    where journal_messages.id = p_message_id
   returning journal_messages.id;
 end;

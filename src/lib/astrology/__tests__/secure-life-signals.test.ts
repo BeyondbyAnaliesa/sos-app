@@ -168,8 +168,8 @@ describe('secure life signal store', () => {
     );
 
     expect(migration).toContain('alter table public.life_signals add column if not exists content_text_encrypted bytea;');
-    expect(migration).toContain('pgp_sym_encrypt(content_text, private.require_journal_encryption_key())');
-    expect(migration).toContain('pgp_sym_decrypt(life_signal.content_text_encrypted, private.require_journal_encryption_key())');
+    expect(migration).toContain('extensions.pgp_sym_encrypt(content_text, private.require_journal_encryption_key())');
+    expect(migration).toContain('extensions.pgp_sym_decrypt(life_signal.content_text_encrypted, private.require_journal_encryption_key())');
     expect(migration).toContain('alter table public.life_signals drop column if exists content_text;');
     expect(migration).toContain('create or replace function public.life_signals_create(');
     expect(migration).toContain('create or replace function public.life_signals_list(');

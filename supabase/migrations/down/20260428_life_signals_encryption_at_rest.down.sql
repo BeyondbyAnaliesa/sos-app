@@ -3,7 +3,7 @@ begin;
 alter table public.life_signals add column if not exists content_text text;
 
 update public.life_signals
-   set content_text = pgp_sym_decrypt(content_text_encrypted, private.require_journal_encryption_key())
+   set content_text = extensions.pgp_sym_decrypt(content_text_encrypted, private.require_journal_encryption_key())
  where content_text is null
    and content_text_encrypted is not null;
 

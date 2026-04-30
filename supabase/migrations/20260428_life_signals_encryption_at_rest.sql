@@ -3,7 +3,7 @@ begin;
 alter table public.life_signals add column if not exists content_text_encrypted bytea;
 
 update public.life_signals
-   set content_text_encrypted = pgp_sym_encrypt(content_text, private.require_journal_encryption_key())
+   set content_text_encrypted = extensions.pgp_sym_encrypt(content_text, private.require_journal_encryption_key())
  where content_text_encrypted is null
    and content_text is not null;
 
@@ -14,11 +14,11 @@ returns text
 language sql
 stable
 security definer
-set search_path = public, private, vault, pg_catalog
+set search_path = public, private, vault, extensions, pg_catalog
 as $$
   select case
     when life_signal.content_text_encrypted is null then null
-    else pgp_sym_decrypt(life_signal.content_text_encrypted, private.require_journal_encryption_key())
+    else extensions.pgp_sym_decrypt(life_signal.content_text_encrypted, private.require_journal_encryption_key())
   end;
 $$;
 
@@ -46,7 +46,7 @@ create or replace function public.life_signals_create(
 returns table (id uuid)
 language plpgsql
 security definer
-set search_path = public, private, vault, pg_catalog
+set search_path = public, private, vault, extensions, pg_catalog
 as $$
 begin
   return query
@@ -82,7 +82,7 @@ begin
     coalesce(p_signal_timestamp, now()),
     case
       when p_content_text is null then null
-      else pgp_sym_encrypt(p_content_text, private.require_journal_encryption_key())
+      else extensions.pgp_sym_encrypt(p_content_text, private.require_journal_encryption_key())
     end,
     p_content_json,
     p_signal_kind,
@@ -129,7 +129,7 @@ returns table (
 )
 language plpgsql
 security definer
-set search_path = public, private, vault, pg_catalog
+set search_path = public, private, vault, extensions, pg_catalog
 as $$
 begin
   if auth.role() <> 'service_role' and auth.uid() is distinct from p_user_id then

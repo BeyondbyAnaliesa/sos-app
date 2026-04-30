@@ -193,9 +193,10 @@ describe('secure journal store', () => {
     );
 
     expect(migration).toContain("create extension if not exists supabase_vault cascade;");
+    expect(migration).toContain("create extension if not exists pgcrypto with schema extensions;");
     expect(migration).toContain("vault.decrypted_secrets");
-    expect(migration).toContain("pgp_sym_encrypt");
-    expect(migration).toContain("pgp_sym_decrypt");
+    expect(migration).toContain("extensions.pgp_sym_encrypt");
+    expect(migration).toContain("extensions.pgp_sym_decrypt");
     expect(migration).toContain("alter table public.journal_entries drop column if exists entry_text;");
     expect(migration).toContain("alter table public.journal_messages drop column if exists content;");
     expect(migration).toContain("alter table public.journal_reflections drop column if exists ai_response;");

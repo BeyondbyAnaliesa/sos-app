@@ -5,17 +5,17 @@ alter table public.journal_messages add column if not exists content text;
 alter table public.journal_reflections add column if not exists ai_response text;
 
 update public.journal_entries
-   set entry_text = pgp_sym_decrypt(entry_text_encrypted, private.require_journal_encryption_key())
+   set entry_text = extensions.pgp_sym_decrypt(entry_text_encrypted, private.require_journal_encryption_key())
  where entry_text is null
    and entry_text_encrypted is not null;
 
 update public.journal_messages
-   set content = pgp_sym_decrypt(content_encrypted, private.require_journal_encryption_key())
+   set content = extensions.pgp_sym_decrypt(content_encrypted, private.require_journal_encryption_key())
  where content is null
    and content_encrypted is not null;
 
 update public.journal_reflections
-   set ai_response = pgp_sym_decrypt(ai_response_encrypted, private.require_journal_encryption_key())
+   set ai_response = extensions.pgp_sym_decrypt(ai_response_encrypted, private.require_journal_encryption_key())
  where ai_response is null
    and ai_response_encrypted is not null;
 

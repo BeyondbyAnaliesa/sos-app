@@ -4,9 +4,16 @@ import type { NextRequest } from 'next/server';
 import { getLoginRedirectPath } from '@/lib/auth/redirects';
 
 const APP_HOST = 'app.getsos.app';
+const APP_ORIGIN = `https://${APP_HOST}`;
 
 function isAppHost(request: NextRequest) {
   return request.headers.get('host')?.split(':')[0] === APP_HOST;
+}
+
+function appUrl(path: string, request: NextRequest) {
+  const url = new URL(path, APP_ORIGIN);
+  url.search = request.nextUrl.search;
+  return url;
 }
 
 export default async function proxy(request: NextRequest) {
@@ -40,6 +47,11 @@ export default async function proxy(request: NextRequest) {
   // Keep the marketing root purely public. Logged-in app home lives on app.getsos.app/home.
   if (onAppHost && path === '/') {
     return NextResponse.redirect(new URL(user ? '/home' : '/auth/login', request.url));
+  }
+
+  // Marketing-domain app/auth paths should move to the app subdomain.
+  if (!onAppHost && (path.startsWith('/auth') || path === '/home')) {
+    return NextResponse.redirect(appUrl(path, request));
   }
 
   // API routes handle their own auth — don't redirect them

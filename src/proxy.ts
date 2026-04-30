@@ -49,11 +49,6 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(user ? '/home' : '/auth/login', request.url));
   }
 
-  // Marketing-domain app/auth paths should move to the app subdomain.
-  if (!onAppHost && (path.startsWith('/auth') || path === '/home')) {
-    return NextResponse.redirect(appUrl(path, request));
-  }
-
   // API routes handle their own auth — don't redirect them
   if (path.startsWith('/api')) {
     return supabaseResponse;

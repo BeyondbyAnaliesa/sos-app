@@ -26,17 +26,17 @@ describe('proxy domain and auth route handling', () => {
     expect(response.headers.get('location')).toBeNull();
   });
 
-  it('moves marketing-domain auth routes to the app subdomain', async () => {
+  it('keeps marketing-domain signup reachable until app subdomain DNS is live', async () => {
     mockUser = null;
     const { default: proxy } = await import('../proxy');
 
     const response = await proxy(req('https://www.getsos.app/auth/signup?utm_source=substack'));
 
-    expect(response.status).toBe(307);
-    expect(response.headers.get('location')).toBe('https://app.getsos.app/auth/signup?utm_source=substack');
+    expect(response.status).toBe(200);
+    expect(response.headers.get('location')).toBeNull();
   });
 
-  it('sends app subdomain root to login when signed out', async () => {
+  it('sends app subdomain root to login when signed out once DNS is live', async () => {
     mockUser = null;
     const { default: proxy } = await import('../proxy');
 
@@ -46,7 +46,7 @@ describe('proxy domain and auth route handling', () => {
     expect(response.headers.get('location')).toBe('https://app.getsos.app/auth/login');
   });
 
-  it('sends app subdomain root to home when signed in', async () => {
+  it('sends app subdomain root to home when signed in once DNS is live', async () => {
     mockUser = { user_metadata: { onboarding_complete: true } };
     const { default: proxy } = await import('../proxy');
 

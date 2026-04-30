@@ -1,4 +1,4 @@
-const APP_ORIGIN = 'https://app.getsos.app';
+import Link from 'next/link';
 
 export default function LandingPage() {
   return (
@@ -30,12 +30,12 @@ export default function LandingPage() {
         </p>
 
         <div className="relative z-10 mt-10 flex flex-col gap-3 sm:flex-row">
-          <a
-            href={`${APP_ORIGIN}/auth/signup`}
+          <Link
+            href="/auth/signup"
             className="flex h-[52px] items-center justify-center rounded-[10px] border border-[var(--color-border)] bg-transparent px-8 text-sm font-medium uppercase tracking-widest text-[var(--color-copper)] hover:border-[var(--color-copper)]"
           >
             Get started free
-          </a>
+          </Link>
           <a
             href="#proof"
             className="flex h-[52px] items-center justify-center rounded-[10px] border border-[var(--color-border-subtle)] bg-transparent px-8 text-sm font-medium uppercase tracking-widest text-[var(--color-text-muted)] hover:border-[var(--color-border)]"
@@ -208,12 +208,12 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <a
-            href={`${APP_ORIGIN}/auth/signup`}
+          <Link
+            href="/auth/signup"
             className="mt-8 inline-flex h-[52px] items-center rounded-[10px] border border-[var(--color-border)] bg-transparent px-8 text-sm font-medium uppercase tracking-widest text-[var(--color-copper)] hover:border-[var(--color-copper)]"
           >
             Claim $49 Charter Spot
-          </a>
+          </Link>
 
           <p className="mt-4 text-xs text-[var(--color-text-muted)] opacity-50">
             Start free. Claim Charter now to lock $49/year forever. This rate closes after the 100 spots are gone.

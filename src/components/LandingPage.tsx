@@ -8,17 +8,15 @@ export default function LandingPage() {
         <div className="mb-10 h-px w-20 bg-gradient-to-r from-transparent via-[var(--color-copper-dim)] to-transparent" />
 
         <p className="text-[10px] uppercase tracking-[0.4em] text-[var(--color-copper)]">
-          Spiritual Operating System
+          Timing for real life
         </p>
 
-        <h1 className="mt-6 text-5xl font-light leading-[1.1] tracking-[0.08em] text-[var(--color-text)] sm:text-6xl">
-          SOS
+        <h1 className="mt-6 max-w-2xl text-4xl font-light leading-[1.15] tracking-[0.04em] text-[var(--color-text)] sm:text-6xl">
+          SOS reads your chart timing with your real life.
         </h1>
 
-        <p className="mx-auto mt-6 max-w-md text-lg leading-relaxed text-[var(--color-text-muted)]">
-          Your birth chart decoded into daily guidance.
-          <br className="hidden sm:block" />
-          {' '}AI that actually knows your sky.
+        <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-[var(--color-text-muted)]">
+          The planets give the timing. Your lived experience gives the context. SOS reads both together, so guidance changes with what is actually happening.
         </p>
 
         <div className="mt-10 flex flex-col gap-3 sm:flex-row">
@@ -28,12 +26,12 @@ export default function LandingPage() {
           >
             Get started free
           </Link>
-          <Link
-            href="/auth/login"
+          <a
+            href="#proof"
             className="flex h-[52px] items-center justify-center rounded-[10px] border border-[var(--color-border-subtle)] bg-transparent px-8 text-sm font-medium uppercase tracking-widest text-[var(--color-text-muted)] hover:border-[var(--color-border)]"
           >
-            Log in
-          </Link>
+            See how it works
+          </a>
         </div>
 
         <div className="mt-16 animate-bounce text-[var(--color-text-muted)] opacity-30">
@@ -55,10 +53,10 @@ export default function LandingPage() {
               ✦
             </div>
             <h3 className="text-base font-light tracking-wide text-[var(--color-text)]">
-              Your real chart
+              The planets give the timing
             </h3>
             <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-[var(--color-text-muted)]">
-              Swiss Ephemeris precision. All 10 planets, houses, aspects — calculated from your exact birth data.
+              SOS calculates the transits active for your exact birth chart, not a generic sign forecast.
             </p>
           </div>
 
@@ -67,10 +65,10 @@ export default function LandingPage() {
               ◆
             </div>
             <h3 className="text-base font-light tracking-wide text-[var(--color-text)]">
-              Daily guidance that&apos;s actually yours
+              Your life gives the context
             </h3>
             <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-[var(--color-text-muted)]">
-              Not generic horoscopes. Real transits hitting your real placements, interpreted by AI that knows your chart.
+              What you write, ask, and return to gives SOS the lived context the chart alone cannot provide.
             </p>
           </div>
 
@@ -79,10 +77,75 @@ export default function LandingPage() {
               ◇
             </div>
             <h3 className="text-base font-light tracking-wide text-[var(--color-text)]">
-              A journal that remembers you
+              The reading changes with both
             </h3>
             <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-[var(--color-text-muted)]">
-              Write what&apos;s on your mind. SOS connects it to your transits, references what you said yesterday, and notices patterns you can&apos;t see yet.
+              The same transit reads differently when SOS knows what is actually active in your life.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Proof ── */}
+      <section id="proof" className="mx-auto max-w-4xl px-6 py-20">
+        <div className="mb-12 h-px w-full bg-gradient-to-r from-transparent via-[var(--color-border-subtle)] to-transparent" />
+
+        <p className="mb-3 text-center text-[10px] uppercase tracking-[0.3em] text-[var(--color-text-muted)]">
+          Product proof
+        </p>
+        <h2 className="mx-auto max-w-xl text-center text-2xl font-light leading-snug tracking-wide text-[var(--color-text)]">
+          See what changes when SOS reads both.
+        </h2>
+
+        <div className="mt-10 grid gap-4 md:grid-cols-3">
+          <div className="rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-5">
+            <p className="text-[10px] font-medium uppercase tracking-[0.25em] text-[var(--color-copper)]">
+              1 · Chart timing
+            </p>
+            <div className="mt-5 rounded-[8px] border border-[var(--color-border-subtle)] bg-black/10 p-4">
+              <p className="text-[10px] uppercase tracking-[0.25em] text-[var(--color-copper)]">
+                ◑ Today&apos;s Sky
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-[var(--color-text)]">
+                Active transits are calculated against your exact chart for today.
+              </p>
+            </div>
+            <p className="mt-4 text-sm leading-relaxed text-[var(--color-text-muted)]">
+              This shows what is active in the sky for you, not for everyone with your sun sign.
+            </p>
+          </div>
+
+          <div className="rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-5">
+            <p className="text-[10px] font-medium uppercase tracking-[0.25em] text-[var(--color-copper)]">
+              2 · Lived context
+            </p>
+            <div className="mt-5 rounded-[8px] border border-[var(--color-border-subtle)] bg-black/10 p-4">
+              <p className="text-[10px] uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
+                Aeon journal
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-[var(--color-text)]">
+                Write what is taking up space, what shifted, or what decision needs timing.
+              </p>
+            </div>
+            <p className="mt-4 text-sm leading-relaxed text-[var(--color-text-muted)]">
+              This gives SOS the real-life context the chart cannot know by itself.
+            </p>
+          </div>
+
+          <div className="rounded-[10px] border border-[var(--color-electric)]/60 bg-[linear-gradient(180deg,rgba(239,68,136,0.14),rgba(239,68,136,0.03))] p-5 shadow-[0_0_40px_rgba(239,68,136,0.08)]">
+            <p className="text-[10px] font-medium uppercase tracking-[0.25em] text-[var(--color-electric)]">
+              3 · What changes
+            </p>
+            <div className="mt-5 rounded-[8px] border border-[var(--color-electric)]/40 bg-black/10 p-4">
+              <p className="text-[10px] uppercase tracking-[0.25em] text-[var(--color-electric)]">
+                SOS noticed
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-[var(--color-text)]">
+                The reading connects today’s timing to the pattern you keep returning to.
+              </p>
+            </div>
+            <p className="mt-4 text-sm font-medium leading-relaxed text-[var(--color-text)]">
+              This is the product: chart timing and lived context read together.
             </p>
           </div>
         </div>
@@ -98,7 +161,7 @@ export default function LandingPage() {
           </p>
 
           <p className="mt-2 text-xs uppercase tracking-[0.2em] text-[var(--color-copper-dim)] opacity-80">
-            First 100 spots remaining
+            100 Charter spots at $49/year
           </p>
 
           <p className="mt-4 flex items-baseline justify-center gap-2">
@@ -107,41 +170,46 @@ export default function LandingPage() {
           </p>
 
           <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-            Locked forever. Never increases.
+            Locked forever for Charter members.
           </p>
 
           <ul className="mx-auto mt-6 max-w-xs space-y-2.5 text-left text-sm text-[var(--color-text-muted)]">
             <li className="flex items-start gap-2.5">
               <span className="mt-0.5 text-[var(--color-copper)]">✓</span>
-              <span>Full natal chart with all placements &amp; aspects</span>
+              <span>Full natal chart with all placements and aspects</span>
             </li>
             <li className="flex items-start gap-2.5">
               <span className="mt-0.5 text-[var(--color-copper)]">✓</span>
-              <span>Daily transit-aware AI guidance</span>
+              <span>Daily guidance based on active transits</span>
             </li>
             <li className="flex items-start gap-2.5">
               <span className="mt-0.5 text-[var(--color-copper)]">✓</span>
-              <span>Unlimited AI journaling with memory</span>
+              <span>Journal context SOS can remember</span>
             </li>
             <li className="flex items-start gap-2.5">
               <span className="mt-0.5 text-[var(--color-copper)]">✓</span>
               <span>30-day transit calendar</span>
             </li>
-            <li className="flex items-start gap-2.5">
-              <span className="mt-0.5 text-[var(--color-copper)]">✓</span>
-              <span>Your $49 rate stays yours for as long as SOS exists</span>
-            </li>
           </ul>
+
+          <div className="mx-auto mt-6 max-w-xs rounded-[8px] border border-[var(--color-border-subtle)] px-4 py-3 text-left">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--color-text-muted)] opacity-70">
+              After Charter
+            </p>
+            <p className="mt-1 text-sm text-[var(--color-text)]">
+              Standard pricing is $99/year or $12.99/month.
+            </p>
+          </div>
 
           <Link
             href="/auth/signup"
             className="mt-8 inline-flex h-[52px] items-center rounded-[10px] border border-[var(--color-border)] bg-transparent px-8 text-sm font-medium uppercase tracking-widest text-[var(--color-copper)] hover:border-[var(--color-copper)]"
           >
-            Claim Charter Spot
+            Claim $49 Charter Spot
           </Link>
 
           <p className="mt-4 text-xs text-[var(--color-text-muted)] opacity-50">
-            Start free. Upgrade when you&apos;re ready.
+            Start free. Upgrade when you&apos;re ready. Charter keeps the $49/year rate.
           </p>
         </div>
       </section>

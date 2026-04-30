@@ -5,7 +5,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 
 export const metadata: Metadata = {
   title: 'SOS — Spiritual Operating System',
-  description: 'Your daily guidance, decoded from the cosmos.',
+  description: 'SOS reads actual chart timing with the lived context you share.',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,

@@ -1,12 +1,12 @@
 # 02 — Privacy Nutrition Labels
 
-Status: scaffolded from code audit; legal review required before filing
-Last updated: 2026-04-28
+Status: updated after privacy route; legal review required before filing
+Last updated: 2026-04-30
 Scope: `/Users/beyond/SOS-App` only
 
 ## Important scope note
 
-This audit is based on the live repo code, not a separate privacy policy, DPIA, or Supabase schema dump.
+This audit is based on the live repo code plus the initial product-facing privacy route at `src/app/privacy/page.tsx`, not a DPIA, legal memo, or Supabase schema dump.
 
 That means this document is strong on **what the app code sends, stores, and logs**, but still needs legal review for:
 - retention periods
@@ -130,4 +130,4 @@ If filing today, the safest provisional stance would likely be:
 - **Probably collected / linked / not tracking:** Usage Data, Diagnostics
 - **Needs legal classification call:** Sensitive Info
 
-Do not finalize App Store privacy answers until legal/product confirms the above categories against the actual production data-retention and vendor setup.
+A first product-facing privacy URL now exists at `/privacy`, but do not finalize App Store privacy answers until legal/product confirms the above categories against the actual production data-retention and vendor setup.

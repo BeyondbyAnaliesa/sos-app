@@ -33,10 +33,10 @@ const LINKS = [
     paid:  false,
   },
   {
-    href:  'mailto:support@getsos.app',
+    href:  '/support',
     glyph: '◆',
     title: 'Contact Support',
-    desc:  'We read every message',
+    desc:  'Get help or send us details',
     paid:  false,
   },
 ];
@@ -65,7 +65,7 @@ export default async function MorePage() {
         {LINKS.map((link) => {
           const locked = link.paid && !paid;
           const href = locked ? '/upgrade' : link.href;
-          const isExternal = link.href.startsWith('mailto:');
+          const isExternal = false;
 
           const inner = (
             <div className="flex items-center justify-between rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5 hover:border-[var(--color-border)]">

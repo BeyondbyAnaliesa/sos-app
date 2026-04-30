@@ -1,7 +1,7 @@
 # 01 — App Metadata Template
 
-Status: scaffolded
-Last updated: 2026-04-28
+Status: updated after support/privacy routes
+Last updated: 2026-04-30
 Source of truth used: `/Users/beyond/SOS-App` code audit + product constraints in `/Users/beyond/.openclaw/workspace/USER.md`
 
 ## Positioning guardrails
@@ -109,15 +109,16 @@ Estimated total including commas: 99 chars.
 - Status: likely exists, human verify live production page
 
 ### Support URL
-- Current support contact in product: `mailto:support@getsos.app` from `src/app/more/page.tsx`
-- App Store Connect prefers a web URL, not just an email link
-- Recommended support URL to create: `https://getsos.app/support`
-- Status: needs creation / human verification
+- Route exists in repo: `src/app/support/page.tsx`
+- Recommended App Store Connect value: `https://getsos.app/support`
+- App-domain equivalent: `https://app.getsos.app/support`
+- Status: implemented in repo; verify live after deploy
 
 ### Privacy Policy URL
-- No privacy policy route or document found in repo audit
-- Recommended URL to create: `https://getsos.app/privacy`
-- Status: needs creation
+- Route exists in repo: `src/app/privacy/page.tsx`
+- Recommended App Store Connect value: `https://getsos.app/privacy`
+- App-domain equivalent: `https://app.getsos.app/privacy`
+- Status: implemented in repo; legal/product review still required before final filing
 
 ## What’s New template
 

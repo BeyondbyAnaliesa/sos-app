@@ -171,7 +171,26 @@ describe('secure life signal store', () => {
     expect(migration).toContain('extensions.pgp_sym_encrypt(content_text, private.require_journal_encryption_key())');
     expect(migration).toContain('extensions.pgp_sym_decrypt(life_signal.content_text_encrypted, private.require_journal_encryption_key())');
     expect(migration).toContain('alter table public.life_signals drop column if exists content_text;');
+    expect(migration).toContain('create or replace function public.content_text(life_signal public.life_signals)');
+    expect(migration).toContain('grant execute on function public.content_text(public.life_signals) to authenticated, service_role;');
     expect(migration).toContain('create or replace function public.life_signals_create(');
     expect(migration).toContain('create or replace function public.life_signals_list(');
+  });
+
+  it('keeps the Aeon recurring-memory content_text reads covered by the computed field bridge', () => {
+    const migration = readFileSync(
+      resolve(process.cwd(), 'supabase/migrations/20260428_life_signals_encryption_at_rest.sql'),
+      'utf8',
+    );
+    const memoryStore = readFileSync(
+      resolve(process.cwd(), 'src/lib/astrology/memory-store.ts'),
+      'utf8',
+    );
+
+    expect(memoryStore).toContain('content_text');
+    expect(memoryStore).toContain('life_signals!inner');
+    expect(migration).toContain('alter table public.life_signals drop column if exists content_text;');
+    expect(migration).toContain('create or replace function public.content_text(life_signal public.life_signals)');
+    expect(migration).toContain('extensions.pgp_sym_decrypt(life_signal.content_text_encrypted, private.require_journal_encryption_key())');
   });
 });

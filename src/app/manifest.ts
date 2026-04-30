@@ -37,12 +37,5 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: 'maskable',
       },
     ],
-    screenshots: [
-      {
-        src: '/icons/screenshot-mobile.png',
-        sizes: '390x844',
-        type: 'image/png',
-      },
-    ],
   };
 }

@@ -40,10 +40,12 @@ export default async function proxy(request: NextRequest) {
     return supabaseResponse;
   }
 
-  // Allow auth routes through
+  // Allow auth routes through. Password recovery links must remain reachable
+  // even when the browser already has a session, because Supabase reset emails
+  // can be opened from a signed-in device.
   if (path.startsWith('/auth')) {
-    if (user) {
-      // Already logged in — redirect away from auth pages
+    if (user && path !== '/auth/reset-password') {
+      // Already logged in — redirect away from routine auth pages
       return NextResponse.redirect(new URL('/', request.url));
     }
     return supabaseResponse;

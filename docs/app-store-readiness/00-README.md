@@ -38,6 +38,7 @@ That means the app may be product-ready for controlled web/backend testers, but 
 | `05-subscription-config-checklist.md` | Native subscription/IAP gap audit + configuration checklist | scaffolded; needs product + implementation decisions |
 | `06-entitlement-and-capability-audit.md` | Native iOS capability audit | updated; native scaffold exists, Xcode/signing/IAP still missing |
 | `07-ios-capacitor-container.md` | Current native Capacitor shell status and validation commands | first scaffold committed; archive validation blocked on full Xcode |
+| `08-testflight-owner-action-runbook.md` | Exact owner/system steps needed before first TestFlight archive | created; Xcode, Apple Developer, IAP, reviewer package still owner-blocked |
 
 ## Biggest gaps before TestFlight
 

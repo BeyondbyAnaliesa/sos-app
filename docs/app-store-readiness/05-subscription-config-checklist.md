@@ -1,7 +1,7 @@
 # 05 — Subscription Config Checklist
 
-Status: scaffolded from code audit; major implementation gaps remain for native App Store submission
-Last updated: 2026-04-28
+Status: updated after native iOS shell gate; major StoreKit gaps remain for native App Store submission
+Last updated: 2026-04-30
 
 ## Target commercial structure
 
@@ -12,11 +12,11 @@ Requested target tiers for App Store planning:
 
 ## Current codebase reality
 
-The live audited codebase does **not** match that target yet.
+The live audited codebase now matches the target web pricing, but does **not** yet implement native App Store purchasing.
 
 ### What exists today
 - Free signup/auth exists via Supabase email/password
-- Stripe checkout exists for subscription purchase
+- Stripe checkout exists for web subscription purchase
 - Subscription gating exists in product logic
 - Paid Stripe plan keys now exist:
   - `charter_annual` = `$49/year`
@@ -36,7 +36,11 @@ Evidence:
 - `src/app/api/stripe/checkout/route.ts`
 - `src/app/api/stripe/webhook/route.ts`
 - `src/lib/subscription.ts`
-- package audit found no StoreKit/native iOS project files
+- `capacitor.config.ts`
+- `src/app/upgrade/page.tsx`
+- `src/components/UpgradePricing.tsx`
+- `ios/App/App.xcodeproj/project.pbxproj`
+- no StoreKit/IAP implementation or `.storekit` config found
 
 ## Current functional gating in app
 
@@ -147,7 +151,8 @@ Current billing is **server-side Stripe for web**, not StoreKit 2 and not App St
 - [ ] Implement StoreKit 2 purchase flow
 - [ ] Implement restore purchases
 - [ ] Implement entitlement refresh on launch and account restore path
-- [ ] Replace or conditionally disable web Stripe purchase flow in native builds for digital content
+- [x] Conditionally disable web Stripe purchase flow in native iOS shell for digital content
+- [ ] Implement StoreKit 2 purchase flow
 
 ### Server / backend
 - [ ] Decide whether subscriptions remain mirrored in Supabase `subscriptions` table
@@ -166,7 +171,8 @@ Current billing is **server-side Stripe for web**, not StoreKit 2 and not App St
 If the goal is App Store/TestFlight readiness, subscriptions are one of the biggest blockers right now.
 
 Current status:
-- web Stripe: **implemented**
+- web Stripe: **implemented for web**
+- native iOS Stripe exposure: **gated off via `SOSNativeIOS` user-agent path**
 - free tier: **partially implied by gating, not formally defined as App Store IAP structure**
 - App Store IAP / StoreKit 2: **missing**
 - first-100 Charter enforcement: **not solved**

@@ -1,8 +1,8 @@
 # SOS App Store / TestFlight Readiness Scaffold
 
 Status: in progress
-Last updated: 2026-04-28
-Estimated TestFlight submission readiness: **35%**
+Last updated: 2026-04-30
+Estimated TestFlight submission readiness: **45%**
 
 ## What this folder is
 
@@ -11,15 +11,21 @@ This folder contains App Store / TestFlight readiness scaffolding generated from
 These files are intentionally split into:
 - what could be generated from the codebase now
 - what still needs product/legal/design decisions
-- what still needs a native iOS implementation layer before TestFlight/App Store submission is real
+- what still needs native iOS signing/archive validation and StoreKit/IAP work before TestFlight/App Store submission is real
 
 ## Important repo reality discovered in audit
 
-Two major blockers surfaced immediately:
+Original audit blockers were:
 1. **Current billing is web Stripe, not App Store IAP / StoreKit 2**
-2. **There is no native iOS target / Xcode project / Info.plist / entitlements in the repo yet**
+2. **No native iOS target / Xcode project / Info.plist / entitlements existed in the repo**
 
-That means the app may be product-ready in many respects, but App Store readiness is still materially blocked by platform implementation work.
+Current reality after 2026-04-30 Build work:
+- first native iOS Capacitor scaffold now exists under `ios/App/`
+- native iOS user-agent marker now hides web Stripe checkout in the native shell
+- full Xcode/signing/archive validation is still blocked locally because only Command Line Tools are selected
+- App Store-native subscriptions / StoreKit / entitlement sync are still unresolved
+
+That means the app may be product-ready for controlled web/backend testers, but App Store readiness is still materially blocked by platform/account/monetization work.
 
 ## File index
 
@@ -30,7 +36,8 @@ That means the app may be product-ready in many respects, but App Store readines
 | `03-screenshots-checklist.md` | Required screenshot sizes, capture set, subject list, process | scaffolded; needs designer + real captures |
 | `04-review-notes-template.md` | Reviewer walkthrough, AI/wellness notes, rejection-risk guidance | scaffolded; needs real reviewer credentials + final review contact |
 | `05-subscription-config-checklist.md` | Native subscription/IAP gap audit + configuration checklist | scaffolded; needs product + implementation decisions |
-| `06-entitlement-and-capability-audit.md` | Native iOS capability audit (currently mostly missing) | scaffolded; needs native shell implementation |
+| `06-entitlement-and-capability-audit.md` | Native iOS capability audit | updated; native scaffold exists, Xcode/signing/IAP still missing |
+| `07-ios-capacitor-container.md` | Current native Capacitor shell status and validation commands | first scaffold committed; archive validation blocked on full Xcode |
 
 ## Biggest gaps before TestFlight
 
@@ -40,8 +47,9 @@ That means the app may be product-ready in many respects, but App Store readines
 - align pricing between request and current codebase
 
 ### App platform
-- create or adopt a native iOS target/shell
-- implement StoreKit 2 / App Store subscriptions
+- validate the new native iOS target with full Xcode
+- configure signing/team/bundle identifier in Apple Developer
+- implement StoreKit 2 / App Store subscriptions, or keep paid purchases unavailable in native tester builds
 - define entitlement sync between Apple and backend
 
 ### Submission artifacts
@@ -67,8 +75,8 @@ Current code:
 1. **Decide native subscription strategy**
    - Confirm whether Charter remains a literal first-100 product or becomes an App-Store-friendly launch offer.
 
-2. **Create the iOS submission layer**
-   - Add the native target/shell and decide whether SOS will ship iPhone-only or universal.
+2. **Validate the iOS submission layer**
+   - Select full Xcode, open/archive the Capacitor target, configure signing, and decide whether SOS ships iPhone-only or universal.
 
 3. **Finish required submission surfaces**
    - Stand up live privacy/support URLs, seed reviewer accounts, and schedule screenshot capture from the actual shipping container.

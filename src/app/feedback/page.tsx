@@ -12,9 +12,12 @@ const TYPES: { value: FeedbackType; label: string; icon: string }[] = [
   { value: 'love',       label: 'I liked this',          icon: '♡' },
 ];
 
+const MAX_FEEDBACK_LENGTH = 2000;
+
 export default function FeedbackPage() {
   const [type, setType]         = useState<FeedbackType | null>(null);
   const [message, setMessage]   = useState('');
+  const [error, setError]         = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -22,18 +25,31 @@ export default function FeedbackPage() {
     e.preventDefault();
     if (!type || !message.trim() || submitting) return;
 
+    const trimmedMessage = message.trim();
+
+    if (trimmedMessage.length > MAX_FEEDBACK_LENGTH) {
+      setError('Keep feedback under 2,000 characters.');
+      return;
+    }
+
+    setError(null);
     setSubmitting(true);
 
     try {
-      await fetch('/api/feedback', {
+      const response = await fetch('/api/feedback', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ type, message: message.trim() }),
+        body:    JSON.stringify({ type, message: trimmedMessage }),
       });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({} as { error?: string }));
+        throw new Error(data.error ?? 'Unable to send feedback right now.');
+      }
+
       setSubmitted(true);
-    } catch {
-      // Still show success — we'll catch it in logs
-      setSubmitted(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to send feedback right now.');
     } finally {
       setSubmitting(false);
     }
@@ -49,7 +65,7 @@ export default function FeedbackPage() {
             Your feedback helps SOS get better. We read everything.
           </p>
           <button
-            onClick={() => { setSubmitted(false); setType(null); setMessage(''); }}
+            onClick={() => { setSubmitted(false); setType(null); setMessage(''); setError(null); }}
             className="mt-8 rounded-[10px] border border-[var(--color-border-subtle)] px-5 py-3 text-xs uppercase tracking-widest text-[var(--color-text-muted)] hover:border-[var(--color-border)]"
           >
             Send more
@@ -104,7 +120,11 @@ export default function FeedbackPage() {
             </p>
             <textarea
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              onChange={(e) => {
+                setMessage(e.target.value);
+                if (error) setError(null);
+              }}
+              maxLength={MAX_FEEDBACK_LENGTH}
               rows={5}
               placeholder={
                 type === 'bug' ? 'What happened? What did you expect?' :
@@ -114,6 +134,10 @@ export default function FeedbackPage() {
               }
               className="w-full resize-none rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-input)] px-5 py-4 text-base leading-relaxed text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border)] focus:outline-none"
             />
+            <div className="mt-2 flex items-center justify-between text-[10px] text-[var(--color-text-muted)]">
+              <span className="text-[var(--color-danger,#fb7185)]">{error}</span>
+              <span>{message.length}/{MAX_FEEDBACK_LENGTH}</span>
+            </div>
             <div className="mt-4 flex justify-end">
               <button
                 type="submit"

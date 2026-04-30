@@ -19,7 +19,7 @@ const placements = [
 export default function ChartRevealStep({ chart, onContinue }: Props) {
   return (
     <div>
-      <h2 className="mb-2 text-xl font-light tracking-wide text-[var(--color-text)]">
+      <h2 className="mb-2 text-2xl font-light tracking-[0.1em] text-[var(--color-text)]">
         Your Chart
       </h2>
       <p className="mb-4 text-sm text-[var(--color-text-muted)]">
@@ -33,12 +33,13 @@ export default function ChartRevealStep({ chart, onContinue }: Props) {
       )}
 
       <div className="space-y-3">
-        {placements.map(({ key, label, desc }) => {
+        {placements.map(({ key, label, desc }, i) => {
           const data = chart[key];
           return (
             <div
               key={key}
-              className="rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-6 py-5"
+              className="animate-[reveal-card_0.5s_ease-out_both] rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-6 py-5"
+              style={{ animationDelay: `${i * 120}ms` }}
             >
               <div className="flex items-baseline justify-between">
                 <p className="text-xs font-medium uppercase tracking-widest text-[var(--color-copper)]">

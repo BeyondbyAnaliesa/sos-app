@@ -27,7 +27,7 @@ export default function WelcomeStep({ onBegin }: { onBegin: () => void }) {
 
       <button
         onClick={onBegin}
-        className="mt-10 h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] text-sm font-medium uppercase tracking-widest text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:text-[var(--color-text)] sm:w-auto sm:px-10"
+        className="mt-10 h-[52px] w-full rounded-[10px] border border-[var(--color-border)] bg-transparent text-sm font-medium uppercase tracking-widest text-[var(--color-copper)] hover:bg-[rgba(142,110,82,0.06)] hover:border-[var(--color-copper)] sm:w-auto sm:px-10"
       >
         Begin
       </button>

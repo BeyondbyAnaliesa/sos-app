@@ -46,7 +46,7 @@ export default function SignupPage() {
   return (
     <>
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-light tracking-[0.2em] text-[var(--color-text)]">SOS</h1>
+        <h1 className="text-4xl font-light tracking-[0.3em] text-[var(--color-text)]">SOS</h1>
         <p className="mt-2 text-[10px] uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
           Create Your Account
         </p>
@@ -76,7 +76,7 @@ export default function SignupPage() {
         <button
           type="submit"
           disabled={loading}
-          className="h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] text-sm font-medium uppercase tracking-widest text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:text-[var(--color-text)] disabled:opacity-40"
+          className="h-[52px] w-full rounded-[10px] border border-[var(--color-border)] bg-transparent text-sm font-medium uppercase tracking-widest text-[var(--color-copper)] hover:bg-[rgba(142,110,82,0.06)] hover:border-[var(--color-copper)] disabled:cursor-not-allowed disabled:opacity-40"
         >
           {loading ? 'Creating account…' : 'Sign Up'}
         </button>

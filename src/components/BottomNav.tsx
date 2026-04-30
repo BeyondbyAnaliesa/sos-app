@@ -25,10 +25,11 @@ export default function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center gap-1 ${
+              className={`flex flex-col items-center gap-0.5 ${
                 active ? 'text-[var(--color-copper)]' : 'text-[var(--color-text-muted)]'
               }`}
             >
+              <span className={`h-0.5 w-4 rounded-full ${active ? 'bg-[var(--color-copper)]' : 'bg-transparent'}`} />
               <span className="text-lg">{item.glyph}</span>
               <span className="text-[9px] uppercase tracking-[0.15em]">{item.label}</span>
             </Link>

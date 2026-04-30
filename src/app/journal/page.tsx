@@ -213,7 +213,7 @@ function JournalPageInner() {
 
   return (
     <main
-      className="mx-auto flex w-full max-w-xl flex-col px-5 pt-10"
+      className="mx-auto flex w-full max-w-xl animate-[fade-in_0.35s_ease-out] flex-col px-5 pt-10"
       style={{ minHeight: '100dvh', paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       {!journalSubmitted && (
@@ -389,7 +389,7 @@ function JournalPageInner() {
 
 export default function JournalPage() {
   return (
-    <Suspense fallback={<main className="mx-auto w-full max-w-xl px-5 pb-24 pt-10 text-center text-sm text-[var(--color-text-muted)]">Loading Aeon…</main>}>
+    <Suspense fallback={<main className="mx-auto w-full max-w-xl animate-[fade-in_0.35s_ease-out] px-5 pb-24 pt-10 text-center text-sm text-[var(--color-text-muted)]">Loading Aeon…</main>}>
       <JournalPageInner />
     </Suspense>
   );

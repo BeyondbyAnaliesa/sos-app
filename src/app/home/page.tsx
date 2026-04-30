@@ -152,7 +152,7 @@ export default async function Home() {
   ];
 
   return (
-    <main className="mx-auto w-full max-w-xl px-5 pb-24 pt-8 sm:px-6 sm:pt-12">
+    <main className="mx-auto w-full max-w-xl animate-[fade-in_0.35s_ease-out] px-5 pb-24 pt-8 sm:px-6 sm:pt-12">
       <Header date={todayDate} />
 
       <section className="flex flex-col items-center pb-8 pt-2">

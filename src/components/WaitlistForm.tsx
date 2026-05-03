@@ -57,7 +57,7 @@ export default function WaitlistForm({ className = '' }: { className?: string })
         <button
           type="submit"
           disabled={state === 'loading'}
-          className="inline-flex h-14 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#f1c08b,#b9784a_48%,#8f5536)] px-7 text-sm font-bold uppercase tracking-[0.2em] text-[#140c0e] shadow-[0_18px_55px_rgba(201,120,76,0.34)] transition hover:translate-y-[-1px] hover:shadow-[0_24px_70px_rgba(201,120,76,0.42)] disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex h-14 min-w-0 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#f1c08b,#b9784a_48%,#8f5536)] px-5 text-center text-xs font-bold uppercase tracking-[0.14em] text-[#140c0e] shadow-[0_18px_55px_rgba(201,120,76,0.34)] transition hover:translate-y-[-1px] hover:shadow-[0_24px_70px_rgba(201,120,76,0.42)] disabled:cursor-not-allowed disabled:opacity-60 sm:px-7 sm:text-sm sm:tracking-[0.2em]"
         >
           {state === 'loading' ? 'Joining…' : 'Join Waitlist'}
         </button>

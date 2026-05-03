@@ -76,7 +76,7 @@ function PrimaryCta({ className = '' }: { className?: string }) {
   return (
     <a
       href="#waitlist"
-      className={`inline-flex h-14 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#f1c08b,#b9784a_48%,#8f5536)] px-7 text-sm font-bold uppercase tracking-[0.2em] text-[#140c0e] shadow-[0_18px_55px_rgba(201,120,76,0.34)] transition hover:translate-y-[-1px] hover:shadow-[0_24px_70px_rgba(201,120,76,0.42)] ${className}`}
+      className={`inline-flex h-14 min-w-0 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#f1c08b,#b9784a_48%,#8f5536)] px-5 text-center text-xs font-bold uppercase tracking-[0.14em] text-[#140c0e] shadow-[0_18px_55px_rgba(201,120,76,0.34)] transition hover:translate-y-[-1px] hover:shadow-[0_24px_70px_rgba(201,120,76,0.42)] sm:px-7 sm:text-sm sm:tracking-[0.2em] ${className}`}
     >
       Join Waitlist
     </a>
@@ -87,7 +87,7 @@ function SecondaryCta({ className = '' }: { className?: string }) {
   return (
     <a
       href="#how-it-works"
-      className={`inline-flex h-14 items-center justify-center rounded-2xl border border-[rgba(247,185,214,0.42)] bg-[rgba(7,7,17,0.5)] px-7 text-sm font-semibold uppercase tracking-[0.18em] text-[rgba(247,185,214,0.96)] backdrop-blur transition hover:border-[rgba(247,185,214,0.72)] ${className}`}
+      className={`inline-flex h-14 min-w-0 items-center justify-center rounded-2xl border border-[rgba(247,185,214,0.42)] bg-[rgba(7,7,17,0.5)] px-5 text-center text-xs font-semibold uppercase tracking-[0.12em] text-[rgba(247,185,214,0.96)] backdrop-blur transition hover:border-[rgba(247,185,214,0.72)] sm:px-7 sm:text-sm sm:tracking-[0.18em] ${className}`}
     >
       See How It Works
     </a>
@@ -115,7 +115,7 @@ export default function LandingPage() {
           >
             <source src="/brand/sos-hero-approved-v5-line-shimmer-2026-05-01.mp4" type="video/mp4" />
           </video>
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,5,13,0.72)_0%,rgba(5,5,13,0.48)_38%,rgba(5,5,13,0.18)_68%,rgba(5,5,13,0.06)_100%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(5,5,13,0.86)_0%,rgba(5,5,13,0.58)_48%,rgba(5,5,13,0.22)_100%)] sm:bg-[linear-gradient(90deg,rgba(5,5,13,0.72)_0%,rgba(5,5,13,0.48)_38%,rgba(5,5,13,0.18)_68%,rgba(5,5,13,0.06)_100%)]" />
           <div className="absolute inset-x-0 top-0 h-36 bg-[linear-gradient(180deg,#05050d,rgba(5,5,13,0))]" />
           <div className="absolute inset-x-0 bottom-0 h-56 bg-[linear-gradient(180deg,rgba(5,5,13,0),#080713_84%)]" />
         </div>
@@ -126,21 +126,21 @@ export default function LandingPage() {
         </nav>
 
         <div id="top" className="relative z-10 flex min-h-[calc(100dvh-76px)] items-center px-5 py-8 sm:px-8 lg:px-12">
-          <div className="w-full max-w-7xl">
-            <div className="max-w-[48rem]">
+          <div className="w-full max-w-7xl min-w-0">
+            <div className="max-w-[48rem] min-w-0">
               <Eyebrow>Private astrology intelligence</Eyebrow>
-              <h1 className="mt-5 text-[3.1rem] font-light leading-[0.9] tracking-[-0.06em] text-[rgba(247,241,236,0.99)] sm:text-[clamp(4.6rem,8vw,7.8rem)]">
+              <h1 className="mt-5 max-w-full text-[2.75rem] font-light leading-[0.96] tracking-[-0.055em] text-[rgba(247,241,236,0.99)] sm:text-[clamp(4.6rem,8vw,7.8rem)] sm:leading-[0.9]">
                 Astrology that remembers your life.
               </h1>
-              <p className="mt-7 max-w-[39rem] text-[18px] leading-8 text-[rgba(244,239,232,0.9)] sm:text-[21px] sm:leading-9">
-                SOS reads your real chart timing beside the context you choose to save, so guidance gets specific instead of generic.
+              <p className="mt-7 max-w-[39rem] text-[17px] leading-8 text-[rgba(244,239,232,0.92)] sm:text-[21px] sm:leading-9">
+                SOS combines your birth chart, current transits, and the life context you save, so each reading gets more personal over time.
               </p>
               <div className="mt-9 flex w-full max-w-[25rem] flex-col gap-4 sm:max-w-none sm:flex-row">
                 <PrimaryCta className="w-full sm:w-auto" />
                 <SecondaryCta className="w-full sm:w-auto" />
               </div>
               <p className="mt-5 max-w-[34rem] text-sm leading-6 text-[rgba(233,221,214,0.76)]">
-                Charter access is being prepared now. Join the list first; founding annual rate is <span className="text-[rgba(247,241,236,0.96)]">$49/year for life</span> when access opens.
+                Join the waitlist now. Early members can lock in the founding rate: <span className="text-[rgba(247,241,236,0.96)]">$49/year</span> when access opens. No payment today.
               </p>
             </div>
           </div>
@@ -242,7 +242,7 @@ export default function LandingPage() {
               If this is the tool you wanted, get on the list before Charter opens.
             </h2>
             <p className="mt-6 max-w-xl text-base leading-8 text-[#5a4a45]">
-              Charter access is being prepared now: the private intelligence layer, the founding annual price for life, and a product that sharpens around real use.
+              Charter access is being prepared now: the private intelligence layer, the founding annual price for life, and a product that sharpens around real use. Joining the waitlist does not require payment.
             </p>
           </div>
 

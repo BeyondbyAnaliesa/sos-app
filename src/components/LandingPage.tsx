@@ -203,7 +203,7 @@ export default function LandingPage() {
               </h2>
             </div>
             <p className="text-lg leading-9 text-[rgba(233,221,214,0.78)]">
-              Final mobile screenshots should come from the real locked UI, not invented mockups. Until then, the site sells the concrete value: SOS connects exact timing, saved context, and pattern memory into one clearer read.
+              SOS turns your chart timing, saved context, and recurring patterns into guidance you can actually use in the moment. The point is not more astrology to decode. It is a clearer next move.
             </p>
           </div>
 

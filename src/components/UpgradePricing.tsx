@@ -16,7 +16,7 @@ export default function UpgradePricing({ nativeIOS = false }: UpgradePricingProp
 
   return (
     <div className="space-y-4">
-      <div className="rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-6">
+      <div className="rounded-2xl border border-[var(--color-border)] bg-[linear-gradient(180deg,rgba(201,162,122,0.07),rgba(201,162,122,0.03))] px-6 py-6 shadow-[inset_0_1px_0_rgba(201,162,122,0.12)]">
         <div className="mb-1 flex items-center justify-between gap-3">
           <p className="text-xs font-medium uppercase tracking-widest text-[var(--color-copper)]">
             Charter
@@ -25,8 +25,8 @@ export default function UpgradePricing({ nativeIOS = false }: UpgradePricingProp
             Locked forever
           </span>
         </div>
-        <p className="mt-2 text-xs uppercase tracking-[0.2em] text-[var(--color-copper-dim)] opacity-80">
-          First 100 spots remaining
+        <p className="mt-2 text-xs uppercase tracking-[0.2em] text-[var(--color-copper)]">
+          Founding access
         </p>
         <p className="mt-3 flex items-baseline gap-2">
           <span className="text-4xl font-light text-[var(--color-text)]">${PLANS.charter_annual.price}</span>
@@ -67,7 +67,7 @@ export default function UpgradePricing({ nativeIOS = false }: UpgradePricingProp
           <CheckoutButton
             plan="charter_annual"
             label="Claim Charter Spot"
-            className="mt-6 h-[52px] w-full rounded-[10px] border border-[var(--color-border)] bg-transparent text-sm font-medium uppercase tracking-widest text-[var(--color-copper)] hover:border-[var(--color-copper)] disabled:cursor-not-allowed disabled:opacity-40"
+            className="mt-6 h-[52px] w-full rounded-[10px] border-0 bg-[linear-gradient(135deg,#f1c08b,#b9784a_48%,#8f5536)] text-sm font-bold uppercase tracking-widest text-[#140c0e] shadow-[0_12px_40px_rgba(201,120,76,0.28)] disabled:cursor-not-allowed disabled:opacity-40"
           />
         )}
       </div>
@@ -86,14 +86,14 @@ export default function UpgradePricing({ nativeIOS = false }: UpgradePricingProp
             <button
               type="button"
               onClick={() => setMemberInterval('year')}
-              className={`rounded-[8px] px-3 py-1 ${memberInterval === 'year' ? 'bg-[var(--color-border)] text-[var(--color-text)]' : 'text-[var(--color-text-muted)]'}`}
+              className={`rounded-[8px] px-3 py-1 ${memberInterval === 'year' ? 'bg-[rgba(201,162,122,0.18)] text-[var(--color-text)]' : 'text-[var(--color-text-muted)]'}`}
             >
               Annual
             </button>
             <button
               type="button"
               onClick={() => setMemberInterval('month')}
-              className={`rounded-[8px] px-3 py-1 ${memberInterval === 'month' ? 'bg-[var(--color-border)] text-[var(--color-text)]' : 'text-[var(--color-text-muted)]'}`}
+              className={`rounded-[8px] px-3 py-1 ${memberInterval === 'month' ? 'bg-[rgba(201,162,122,0.18)] text-[var(--color-text)]' : 'text-[var(--color-text-muted)]'}`}
             >
               Monthly
             </button>
@@ -139,7 +139,7 @@ export default function UpgradePricing({ nativeIOS = false }: UpgradePricingProp
           <CheckoutButton
             plan={memberPlan}
             label="Get Started"
-            className="mt-6 h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-transparent text-sm font-medium uppercase tracking-widest text-[var(--color-text-muted)] hover:border-[var(--color-border)] disabled:cursor-not-allowed disabled:opacity-40"
+            className="mt-6 h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-transparent text-sm font-medium uppercase tracking-widest text-[var(--color-text)] hover:border-[var(--color-border)] disabled:cursor-not-allowed disabled:opacity-40"
           />
         )}
       </div>

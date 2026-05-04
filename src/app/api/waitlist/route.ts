@@ -4,6 +4,24 @@ export const runtime = 'nodejs';
 
 const BEEHIIV_API_URL = 'https://api.beehiiv.com/v2';
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const ATTRIBUTION_PATTERN = /^[a-zA-Z0-9._/-]+$/;
+
+type WaitlistRequestBody = {
+  email?: string;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+};
+
+function cleanAttribution(value: unknown, fallback: string) {
+  if (typeof value !== 'string') return fallback;
+
+  const trimmed = value.trim().slice(0, 80);
+
+  if (!trimmed || !ATTRIBUTION_PATTERN.test(trimmed)) return fallback;
+
+  return trimmed;
+}
 
 export async function POST(request: Request) {
   const apiKey = process.env.BEEHIIV_API_KEY;
@@ -17,7 +35,7 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: { email?: string };
+  let body: WaitlistRequestBody;
 
   try {
     body = await request.json();
@@ -47,9 +65,9 @@ export async function POST(request: Request) {
         email,
         reactivate_existing: true,
         send_welcome_email: true,
-        utm_source: 'getsos.app',
-        utm_medium: 'waitlist',
-        utm_campaign: 'launch',
+        utm_source: cleanAttribution(body.utm_source, 'getsos.app'),
+        utm_medium: cleanAttribution(body.utm_medium, 'waitlist'),
+        utm_campaign: cleanAttribution(body.utm_campaign, 'launch'),
       }),
       cache: 'no-store',
     },

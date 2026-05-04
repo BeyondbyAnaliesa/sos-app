@@ -4,6 +4,16 @@ import { FormEvent, useState } from 'react';
 
 type FormState = 'idle' | 'loading' | 'success' | 'error';
 
+function getAttributionParams() {
+  const searchParams = new URLSearchParams(window.location.search);
+
+  return {
+    utm_source: searchParams.get('utm_source') || undefined,
+    utm_medium: searchParams.get('utm_medium') || undefined,
+    utm_campaign: searchParams.get('utm_campaign') || undefined,
+  };
+}
+
 export default function WaitlistForm({ className = '' }: { className?: string }) {
   const [email, setEmail] = useState('');
   const [state, setState] = useState<FormState>('idle');
@@ -18,7 +28,7 @@ export default function WaitlistForm({ className = '' }: { className?: string })
       const response = await fetch('/api/waitlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, ...getAttributionParams() }),
       });
       const data = (await response.json()) as { ok?: boolean; error?: string };
 

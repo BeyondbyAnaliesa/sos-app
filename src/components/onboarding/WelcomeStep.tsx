@@ -15,13 +15,13 @@ export default function WelcomeStep({ onBegin }: { onBegin: () => void }) {
           from here.
         </p>
         <p>
-          This will take about <span className="text-[var(--color-text)]">10–15 minutes</span>.
+          This will take about <span className="font-medium text-[var(--color-electric)]">10–15 minutes</span>.
           There are no wrong answers. Write honestly and write enough — the
           system learns from what you share.
         </p>
         <p className="opacity-60">
           We will start with your birth data, reveal your natal chart, then ask
-          you seven questions about your life right now.
+          you eight first-journal questions about your life right now.
         </p>
       </div>
 

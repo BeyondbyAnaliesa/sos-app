@@ -11,7 +11,11 @@ interface ErrorContext {
 }
 
 export function logError(error: unknown, context?: ErrorContext): void {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === 'object' && error !== null
+      ? JSON.stringify(error)
+      : String(error);
   const stack = error instanceof Error ? error.stack : undefined;
 
   const payload = {

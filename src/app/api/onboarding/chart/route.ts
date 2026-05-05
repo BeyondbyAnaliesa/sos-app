@@ -7,8 +7,9 @@ import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { generateNatalChart } from '@/lib/astrology/generate-chart';
 import { geocodeLocation } from '@/lib/astrology/geocode';
 import { buildNatalReadingPrompt, type NatalReadingReport } from '@/lib/natal-reading-prompt';
+import { logError } from '@/lib/logger';
 
-import { find as findTimezone } from 'geo-tz';
+import tzLookup from 'tz-lookup';
 
 function getOpenAIClient() {
   if (!process.env.OPENAI_API_KEY) {
@@ -69,8 +70,7 @@ export function buildChartParamsFromBirthData(birthData: {
     ? time_value.split(':').map(Number)
     : [12, 0];
 
-  const tzNames = findTimezone(latitude, longitude);
-  const tz = tzNames[0] ?? 'UTC';
+  const tz = tzLookup(latitude, longitude) || 'UTC';
 
   const localDateStr = `${birth_date}T${String(localHour).padStart(2, '0')}:${String(localMinute).padStart(2, '0')}:00`;
   const formatter = new Intl.DateTimeFormat('en-US', {
@@ -206,7 +206,7 @@ export async function POST(request: Request) {
       location: geo.displayName,
     });
   } catch (err) {
-    console.error('Chart generation error:', err);
+    logError(err, { route: '/api/onboarding/chart' });
     const message = err instanceof Error ? err.message : 'Something went wrong';
     return NextResponse.json({ error: message }, { status: 500 });
   }
@@ -276,7 +276,7 @@ export async function PATCH() {
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error('Chart regeneration error:', err);
+    logError(err, { route: '/api/onboarding/chart', action: 'regenerate' });
     const message = err instanceof Error ? err.message : 'Something went wrong';
     return NextResponse.json({ error: message }, { status: 500 });
   }

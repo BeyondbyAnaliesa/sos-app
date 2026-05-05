@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
@@ -6,6 +5,8 @@ import { getLoginRedirectPath } from '@/lib/auth/redirects';
 import { getSubscription, isActive } from '@/lib/subscription';
 import UpgradePricing from '@/components/UpgradePricing';
 import BottomNav from '@/components/BottomNav';
+import AppBackLink from '@/components/AppBackLink';
+import AeonFloatingButton from '@/components/AeonFloatingButton';
 
 export default async function UpgradePage() {
   const headersList = await headers();
@@ -16,10 +17,11 @@ export default async function UpgradePage() {
   if (!user) redirect(getLoginRedirectPath('/upgrade'));
 
   const sub = await getSubscription(user.id);
-  if (isActive(sub)) redirect('/');
+  if (isActive(sub)) redirect('/home');
 
   return (
     <main className="mx-auto w-full max-w-xl px-5 pb-24 pt-10 sm:px-6 sm:pt-14">
+      <AppBackLink />
       <header className="mb-10 text-center">
         <div className="mx-auto mb-6 h-px w-12 bg-gradient-to-r from-transparent via-[var(--color-copper-dim)] to-transparent" />
         <h1 className="text-3xl font-light tracking-[0.15em] text-[var(--color-text)]">
@@ -38,7 +40,7 @@ export default async function UpgradePage() {
           {isNativeIOS ? (
             <>
               Paid memberships are not available inside this iOS build yet.
-              <br />Use an invite code for tester access.
+              <br />If you were invited, use the private link you received.
             </>
           ) : (
             <>
@@ -47,13 +49,8 @@ export default async function UpgradePage() {
             </>
           )}
         </p>
-        <p>
-          Have an invite code?{' '}
-          <Link href="/access" className="text-[var(--color-copper)] hover:underline">
-            Unlock tester access
-          </Link>
-        </p>
       </div>
+      <AeonFloatingButton />
       <BottomNav />
     </main>
   );

@@ -1,11 +1,6 @@
+import LocalDateTime from '@/components/LocalDateTime';
+
 export default function Header({ date }: { date: string }) {
-  const parsed = new Date(`${date}T12:00:00`);
-  const formatted = parsed.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year:    'numeric',
-    month:   'long',
-    day:     'numeric',
-  });
 
   return (
     <header className="mb-8 text-center">
@@ -21,7 +16,7 @@ export default function Header({ date }: { date: string }) {
         dateTime={date}
         className="mt-3 block text-sm text-[var(--color-text-muted)]"
       >
-        {formatted}
+        <LocalDateTime fallbackDate={date} />
       </time>
 
       <div className="mx-auto mt-6 h-px w-full max-w-xs bg-gradient-to-r from-transparent via-[var(--color-border-subtle)] to-transparent" />

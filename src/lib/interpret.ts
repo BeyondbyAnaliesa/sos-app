@@ -407,6 +407,15 @@ function buildCalmDayOverview(
 
 // ─────────────────────────────────────────────────────────────────────────────
 
+const DOMAIN_LIVED_OPENERS: Record<Domain, string> = {
+  body: 'Watch your physical bandwidth first. The chart is pointing to what your body will tolerate, not what your calendar thinks you can do.',
+  mind: 'The useful signal today is underneath the first thought. Pay attention to what keeps repeating in your head after the obvious explanation is gone.',
+  spirit: 'This is a meaning-and-direction day. The chart is less interested in comfort than in whether the path still feels true.',
+  relationships: 'The relationship signal is in the part you keep editing before you say it. That is where the chart is applying pressure.',
+  career: 'The work signal is about leverage, not effort. Notice where more force would only hide the actual bottleneck.',
+  home: 'Your environment is giving information today. The friction in the routine is not random; it is showing what no longer fits.',
+};
+
 function buildMessage(domain: Domain, signatures: TransitSignature[]): string {
   const primary = signatures[0];
   const secondary = signatures[1];
@@ -417,7 +426,7 @@ function buildMessage(domain: Domain, signatures: TransitSignature[]): string {
     return 'No significant activations in this area today. Wide-orb or no contacts — the signal here is low.';
   }
 
-  const lines = [primary.theme.focus];
+  const lines = [DOMAIN_LIVED_OPENERS[domain], primary.theme.focus];
 
   if (primary.intensity === 'high') {
     lines.push(primary.theme.tension);

@@ -139,7 +139,7 @@ export default async function Home() {
       glyph: '◎',
       title: 'Transits',
       desc:  'Planetary positions now',
-      href:  paid ? '/calendar' : '/transits',
+      href:  '/transits',
       locked: !paid,
     },
     {

@@ -15,6 +15,8 @@ import { getSubscription, isActive } from '@/lib/subscription';
 import { getRelevantTransitMemoryForToday } from '@/lib/astrology/memory-store';
 import { buildExplainabilityNote, buildDailyMemoryCue, describeHiddenDomains } from '@/lib/astrology/pure-fns';
 import UnlockCTA from '@/components/UnlockCTA';
+import AppBackLink from '@/components/AppBackLink';
+import AeonFloatingButton from '@/components/AeonFloatingButton';
 
 // DOMAIN_LABELS and describeHiddenDomains have been extracted to pure-fns.ts.
 // buildMemoryCue has been extracted to pure-fns.ts as buildDailyMemoryCue.
@@ -26,7 +28,7 @@ export default async function DailyReadingPage() {
 
   if (!user) redirect('/auth/login');
 
-  const [chartResult, signalResult, sub] = await Promise.all([
+  const [chartResult, signalResult, reportResult, sub] = await Promise.all([
     supabase
       .from('natal_charts')
       .select('placements_json, angles_json, houses_json, aspects_json, metadata_json')
@@ -38,6 +40,11 @@ export default async function DailyReadingPage() {
       .eq('user_id', user.id)
       .order('signal_timestamp', { ascending: false })
       .limit(1)
+      .maybeSingle(),
+    supabase
+      .from('onboarding_reports')
+      .select('report_json')
+      .eq('user_id', user.id)
       .maybeSingle(),
     getSubscription(user.id),
   ]);
@@ -95,6 +102,9 @@ export default async function DailyReadingPage() {
   // Arc memory: fetch structured transit memory context (non-fatal — falls back to signal-based cue)
   const arcMemory = await getRelevantTransitMemoryForToday(user.id).catch(() => null);
 
+  const onboardingReport = reportResult.data?.report_json as { themes?: string[] | null; chartReading?: string | null } | null;
+  const personalTheme = Array.isArray(onboardingReport?.themes) ? onboardingReport?.themes?.[0] : null;
+
   const memoryCue = buildDailyMemoryCue({
     signal: signalResult.data as { life_domain?: string | null; themes_json?: string[] | null } | null,
     arcMemory,
@@ -116,6 +126,7 @@ export default async function DailyReadingPage() {
 
   return (
     <main className="mx-auto w-full max-w-xl animate-[fade-in_0.35s_ease-out] px-5 pb-24 pt-10 sm:px-6 sm:pt-14">
+      <AppBackLink />
       <header className="mb-10 text-center">
         <div className="mx-auto mb-6 h-px w-12 bg-gradient-to-r from-transparent via-[var(--color-copper-dim)] to-transparent" />
         <h1 className="text-3xl font-light tracking-[0.15em] text-[var(--color-text)]">
@@ -141,8 +152,25 @@ export default async function DailyReadingPage() {
         )}
       </section>
 
-      <section className="mb-6 rounded-[10px] border border-[var(--color-electric)]/60 bg-[linear-gradient(180deg,rgba(239,68,136,0.12),rgba(239,68,136,0.02))] px-5 py-5">
-        <p className="text-xs font-medium uppercase tracking-[0.25em] text-[var(--color-electric)]">
+      {personalTheme && (
+        <section className="mb-6 rounded-2xl border border-[var(--color-electric)]/45 bg-[rgba(239,68,136,0.05)] px-5 py-5">
+          <p className="text-xs font-medium uppercase tracking-[0.25em] text-[var(--color-electric)]">
+            Personal thread
+          </p>
+          <p className="mt-2 text-[15px] leading-relaxed text-[var(--color-text)]">
+            {personalTheme}
+          </p>
+          <Link
+            href={`/journal?starter=${encodeURIComponent('Go deeper on this personal thread today.')}&context=${encodeURIComponent(personalTheme)}`}
+            className="mt-4 inline-flex text-xs uppercase tracking-[0.18em] text-[var(--color-electric)] hover:underline"
+          >
+            Ask Aeon why this is active →
+          </Link>
+        </section>
+      )}
+
+      <section className="mb-6 rounded-2xl border border-[var(--color-border)] bg-[rgba(201,162,122,0.05)] px-5 py-5">
+        <p className="text-xs font-medium uppercase tracking-[0.25em] text-[var(--color-copper)]">
           SOS noticed
         </p>
         <p className="mt-2 text-[15px] leading-relaxed text-[var(--color-text)]">
@@ -205,7 +233,7 @@ export default async function DailyReadingPage() {
           </p>
           <div className="space-y-4">
             {visibleGuidance.map((result) => (
-              <GuidanceCard key={result.domain} result={result} />
+              <GuidanceCard key={result.domain} result={result} showAskAeon />
             ))}
           </div>
         </section>
@@ -254,9 +282,14 @@ export default async function DailyReadingPage() {
       )}
 
       <section className="mb-6 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5 sm:px-6">
-        <p className="mb-4 text-xs font-medium uppercase tracking-widest text-[var(--color-copper)]">
-          ✦ Active Transits
-        </p>
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <p className="text-xs font-medium uppercase tracking-widest text-[var(--color-copper)]">
+            ✦ Active Transits
+          </p>
+          <Link href="/transits" className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-electric)] hover:underline">
+            Go to transits →
+          </Link>
+        </div>
         <div className="space-y-2">
           {todayTransits.transits.slice(0, paid ? 10 : 3).map((t, i) => (
             <div key={i} className="flex items-center justify-between text-sm">
@@ -281,6 +314,7 @@ export default async function DailyReadingPage() {
         </Link>
       </div>
 
+      <AeonFloatingButton />
       <BottomNav />
     </main>
   );

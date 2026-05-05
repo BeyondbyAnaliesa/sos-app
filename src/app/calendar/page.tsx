@@ -9,6 +9,8 @@ import type { DailyTransits } from '@/lib/astrology/domain-types';
 import CalendarGrid from './CalendarGrid';
 import { track } from '@/lib/analytics';
 import BottomNav from '@/components/BottomNav';
+import AppBackLink from '@/components/AppBackLink';
+import AeonFloatingButton from '@/components/AeonFloatingButton';
 
 export default async function CalendarPage() {
   const supabase = await createClient();
@@ -65,6 +67,7 @@ export default async function CalendarPage() {
 
   return (
     <main className="mx-auto w-full max-w-xl px-4 pb-24 pt-10 sm:px-6 sm:pt-14">
+      <AppBackLink href="/transits" label="Back to transits" />
       <header className="mb-8">
         <div className="mx-auto mb-6 h-px w-16 bg-gradient-to-r from-transparent via-[var(--color-copper-dim)] to-transparent" />
         <h1 className="text-center text-3xl font-light tracking-[0.15em] text-[var(--color-text)]">
@@ -83,6 +86,7 @@ export default async function CalendarPage() {
         startDayOfWeek={startDayOfWeek}
         daysInMonth={daysInMonth}
       />
+      <AeonFloatingButton />
       <BottomNav />
     </main>
   );

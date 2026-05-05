@@ -1,5 +1,4 @@
 import type { OnboardingReport } from '@/lib/onboarding-prompt';
-import AeonBridgeBox from '@/components/onboarding/AeonBridgeBox';
 
 // splitReport: safe paragraph splitter for report fields — handles null/undefined from GPT
 function splitReport(text: string | null | undefined): string[] {
@@ -7,21 +6,7 @@ function splitReport(text: string | null | undefined): string[] {
   return text.split('\n\n').filter(Boolean);
 }
 
-function buildFallbackBridge(report: OnboardingReport) {
-  const headline = report.aeonBridgeHeadline ?? (Array.isArray(report.themes) ? report.themes[0] : undefined) ?? 'There is a live thread in your chart worth following right now.';
-  // Guard: lookAhead may be undefined if GPT dropped the field; fall through to static copy.
-  const body = report.aeonBridgeBody ?? (report.lookAhead ? report.lookAhead.split('\n\n')[0] : undefined) ?? 'Aeon can help you work with what is active right now in your chart and your life.';
-  const starterChips = report.aeonStarterChips?.filter(Boolean)?.slice(0, 3) ?? report.practices?.filter(Boolean)?.slice(0, 3) ?? [
-    'How do I work with this love pattern?',
-    'What is my chart trying to show me?',
-    'Where should I start with Aeon?',
-  ];
-
-  return { headline, body, starterChips };
-}
-
 export default function NatalReading({ report }: { report: OnboardingReport }) {
-  const bridge = buildFallbackBridge(report);
   return (
     <div className="space-y-6">
       {/* Chart Reading */}
@@ -52,12 +37,6 @@ export default function NatalReading({ report }: { report: OnboardingReport }) {
           ))}
         </ol>
       </div>
-
-      <AeonBridgeBox
-        headline={bridge.headline}
-        body={bridge.body}
-        starterChips={bridge.starterChips}
-      />
 
       {/* Look Ahead */}
       <div className="rounded-[10px] border border-[var(--color-electric)] bg-[linear-gradient(180deg,rgba(239,68,136,0.08),rgba(239,68,136,0.02))] px-6 py-5 shadow-[0_0_0_1px_rgba(239,68,136,0.12)]">

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { GuidanceResult, Domain, Intensity } from '@/lib/interpret';
 
 const DOMAIN_CONFIG: Record<Domain, { icon: string; accentClass: string; borderClass: string }> = {
@@ -15,12 +16,12 @@ const INTENSITY_CONFIG: Record<Intensity, { label: string; dotClass: string }> =
   low:    { label: 'Mild',   dotClass: 'bg-[var(--color-text-muted)]' },
 };
 
-export default function GuidanceCard({ result }: { result: GuidanceResult }) {
+export default function GuidanceCard({ result, showAskAeon = false }: { result: GuidanceResult; showAskAeon?: boolean }) {
   const domain    = DOMAIN_CONFIG[result.domain];
   const intensity = INTENSITY_CONFIG[result.intensity];
 
   return (
-    <div className={`rounded-[10px] border border-l-2 border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-6 py-5 ${domain.borderClass}`}>
+    <div className={`rounded-2xl border border-l-2 border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-6 py-5 ${domain.borderClass}`}>
       <div className="mb-4 flex items-center justify-between">
         <div
           className={`flex items-center gap-2 text-xs font-semibold uppercase tracking-widest ${domain.accentClass}`}
@@ -33,7 +34,16 @@ export default function GuidanceCard({ result }: { result: GuidanceResult }) {
           <span className="text-xs text-[var(--color-text-muted)]">{intensity.label}</span>
         </div>
       </div>
-      <p className="text-sm leading-relaxed text-[var(--color-text-muted)]">{result.message}</p>
+      <p className="text-sm leading-relaxed text-[var(--color-text)]">{result.message}</p>
+      {showAskAeon && (
+        <Link
+          href={`/journal?starter=${encodeURIComponent(`Go deeper on this ${result.title.toLowerCase()} reading.`)}&context=${encodeURIComponent(result.message)}`}
+          className="mt-4 flex items-center justify-between rounded-[10px] border border-[var(--color-border-subtle)] px-4 py-3 text-xs uppercase tracking-[0.18em] text-[var(--color-electric)] hover:border-[var(--color-electric)]"
+        >
+          <span>Ask Aeon about this</span>
+          <span>→</span>
+        </Link>
+      )}
     </div>
   );
 }

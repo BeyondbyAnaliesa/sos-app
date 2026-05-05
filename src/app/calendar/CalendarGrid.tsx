@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import type { DailyTransits, Aspect } from '@/lib/astrology/domain-types';
+import type { DailyTransits, Aspect, Transit } from '@/lib/astrology/domain-types';
+import { buildOrbTimeframe, buildTransitFeel, buildTransitReading, transitKey } from '@/lib/transit-copy';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -23,6 +24,32 @@ const ASPECT_LABELS: Record<Aspect, string> = {
 
 function formatPlanetName(key: string): string {
   return key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+function buildWindow(transit: Transit, selectedDate: string, transitDays: DailyTransits[]): { label: string; trend: 'building' | 'easing' | 'steady' } {
+  const key = transitKey(transit);
+  const dates = transitDays
+    .filter((day) => day.transits.some((t) => transitKey(t) === key))
+    .map((day) => day.date)
+    .sort();
+
+  const selectedIndex = dates.indexOf(selectedDate);
+  const start = dates[0] ?? selectedDate;
+  const end = dates[dates.length - 1] ?? selectedDate;
+  const selectedOrb = transit.orb;
+  const nextDate = selectedIndex >= 0 ? dates[selectedIndex + 1] : undefined;
+  const nextTransit = nextDate
+    ? transitDays.find((day) => day.date === nextDate)?.transits.find((t) => transitKey(t) === key)
+    : undefined;
+  const trend = nextTransit
+    ? nextTransit.orb < selectedOrb ? 'building' : nextTransit.orb > selectedOrb ? 'easing' : 'steady'
+    : 'steady';
+
+  const label = start === end
+    ? new Date(`${start}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : `${new Date(`${start}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}–${new Date(`${end}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+
+  return { label, trend };
 }
 
 interface Props {
@@ -154,24 +181,36 @@ export default function CalendarGrid({
             </button>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-4">
             {selectedDay.transits.slice(0, 8).map((t, i) => {
               const energy = ASPECT_ENERGY[t.aspect];
+              const window = buildWindow(t, selectedDay.date, transitDays);
               return (
-                <div key={i} className="flex items-center justify-between text-sm">
-                  <span className="text-[var(--color-text)]">
-                    {t.transitPlanet}{' '}
-                    <span className="text-[var(--color-text-muted)]">{ASPECT_LABELS[t.aspect]}</span>{' '}
-                    {formatPlanetName(t.natalPlanet)}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-[var(--color-text-muted)]">
-                      {t.orb}°
+                <div key={i} className="border-b border-[var(--color-border-subtle)] pb-4 last:border-b-0 last:pb-0">
+                  <div className="flex items-start justify-between gap-3 text-sm">
+                    <span className="text-[var(--color-text)]">
+                      {t.transitPlanet}{' '}
+                      <span className="text-[var(--color-text-muted)]">{ASPECT_LABELS[t.aspect]}</span>{' '}
+                      {formatPlanetName(t.natalPlanet)}
                     </span>
-                    <span className="text-[10px] uppercase tracking-wider text-[var(--color-copper)]">
-                      {energy.label}
-                    </span>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="text-[10px] text-[var(--color-text-muted)]">
+                        {t.orb}°
+                      </span>
+                      <span className="text-[10px] uppercase tracking-wider text-[var(--color-copper)]">
+                        {energy.label}
+                      </span>
+                    </div>
                   </div>
+                  <p className="mt-2 text-xs leading-relaxed text-[var(--color-text-muted)]">
+                    {buildTransitReading(t)}
+                  </p>
+                  <p className="mt-2 text-[11px] leading-relaxed text-[var(--color-text-muted)] opacity-80">
+                    {buildTransitFeel(t)}
+                  </p>
+                  <p className="mt-2 text-[11px] leading-relaxed text-[var(--color-electric)]">
+                    Active in this calendar view: {window.label}. {buildOrbTimeframe(t.orb, window.trend)}
+                  </p>
                 </div>
               );
             })}

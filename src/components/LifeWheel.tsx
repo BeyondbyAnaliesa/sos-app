@@ -9,21 +9,21 @@ const CX = 150;
 const CY = 150;
 const INNER_R = 54;
 const OUTER_R = 96;
-const LABEL_R = 120;
+const LABEL_R = 75;
 const GAP = 3;
 
 const COLORS: Record<LifeSignal, { fill: string; stroke: string; strokeWidth: number; text: string }> = {
   supportive: {
-    fill: 'rgba(201,162,122,0.16)',
-    stroke: 'rgba(201,162,122,0.72)',
-    strokeWidth: 1.5,
-    text: '#C9A27A',
+    fill: 'rgba(201,162,122,0.20)',
+    stroke: 'rgba(201,162,122,0.86)',
+    strokeWidth: 1.8,
+    text: '#F4EFE8',
   },
   cautionary: {
-    fill: 'rgba(195,108,80,0.16)',
-    stroke: 'rgba(195,108,80,0.68)',
-    strokeWidth: 1.5,
-    text: '#C3705A',
+    fill: 'rgba(239,68,136,0.12)',
+    stroke: 'rgba(239,68,136,0.74)',
+    strokeWidth: 1.8,
+    text: '#F4EFE8',
   },
   // Restrained warm presence — not activated, not dead, just quietly alive
   ambient: {
@@ -63,6 +63,16 @@ export default function LifeWheel({ segments }: { segments: LifeSegmentData[] })
       aria-hidden="true"
       className="mx-auto w-full max-w-[320px]"
     >
+      <defs>
+        <radialGradient id="sos-wheel-cosmos" cx="50%" cy="42%" r="58%">
+          <stop offset="0%" stopColor="rgba(244,239,232,0.10)" />
+          <stop offset="48%" stopColor="rgba(201,162,122,0.06)" />
+          <stop offset="100%" stopColor="rgba(14,12,30,0.0)" />
+        </radialGradient>
+      </defs>
+
+      <circle cx={CX} cy={CY} r={OUTER_R + 18} fill="url(#sos-wheel-cosmos)" />
+
       {/* Outer atmospheric ring */}
       <circle
         cx={CX} cy={CY} r={OUTER_R + 8}
@@ -89,13 +99,22 @@ export default function LifeWheel({ segments }: { segments: LifeSegmentData[] })
               strokeWidth={col.strokeWidth}
               strokeLinejoin="round"
             />
+            <rect
+              x={(lx - 23).toFixed(2)}
+              y={(ly - 8).toFixed(2)}
+              width="46"
+              height="16"
+              rx="8"
+              fill="rgba(14,12,30,0.42)"
+              stroke="rgba(201,162,122,0.18)"
+            />
             <text
               x={lx.toFixed(2)}
               y={ly.toFixed(2)}
               textAnchor="middle"
               dominantBaseline="central"
-              fontSize="8"
-              letterSpacing="0.12em"
+              fontSize="7.5"
+              letterSpacing="0.10em"
               fill={col.text}
             >
               {segment.label}
@@ -107,10 +126,11 @@ export default function LifeWheel({ segments }: { segments: LifeSegmentData[] })
       {/* Center point */}
       <circle
         cx={CX} cy={CY} r="5"
-        fill="rgba(201,162,122,0.18)"
-        stroke="rgba(201,162,122,0.42)"
-        strokeWidth="0.75"
+        fill="rgba(239,68,136,0.28)"
+        stroke="rgba(239,68,136,0.62)"
+        strokeWidth="0.9"
       />
+      <circle cx={CX} cy={CY} r="10" fill="none" stroke="rgba(239,68,136,0.18)" strokeWidth="0.7" />
     </svg>
   );
 }

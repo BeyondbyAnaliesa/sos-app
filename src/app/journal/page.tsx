@@ -4,6 +4,7 @@ import { Suspense, useState, useRef, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import BottomNav from '@/components/BottomNav';
 import UnlockCTA from '@/components/UnlockCTA';
+import AppBackLink from '@/components/AppBackLink';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -218,6 +219,7 @@ function JournalPageInner() {
     >
       {!journalSubmitted && (
         <div className="flex flex-1 flex-col pb-24">
+          <AppBackLink />
           <header className="mb-8 text-center">
             <div className="mx-auto mb-6 h-px w-12 bg-gradient-to-r from-transparent via-[var(--color-copper-dim)] to-transparent" />
             <h1 className="text-3xl font-light tracking-[0.15em] text-[var(--color-text)]">
@@ -234,7 +236,7 @@ function JournalPageInner() {
               <p className={`text-[10px] font-medium uppercase tracking-[0.25em] ${usageSummary.locked ? 'text-[var(--color-electric)]' : 'text-[var(--color-copper)]'}`}>
                 {usageSummary.eyebrow}
               </p>
-              <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">
+              <p className="mt-2 text-sm leading-relaxed text-[var(--color-text)]">
                 {usageSummary.body}
               </p>
               {usageSummary.locked && (
@@ -245,8 +247,8 @@ function JournalPageInner() {
             </div>
           )}
 
-          <div className="mb-8 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-4">
-            <p className="text-sm leading-relaxed text-[var(--color-text-muted)]">
+          <div className="mb-8 rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-4">
+            <p className="text-sm leading-relaxed text-[var(--color-text)]">
               Aeon is here to help you work with what is active in your chart and your life. Bring the real thing — it will meet you there.
             </p>
           </div>
@@ -260,7 +262,7 @@ function JournalPageInner() {
                 key={prompt}
                 onClick={() => handlePromptSelect(prompt)}
                 disabled={blocked}
-                className="w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-4 text-left text-sm text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:text-[var(--color-text)] disabled:cursor-not-allowed disabled:opacity-40"
+                className="w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-4 text-left text-sm text-[var(--color-text)] opacity-80 hover:border-[var(--color-border)] hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {prompt}
               </button>
@@ -284,7 +286,7 @@ function JournalPageInner() {
                 <button
                   type="submit"
                   disabled={!input.trim() || blocked}
-                  className="h-[52px] rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-6 text-xs font-medium uppercase tracking-widest text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:text-[var(--color-text)] disabled:cursor-not-allowed disabled:opacity-40"
+                  className="h-[52px] rounded-[10px] border border-[var(--color-border)] bg-[var(--color-surface)] px-6 text-xs font-medium uppercase tracking-widest text-[var(--color-copper)] hover:border-[var(--color-copper)] hover:text-[var(--color-text)] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Talk to Aeon
                 </button>
@@ -296,6 +298,7 @@ function JournalPageInner() {
 
       {journalSubmitted && (
         <>
+          <AppBackLink />
           <div className="mb-4 flex items-center justify-between">
             <p className="text-xs font-medium uppercase tracking-widest text-[var(--color-copper)]">
               ◆ Chat with Aeon
@@ -308,7 +311,7 @@ function JournalPageInner() {
               <p className={`text-[10px] font-medium uppercase tracking-[0.25em] ${usageSummary.locked ? 'text-[var(--color-electric)]' : 'text-[var(--color-copper)]'}`}>
                 {usageSummary.eyebrow}
               </p>
-              <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">
+              <p className="mt-2 text-sm leading-relaxed text-[var(--color-text)]">
                 {usageSummary.body}
               </p>
               {usageSummary.locked && (

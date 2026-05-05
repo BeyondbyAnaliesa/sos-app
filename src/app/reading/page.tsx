@@ -8,6 +8,8 @@ import ReadingRefresh from '@/components/ReadingRefresh';
 import { track } from '@/lib/analytics';
 import UnlockCTA from '@/components/UnlockCTA';
 import BottomNav from '@/components/BottomNav';
+import AppBackLink from '@/components/AppBackLink';
+import AeonFloatingButton from '@/components/AeonFloatingButton';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -108,21 +110,26 @@ export default async function ReadingPage() {
   if (!readingResult.data) {
     return (
       <main className="mx-auto w-full max-w-xl px-5 py-10 sm:px-6">
-        <Link
-          href="/home"
-          className="mb-8 flex items-center gap-1.5 py-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-copper)]"
-        >
-          <span>←</span>
-          <span>Home</span>
-        </Link>
+        <AppBackLink />
         <div className="py-16 text-center">
-          <div className="mx-auto mb-6 h-px w-12 bg-gradient-to-r from-transparent via-[var(--color-copper-dim)] to-transparent" />
-          <p className="text-sm text-[var(--color-text)]">Your natal reading is being generated.</p>
+          <div className="mx-auto mb-6 flex items-center justify-center gap-3">
+            <div className="relative flex h-12 w-12 items-center justify-center rounded-full border border-[var(--color-electric)]/40">
+              <div className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-[var(--color-electric)]" />
+              <span className="text-lg text-[var(--color-electric)] animate-pulse">✦</span>
+            </div>
+            <div className="flex gap-1 text-[var(--color-electric)]">
+              <span className="animate-bounce [animation-delay:-0.3s]">✦</span>
+              <span className="animate-bounce [animation-delay:-0.15s]">✦</span>
+              <span className="animate-bounce">✦</span>
+            </div>
+          </div>
+          <p className="text-sm text-[var(--color-text)]">Building your natal reading…</p>
           <p className="mt-2 text-xs text-[var(--color-text-muted)]">
-            This usually takes under a minute. It will be ready when you return.
+            SOS is reading the chart in more detail now. Keep this screen open for a moment.
           </p>
           <ReadingRefresh />
         </div>
+        <AeonFloatingButton />
         <BottomNav />
       </main>
     );
@@ -156,6 +163,7 @@ export default async function ReadingPage() {
 
   return (
     <main className="mx-auto w-full max-w-xl px-5 pb-24 pt-10 sm:px-6 sm:pt-14">
+      <AppBackLink />
       <header className="mb-8 text-center">
         <div className="mx-auto mb-6 h-px w-12 bg-gradient-to-r from-transparent via-[var(--color-copper-dim)] to-transparent" />
         <h1 className="text-3xl font-light tracking-[0.15em] text-[var(--color-text)]">
@@ -379,6 +387,7 @@ export default async function ReadingPage() {
         )}
 
       </div>
+      <AeonFloatingButton />
       <BottomNav />
     </main>
   );

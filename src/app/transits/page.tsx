@@ -14,6 +14,9 @@ import {
 import GuidanceCard from '@/components/GuidanceCard';
 import UnlockCTA from '@/components/UnlockCTA';
 import BottomNav from '@/components/BottomNav';
+import AppBackLink from '@/components/AppBackLink';
+import AeonFloatingButton from '@/components/AeonFloatingButton';
+import { buildOrbTimeframe, buildTransitFeel, buildTransitReading, transitTitle } from '@/lib/transit-copy';
 
 /**
  * Transit Room — the free-user thirst trap for the Transits card.
@@ -47,9 +50,6 @@ export default async function TransitRoomPage() {
 
   const paid = isActive(sub);
 
-  // Paid users get the full transit calendar.
-  if (paid) redirect('/calendar');
-
   // Guard: no chart, or chart row exists with null/malformed columns (partial write, old migration).
   // No chart row → onboarding. Corrupted chart row → chart-error (Option B, P1-4).
   if (!chartResult.data) {
@@ -81,7 +81,7 @@ export default async function TransitRoomPage() {
   const guidance = interpretTransits(todayTransits.transits, natalSummary);
   const overview = buildTransitOverview(todayTransits.transits, natalSummary, { lookAheadTransits });
 
-  // Free users: 1 visible, rest locked. (paid is always false here due to redirect above.)
+  // Free users: 1 visible, rest locked. Paid users see all current guidance here and can also open Calendar.
   const { visible, locked, quiet } = partitionTransitRoomGuidance(guidance, paid);
 
   const today = todayRef.toLocaleDateString('en-US', {
@@ -95,6 +95,7 @@ export default async function TransitRoomPage() {
 
   return (
     <main className="mx-auto w-full max-w-xl px-5 pb-24 pt-10 sm:px-6 sm:pt-14">
+      <AppBackLink />
       <header className="mb-10 text-center">
         <div className="mx-auto mb-6 h-px w-12 bg-gradient-to-r from-transparent via-[var(--color-copper-dim)] to-transparent" />
         <h1 className="text-3xl font-light tracking-[0.15em] text-[var(--color-text)]">
@@ -105,6 +106,16 @@ export default async function TransitRoomPage() {
         </time>
         <div className="mt-6 h-px w-full bg-gradient-to-r from-transparent via-[var(--color-border-subtle)] to-transparent" />
       </header>
+
+      {paid && (
+        <a
+          href="/calendar"
+          className="mb-6 flex items-center justify-between rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-4 text-xs uppercase tracking-[0.18em] text-[var(--color-copper)] hover:border-[var(--color-border)]"
+        >
+          <span>Open 30-day calendar</span>
+          <span>→</span>
+        </a>
+      )}
 
       {/* Sky overview */}
       <section className="mb-8 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5 sm:px-6">
@@ -121,6 +132,27 @@ export default async function TransitRoomPage() {
         )}
       </section>
 
+      {todayTransits.transits.length > 0 && (
+        <section className="mb-8 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5 sm:px-6">
+          <p className="mb-4 text-xs font-medium uppercase tracking-widest text-[var(--color-copper)]">
+            What is active now
+          </p>
+          <div className="space-y-4">
+            {todayTransits.transits.slice(0, paid ? 8 : 3).map((transit, i) => (
+              <div key={`${transitTitle(transit)}-${i}`} className="border-b border-[var(--color-border-subtle)] pb-4 last:border-b-0 last:pb-0">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-sm font-medium text-[var(--color-text)]">{transitTitle(transit)}</p>
+                  <span className="shrink-0 text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper-dim)]">{transit.orb}° orb</span>
+                </div>
+                <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">{buildTransitReading(transit)}</p>
+                <p className="mt-2 text-xs leading-relaxed text-[var(--color-text-muted)] opacity-80">{buildTransitFeel(transit)}</p>
+                <p className="mt-2 text-[11px] leading-relaxed text-[var(--color-electric)]">{buildOrbTimeframe(transit.orb)}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Free unlocked transit — full depth reading */}
       {visible.length > 0 && (
         <section className="mb-6">
@@ -129,7 +161,7 @@ export default async function TransitRoomPage() {
           </p>
           <div className="space-y-4">
             {visible.map((result) => (
-              <GuidanceCard key={result.domain} result={result} />
+              <GuidanceCard key={result.domain} result={result} showAskAeon />
             ))}
           </div>
         </section>
@@ -192,11 +224,10 @@ export default async function TransitRoomPage() {
         </section>
       )}
 
-      {/* Upgrade CTA — always shown at bottom of Transit Room for free users.
-          The page only renders for free users (paid users are redirected to /calendar above). */}
-      <section
+      {/* Upgrade CTA — shown for free users. */}
+      {!paid && <section
         data-testid="transit-room-unlock-cta"
-        className="mb-8 rounded-[10px] border border-[var(--color-electric)] bg-[linear-gradient(180deg,rgba(239,68,136,0.08),rgba(239,68,136,0.02))] px-5 py-5 sm:px-6"
+        className="mb-8 rounded-[10px] border border-[var(--color-electric)] bg-[rgba(239,68,136,0.06)] px-5 py-5 sm:px-6"
       >
         <p className="text-xs font-medium uppercase tracking-widest text-[var(--color-electric)]">
           ✦ Full access unlocks everything
@@ -221,8 +252,9 @@ export default async function TransitRoomPage() {
         <div className="mt-5">
           <UnlockCTA />
         </div>
-      </section>
+      </section>}
 
+      <AeonFloatingButton />
       <BottomNav />
     </main>
   );

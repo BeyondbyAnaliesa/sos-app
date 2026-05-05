@@ -94,7 +94,7 @@ export async function POST(request: Request) {
     const userContext = contextParts.join('\n\n');
     const { error: profileError } = await admin
       .from('profiles')
-      .update({ onboarding_complete: true, user_context: userContext })
+      .update({ user_context: userContext })
       .eq('id', user.id);
     if (profileError) throw profileError;
 

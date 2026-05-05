@@ -1,0 +1,103 @@
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { createBrowserClient } from '@supabase/ssr';
+import { trackClient } from '@/lib/analytics';
+
+export default function TesterStartPage() {
+  const [email, setEmail]       = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError]       = useState<string | null>(null);
+  const [loading, setLoading]   = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    );
+
+    const emailRedirectTo = `${window.location.origin}/auth/callback`;
+
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo,
+        data: { onboarding_complete: false, tester_invite: true },
+      },
+    });
+
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+      return;
+    }
+
+    trackClient('signup_complete', { method: 'email', source: 'tester_start' });
+
+    window.location.href = '/onboarding';
+  }
+
+  return (
+    <>
+      <div className="mb-8 text-center">
+        <h1 className="text-4xl font-light tracking-[0.3em] text-[var(--color-text)]">SOS</h1>
+        <p className="mt-2 text-[10px] uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
+          Tester Onboarding
+        </p>
+      </div>
+
+      <div className="mb-7 space-y-3 text-center text-sm leading-relaxed text-[var(--color-text-muted)]">
+        <p>
+          Create a free tester account to start onboarding. You will enter your birth data,
+          answer the setup questions, and get your first SOS reading.
+        </p>
+        <p className="text-xs opacity-70">
+          After onboarding, use your tester access code to unlock the app without Stripe checkout.
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          className="h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-input)] px-4 text-base text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border)] focus:outline-none"
+        />
+        <input
+          type="password"
+          placeholder="Password (8+ characters)"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          minLength={8}
+          className="h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-input)] px-4 text-base text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-border)] focus:outline-none"
+        />
+
+        {error && <p className="text-xs text-red-400">{error}</p>}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="h-[52px] w-full rounded-[10px] border border-[var(--color-border)] bg-transparent text-sm font-medium uppercase tracking-widest text-[var(--color-copper)] hover:bg-[rgba(142,110,82,0.06)] hover:border-[var(--color-copper)] disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {loading ? 'Creating account…' : 'Start free onboarding'}
+        </button>
+      </form>
+
+      <p className="mt-6 text-center text-xs text-[var(--color-text-muted)]">
+        Already have an account?{' '}
+        <Link href="/auth/login?next=%2Fonboarding" className="text-[var(--color-copper)] hover:underline">
+          Log in and continue onboarding
+        </Link>
+      </p>
+    </>
+  );
+}

@@ -11,7 +11,7 @@ export default async function TesterAccessPage() {
   if (!user) redirect(getLoginRedirectPath('/access'));
 
   const sub = await getSubscription(user.id);
-  if (isActive(sub)) redirect('/');
+  if (isActive(sub)) redirect('/home');
 
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col justify-center px-5 py-10 sm:px-6 sm:py-16">

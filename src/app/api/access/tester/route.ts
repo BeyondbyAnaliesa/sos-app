@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 
     if (error) throw error;
 
-    return NextResponse.json({ ok: true, redirectTo: '/' });
+    return NextResponse.json({ ok: true, redirectTo: '/home' });
   } catch (err) {
     logError(err, { route: '/api/access/tester' });
     return NextResponse.json({ error: 'Something went wrong.' }, { status: 500 });

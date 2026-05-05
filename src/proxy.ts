@@ -58,9 +58,15 @@ export default async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(user ? '/home' : '/auth/login', request.url));
   }
 
-  // Marketing-domain app/auth paths should move to the app subdomain.
+  // Marketing-domain app/auth/tester paths should move to the app subdomain.
   // Localhost stays local so design/dev preview can inspect app routes without bouncing to production.
-  if (!onAppHost && !isLocalPreviewHost(request) && (path.startsWith('/auth') || path === '/home')) {
+  const isAppSurfacePath = path.startsWith('/auth')
+    || path.startsWith('/onboarding')
+    || path.startsWith('/upgrade')
+    || path === '/home'
+    || path === '/access'
+    || path === '/tester';
+  if (!onAppHost && !isLocalPreviewHost(request) && isAppSurfacePath) {
     return NextResponse.redirect(appUrl(path, request));
   }
 

@@ -268,7 +268,7 @@ export default function OnboardingPage() {
       )}
 
       {step === 11 && report && (
-        <ReportStep report={report} onEnter={() => router.push('/')} />
+        <ReportStep report={report} onEnter={() => router.push('/home')} />
       )}
     </main>
   );

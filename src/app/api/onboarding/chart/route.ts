@@ -168,7 +168,7 @@ export async function POST(request: Request) {
     // Save birth data and chart
     const admin = createAdminClient();
 
-    await admin.from('birth_data').upsert({
+    const { error: birthDataError } = await admin.from('birth_data').upsert({
       user_id:       user.id,
       birth_date:    birthDate,
       time_exact:    timeExact,
@@ -177,8 +177,9 @@ export async function POST(request: Request) {
       latitude:      geo.latitude,
       longitude:     geo.longitude,
     }, { onConflict: 'user_id' });
+    if (birthDataError) throw birthDataError;
 
-    await admin.from('natal_charts').upsert({
+    const { error: chartError } = await admin.from('natal_charts').upsert({
       user_id:         user.id,
       placements_json: chart.placements,
       angles_json:     chart.angles,
@@ -186,6 +187,7 @@ export async function POST(request: Request) {
       aspects_json:    chart.aspects,
       metadata_json:   chart.metadata,
     }, { onConflict: 'user_id' });
+    if (chartError) throw chartError;
 
     // Fire off the deep natal reading in the background — don't block the user
     generateNatalReading(user.id, chart);

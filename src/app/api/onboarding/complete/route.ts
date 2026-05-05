@@ -38,9 +38,10 @@ export async function POST(request: Request) {
       question_key,
       response_text,
     }));
-    await admin.from('onboarding_responses').upsert(responseRows, {
+    const { error: responsesError } = await admin.from('onboarding_responses').upsert(responseRows, {
       onConflict: 'user_id,question_key',
     });
+    if (responsesError) throw responsesError;
 
     // 2. Fetch natal chart
     const { data: chartRow } = await admin
@@ -78,27 +79,30 @@ export async function POST(request: Request) {
     const report = JSON.parse(raw) as OnboardingReport;
 
     // 4. Save report
-    await admin.from('onboarding_reports').upsert({
+    const { error: reportError } = await admin.from('onboarding_reports').upsert({
       user_id:        user.id,
       report_json:    report,
       model:          'gpt-4o',
       prompt_version: 'v2-aeon-bridge',
     }, { onConflict: 'user_id' });
+    if (reportError) throw reportError;
 
     // 5. Build initial user context summary
     const contextParts = Object.entries(answers).map(
       ([key, val]) => `[${key}]: ${val}`,
     );
     const userContext = contextParts.join('\n\n');
-    await admin
+    const { error: profileError } = await admin
       .from('profiles')
       .update({ onboarding_complete: true, user_context: userContext })
       .eq('id', user.id);
+    if (profileError) throw profileError;
 
     // 6. Update user metadata so middleware knows onboarding is done
-    await admin.auth.admin.updateUserById(user.id, {
+    const { error: metadataError } = await admin.auth.admin.updateUserById(user.id, {
       user_metadata: { onboarding_complete: true },
     });
+    if (metadataError) throw metadataError;
 
     track('onboarding_complete', { userId: user.id, questionCount: Object.keys(answers).length });
 

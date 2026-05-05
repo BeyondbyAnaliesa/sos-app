@@ -6,8 +6,17 @@ import { getLoginRedirectPath } from '@/lib/auth/redirects';
 const APP_HOST = 'app.getsos.app';
 const APP_ORIGIN = `https://${APP_HOST}`;
 
+function requestHost(request: NextRequest) {
+  return request.headers.get('host')?.split(':')[0] ?? '';
+}
+
 function isAppHost(request: NextRequest) {
-  return request.headers.get('host')?.split(':')[0] === APP_HOST;
+  return requestHost(request) === APP_HOST;
+}
+
+function isLocalPreviewHost(request: NextRequest) {
+  const host = requestHost(request);
+  return host === 'localhost' || host === '127.0.0.1';
 }
 
 function appUrl(path: string, request: NextRequest) {
@@ -50,12 +59,25 @@ export default async function proxy(request: NextRequest) {
   }
 
   // Marketing-domain app/auth paths should move to the app subdomain.
-  if (!onAppHost && (path.startsWith('/auth') || path === '/home')) {
+  // Localhost stays local so design/dev preview can inspect app routes without bouncing to production.
+  if (!onAppHost && !isLocalPreviewHost(request) && (path.startsWith('/auth') || path === '/home')) {
     return NextResponse.redirect(appUrl(path, request));
   }
 
   // API routes handle their own auth — don't redirect them
   if (path.startsWith('/api')) {
+    return supabaseResponse;
+  }
+
+  // Public tester start page must remain reachable even if the viewer has an existing session.
+  // It is the free onboarding entry point for invited testers/investors.
+  if (path === '/tester') {
+    return supabaseResponse;
+  }
+
+  // Local-only design preview routes stay unauthenticated for visual QA.
+  // Do not expose these on production/app host.
+  if (isLocalPreviewHost(request) && path.startsWith('/dev/')) {
     return supabaseResponse;
   }
 
@@ -104,6 +126,6 @@ export default async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|mp4|webm|mov)$).*)',
   ],
 };

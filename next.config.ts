@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ['sweph'],
+  outputFileTracingIncludes: {
+    '/api/onboarding/chart': ['./node_modules/geo-tz/data/**/*'],
+  },
   async headers() {
     return [
       {

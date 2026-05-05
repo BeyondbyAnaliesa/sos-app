@@ -121,6 +121,7 @@ export default function OnboardingPage() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
         setReport(data.report);
+        clearProgress();
         setLoading(false);
         return;
       } catch (err) {
@@ -164,7 +165,7 @@ export default function OnboardingPage() {
       saveProgress(nextStep, answers, chartSummary);
     } else {
       setStep(11);
-      clearProgress();
+      saveProgress(11, answers, chartSummary);
       handleComplete();
     }
   }

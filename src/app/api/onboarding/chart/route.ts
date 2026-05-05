@@ -1,4 +1,5 @@
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
@@ -127,7 +128,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { birthDate, birthTime, timeUnknown, locationText } = await request.json();
+    const { birthDate, birthTime, timeUnknown, locationText, latitude, longitude } = await request.json();
 
     if (!birthDate || !locationText) {
       return NextResponse.json({ error: 'birthDate and locationText are required' }, { status: 400 });
@@ -140,8 +141,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Birth date cannot be in the future.' }, { status: 400 });
     }
 
-    // Geocode location
-    const geo = await geocodeLocation(locationText);
+    const hasConfirmedCoordinates = typeof latitude === 'number' && typeof longitude === 'number';
+
+    // Prefer the coordinates selected during the typeahead step. This avoids a
+    // second external geocode call after the UI has already confirmed a place,
+    // which is especially fragile on mobile/tester onboarding.
+    const geo = hasConfirmedCoordinates
+      ? { latitude, longitude, displayName: locationText }
+      : await geocodeLocation(locationText);
 
     // Parse birth date and time
     const timeExact = !timeUnknown && !!birthTime;

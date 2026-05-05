@@ -7,11 +7,15 @@ export interface BirthDataValues {
   birthTime: string;
   timeUnknown: boolean;
   locationText: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 interface LocationSuggestion {
   placeId: string;
   displayName: string;
+  latitude: number;
+  longitude: number;
 }
 
 interface Props {
@@ -29,6 +33,7 @@ export default function BirthDataStep({ onSubmit, loading }: Props) {
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<LocationSuggestion | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -85,12 +90,20 @@ export default function BirthDataStep({ onSubmit, loading }: Props) {
       setLocationError('Pick your birth place from the dropdown so we use the right coordinates.');
       return;
     }
-    onSubmit({ birthDate, birthTime, timeUnknown, locationText: trimmedLocation });
+    onSubmit({
+      birthDate,
+      birthTime,
+      timeUnknown,
+      locationText: selectedLocation?.displayName ?? trimmedLocation,
+      latitude: selectedLocation?.latitude,
+      longitude: selectedLocation?.longitude,
+    });
   }
 
   function handleLocationChange(value: string) {
     setLocationText(value);
     setSelectedPlaceId(null);
+    setSelectedLocation(null);
     setLocationError(null);
     if (!value.trim()) {
       setShowDropdown(false);
@@ -101,6 +114,7 @@ export default function BirthDataStep({ onSubmit, loading }: Props) {
   function handleLocationPick(option: LocationSuggestion) {
     setLocationText(option.displayName);
     setSelectedPlaceId(option.placeId);
+    setSelectedLocation(option);
     setLocationResults([]);
     setLocationError(null);
     setShowDropdown(false);

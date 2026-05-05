@@ -170,6 +170,17 @@ export default function OnboardingPage() {
     }
   }
 
+  // If the browser reloads, deploys refresh the page, or Safari resumes the tab
+  // at step 11, do not strand the user on "ready". Their saved answers are enough
+  // to resume report generation without making them redo onboarding.
+  useEffect(() => {
+    if (!hydrated || step !== 11 || report || loading || error) return;
+    if (Object.keys(answers).length >= ONBOARDING_QUESTIONS.length) {
+      handleComplete();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, step, report, loading, error, answers]);
+
   if (!hydrated) {
     return (
       <main className="mx-auto w-full max-w-xl px-5 py-8 sm:px-6 sm:py-10">
@@ -253,7 +264,17 @@ export default function OnboardingPage() {
             <ReadingLoader />
           ) : (
             <div className="py-20 text-center">
-              {!error && <p className="text-sm text-[var(--color-text-muted)]">Ready to generate your reading.</p>}
+              {!error && (
+                <>
+                  <p className="text-sm text-[var(--color-text-muted)]">Ready to generate your reading.</p>
+                  <button
+                    onClick={handleComplete}
+                    className="mt-6 rounded-[10px] border border-[var(--color-border-subtle)] px-6 py-3 text-sm text-[var(--color-copper)] hover:border-[var(--color-copper)]"
+                  >
+                    Generate my reading
+                  </button>
+                </>
+              )}
               {!loading && error && (
                 <button
                   onClick={() => { setError(null); handleComplete(); }}

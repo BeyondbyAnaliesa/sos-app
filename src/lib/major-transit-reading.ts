@@ -16,6 +16,8 @@ type LifeSignalMemory = {
 
 export type MajorWaveMemoryInput = {
   report?: OnboardingMemory | null;
+  natalReading?: unknown;
+  priorReadings?: unknown[];
   lifeSignals?: LifeSignalMemory[] | null;
 };
 

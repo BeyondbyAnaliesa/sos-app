@@ -24,6 +24,8 @@ import CalendarGrid from '@/app/calendar/CalendarGrid';
 import { listSecureLifeSignals } from '@/lib/astrology/secure-life-signals';
 import { buildMajorWaveMemoryReading } from '@/lib/major-transit-reading';
 import type { MajorWaveMemoryInput } from '@/lib/major-transit-reading';
+import { getOrCreateMajorTransitAiReadings, majorTransitReadingKey } from '@/lib/major-transit-ai-reading';
+import type { MajorTransitAiReading } from '@/lib/major-transit-ai-reading';
 
 /**
  * Transit Room — the free-user thirst trap for the Transits card.
@@ -73,7 +75,7 @@ function diffDaysLocal(a: string, b: string) {
   return Math.round((new Date(`${a}T12:00:00Z`).getTime() - new Date(`${b}T12:00:00Z`).getTime()) / 86_400_000);
 }
 
-function MajorTransitCard({ arc, memory }: { arc: MajorTransitArc; memory: MajorWaveMemoryInput }) {
+function MajorTransitCard({ arc, memory, aiReading }: { arc: MajorTransitArc; memory: MajorWaveMemoryInput; aiReading?: MajorTransitAiReading }) {
   const memoryReading = buildMajorWaveMemoryReading(arc, memory);
   const color = transitColor(arc.transit);
   return (
@@ -159,18 +161,31 @@ function MajorTransitCard({ arc, memory }: { arc: MajorTransitArc; memory: Major
         </div>
         <div>
           <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper)]">Memory read</p>
-          <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-muted)]">{memoryReading.personalLine}</p>
-          <p className="mt-2 text-xs leading-relaxed text-[var(--color-text-muted)] opacity-80">{memoryReading.memoryLine}</p>
-          <p className="mt-2 text-xs leading-relaxed text-[var(--color-electric)]">{memoryReading.lifecycleLine}</p>
+          {aiReading ? (
+            <div className="mt-1 space-y-3">
+              <p className="text-base leading-relaxed text-[var(--color-text)]">{aiReading.headline}</p>
+              <p className="text-sm leading-relaxed text-[var(--color-text-muted)]">{aiReading.wave}</p>
+              <p className="text-sm leading-relaxed text-[var(--color-text-muted)]">{aiReading.whyYou}</p>
+              <p className="text-sm leading-relaxed text-[var(--color-text-muted)]">{aiReading.feel}</p>
+              {aiReading.memoryNote && <p className="text-xs leading-relaxed text-[var(--color-text-muted)] opacity-75">{aiReading.memoryNote}</p>}
+            </div>
+          ) : (
+            <>
+              <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-muted)]">{memoryReading.personalLine}</p>
+              <p className="mt-2 text-xs leading-relaxed text-[var(--color-text-muted)] opacity-80">{memoryReading.memoryLine}</p>
+              <p className="mt-2 text-xs leading-relaxed text-[var(--color-electric)]">{memoryReading.lifecycleLine}</p>
+            </>
+          )}
         </div>
         <div>
           <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper)]">How to use it</p>
-          <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-muted)]">{buildWaveUse(arc.transit, arc.context.lifeArea)}</p>
+          <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-muted)]">{aiReading?.use ?? buildWaveUse(arc.transit, arc.context.lifeArea)}</p>
+          {aiReading?.doNotForce && <p className="mt-2 text-xs leading-relaxed text-[var(--color-text-muted)] opacity-80">Do not force: {aiReading.doNotForce}</p>}
         </div>
       </div>
       <p className="mt-3 text-xs leading-relaxed text-[var(--color-text-muted)] opacity-80">{buildTransitFeel(arc.transit)}</p>
       <a
-        href={`/journal?starter=${encodeURIComponent(`Go deeper on this ${transitTitle(arc.transit)} transit.`)}&context=${encodeURIComponent(`${transitTitle(arc.transit)} is active ${arcWindow(arc)} and ${phaseCopy(arc).toLowerCase()}.`)}`}
+        href={`/journal?starter=${encodeURIComponent(aiReading?.aeonQuestion ?? `Go deeper on this ${transitTitle(arc.transit)} transit.`)}&context=${encodeURIComponent(`${transitTitle(arc.transit)} is active ${arcWindow(arc)} and ${phaseCopy(arc).toLowerCase()}.`)}`}
         className="mt-4 flex items-center justify-between rounded-[10px] border border-[var(--color-border-subtle)] px-4 py-3 text-xs uppercase tracking-[0.18em] text-[var(--color-electric)] hover:border-[var(--color-electric)]"
       >
         <span>Ask Aeon about this wave</span>
@@ -188,7 +203,7 @@ export default async function TransitRoomPage() {
 
   if (!user) redirect('/auth/login');
 
-  const [chartResult, reportResult, sub] = await Promise.all([
+  const [chartResult, reportResult, natalReadingResult, sub] = await Promise.all([
     supabase
       .from('natal_charts')
       .select(
@@ -199,6 +214,11 @@ export default async function TransitRoomPage() {
     supabase
       .from('onboarding_reports')
       .select('report_json')
+      .eq('user_id', user.id)
+      .maybeSingle(),
+    supabase
+      .from('natal_readings')
+      .select('reading_json')
       .eq('user_id', user.id)
       .maybeSingle(),
     getSubscription(user.id),
@@ -270,10 +290,18 @@ export default async function TransitRoomPage() {
   const lifeSignals = await listSecureLifeSignals(supabase, { userId: user.id, limit: 12 }).catch(() => []);
   const waveMemory: MajorWaveMemoryInput = {
     report: (reportResult.data?.report_json ?? null) as MajorWaveMemoryInput['report'],
+    natalReading: natalReadingResult.data?.reading_json ?? null,
     lifeSignals,
   };
   const activeMajorArcs = majorArcs.filter((arc) => arc.activeToday).slice(0, paid ? 8 : 2);
   const upcomingMajorArcs = majorArcs.filter((arc) => !arc.activeToday).slice(0, paid ? 6 : 2);
+  const displayedMajorArcs = [...activeMajorArcs, ...upcomingMajorArcs];
+  const aiReadings = await getOrCreateMajorTransitAiReadings({
+    userId: user.id,
+    arcs: displayedMajorArcs,
+    chart: richChart,
+    memory: waveMemory,
+  });
 
   return (
     <main className="mx-auto w-full max-w-xl px-5 pb-24 pt-10 sm:px-6 sm:pt-14">
@@ -320,7 +348,7 @@ export default async function TransitRoomPage() {
         </p>
         {activeMajorArcs.length > 0 ? (
           <div className="space-y-4">
-            {activeMajorArcs.map((arc) => <MajorTransitCard key={arc.key} arc={arc} memory={waveMemory} />)}
+            {activeMajorArcs.map((arc) => <MajorTransitCard key={arc.key} arc={arc} memory={waveMemory} aiReading={aiReadings[majorTransitReadingKey(arc)]} />)}
           </div>
         ) : (
           <div className="rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5">
@@ -337,7 +365,7 @@ export default async function TransitRoomPage() {
             Building next
           </p>
           <div className="space-y-4">
-            {upcomingMajorArcs.map((arc) => <MajorTransitCard key={arc.key} arc={arc} memory={waveMemory} />)}
+            {upcomingMajorArcs.map((arc) => <MajorTransitCard key={arc.key} arc={arc} memory={waveMemory} aiReading={aiReadings[majorTransitReadingKey(arc)]} />)}
           </div>
         </section>
       )}

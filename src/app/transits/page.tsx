@@ -1,5 +1,6 @@
 export const runtime = 'nodejs'; // required for sweph
 
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { calculateTransitsForDate, calculateTransitsForRange } from '@/lib/astrology/calculate-transits';
@@ -184,13 +185,22 @@ function MajorTransitCard({ arc, memory, aiReading }: { arc: MajorTransitArc; me
         </div>
       </div>
       <p className="mt-3 text-xs leading-relaxed text-[var(--color-text-muted)] opacity-80">{buildTransitFeel(arc.transit)}</p>
-      <a
-        href={`/journal?starter=${encodeURIComponent(aiReading?.aeonQuestion ?? `Go deeper on this ${transitTitle(arc.transit)} transit.`)}&context=${encodeURIComponent(`${transitTitle(arc.transit)} is active ${arcWindow(arc)} and ${phaseCopy(arc).toLowerCase()}.`)}`}
-        className="mt-4 flex items-center justify-between rounded-[10px] border border-[var(--color-border-subtle)] px-4 py-3 text-xs uppercase tracking-[0.18em] text-[var(--color-electric)] hover:border-[var(--color-electric)]"
-      >
-        <span>Ask Aeon about this wave</span>
-        <span>→</span>
-      </a>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <Link
+          href={`/transits/${encodeURIComponent(arc.key)}`}
+          className="flex items-center justify-between rounded-[10px] border border-[var(--color-electric)]/45 px-4 py-3 text-xs uppercase tracking-[0.18em] text-[var(--color-electric)] hover:border-[var(--color-electric)]"
+        >
+          <span>Open full wave</span>
+          <span>→</span>
+        </Link>
+        <a
+          href={`/journal?starter=${encodeURIComponent(aiReading?.aeonQuestion ?? `Go deeper on this ${transitTitle(arc.transit)} transit.`)}&context=${encodeURIComponent(`${transitTitle(arc.transit)} is active ${arcWindow(arc)} and ${phaseCopy(arc).toLowerCase()}.`)}`}
+          className="flex items-center justify-between rounded-[10px] border border-[var(--color-border-subtle)] px-4 py-3 text-xs uppercase tracking-[0.18em] text-[var(--color-electric)] hover:border-[var(--color-electric)]"
+        >
+          <span>Ask Aeon</span>
+          <span>→</span>
+        </a>
+      </div>
     </div>
   );
 }

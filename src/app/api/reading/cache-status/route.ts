@@ -63,12 +63,14 @@ export async function GET(request: Request) {
           majorArcs: selectedMajorArcs,
           guidance: context.guidance,
           memory: context.memory,
+          judgment: context.judgment,
         });
 
         const major = await getMajorTransitAiReadingsCacheStatus({
           userId,
           arcs: selectedMajorArcs,
           memory: context.memory,
+          chart: context.chart,
         });
 
         if (daily.exactMatch) dailyHits += 1;

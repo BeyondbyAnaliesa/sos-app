@@ -5,6 +5,8 @@ import { buildNatalSummary } from '@/lib/astrology/domain-types';
 import type { NatalChart } from '@/lib/astrology/types';
 import { interpretTransits } from '@/lib/interpret';
 import { listSecureLifeSignals } from '@/lib/astrology/secure-life-signals';
+import { buildAstrologyJudgment } from '@/lib/astrology/judgment';
+import type { AstrologyJudgment } from '@/lib/astrology/judgment-types';
 import type { MajorWaveMemoryInput } from '@/lib/major-transit-reading';
 
 export type ReadingContext = {
@@ -17,6 +19,7 @@ export type ReadingContext = {
   activeMajorArcs: ReturnType<typeof calculateMajorTransitArcs>['arcs'];
   upcomingMajorArcs: ReturnType<typeof calculateMajorTransitArcs>['arcs'];
   memory: MajorWaveMemoryInput;
+  judgment: AstrologyJudgment;
 };
 
 type DbClient = Pick<SupabaseClient, 'from' | 'rpc'>;
@@ -67,6 +70,19 @@ export async function buildReadingContext(client: DbClient, userId: string, now 
   const activeMajorArcs = majorArcs.filter((arc) => arc.activeToday);
   const upcomingMajorArcs = majorArcs.filter((arc) => !arc.activeToday);
   const lifeSignals = await listSecureLifeSignals(client, { userId, limit: 12 }).catch(() => []);
+  const memory = {
+    report: (reportResult.data?.report_json ?? null) as MajorWaveMemoryInput['report'],
+    natalReading: natalReadingResult.data?.reading_json ?? null,
+    lifeSignals,
+  } satisfies MajorWaveMemoryInput;
+  const judgment = buildAstrologyJudgment({
+    date: todayTransits.date,
+    chart,
+    todayTransits,
+    majorArcs,
+    guidance,
+    memory,
+  });
 
   return {
     chart,
@@ -77,10 +93,7 @@ export async function buildReadingContext(client: DbClient, userId: string, now 
     majorArcs,
     activeMajorArcs,
     upcomingMajorArcs,
-    memory: {
-      report: (reportResult.data?.report_json ?? null) as MajorWaveMemoryInput['report'],
-      natalReading: natalReadingResult.data?.reading_json ?? null,
-      lifeSignals,
-    },
+    memory,
+    judgment,
   };
 }

@@ -67,6 +67,7 @@ export async function POST(request: Request) {
             majorArcs: selectedMajorArcs,
             guidance: context.guidance,
             memory: context.memory,
+            judgment: context.judgment,
           });
           dailyGenerated = Boolean(daily);
         }

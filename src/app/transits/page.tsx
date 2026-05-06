@@ -23,6 +23,7 @@ import AeonFloatingButton from '@/components/AeonFloatingButton';
 import { buildTransitFeel, buildTransitReading, buildWaveUse, transitColor, transitTitle } from '@/lib/transit-copy';
 import CalendarGrid from '@/app/calendar/CalendarGrid';
 import { listSecureLifeSignals } from '@/lib/astrology/secure-life-signals';
+import { buildTransitArcJudgment } from '@/lib/astrology/transit-arc-judgment';
 import { buildMajorWaveMemoryReading } from '@/lib/major-transit-reading';
 import type { MajorWaveMemoryInput } from '@/lib/major-transit-reading';
 import { getOrCreateMajorTransitAiReadings, majorTransitReadingKey } from '@/lib/major-transit-ai-reading';
@@ -77,8 +78,9 @@ function diffDaysLocal(a: string, b: string) {
   return Math.round((new Date(`${a}T12:00:00Z`).getTime() - new Date(`${b}T12:00:00Z`).getTime()) / 86_400_000);
 }
 
-function MajorTransitCard({ arc, memory, aiReading }: { arc: MajorTransitArc; memory: MajorWaveMemoryInput; aiReading?: MajorTransitAiReading }) {
-  const memoryReading = buildMajorWaveMemoryReading(arc, memory);
+function MajorTransitCard({ arc, memory, chart, aiReading }: { arc: MajorTransitArc; memory: MajorWaveMemoryInput; chart: RichChart; aiReading?: MajorTransitAiReading }) {
+  const arcFacts = buildTransitArcJudgment({ arc, chart, memory, date: new Date().toISOString().split('T')[0] });
+  const memoryReading = buildMajorWaveMemoryReading(arc, memory, chart);
   const timing = buildTransitTiming(arc);
   const passMemory = buildPassMemoryCue(arc, memory.lifeSignals ?? []);
   const color = transitColor(arc.transit);
@@ -146,6 +148,9 @@ function MajorTransitCard({ arc, memory, aiReading }: { arc: MajorTransitArc; me
         {arc.exactHits.length > 1 && (
           <p className="mt-2 text-xs leading-relaxed text-[var(--color-text-muted)] opacity-80">{passMemory.headline}</p>
         )}
+        <p className="mt-2 text-xs leading-relaxed text-[var(--color-text-muted)] opacity-80">
+          Arc spine: {arcFacts.daysActive}/{arcFacts.durationDays} days active{arcFacts.percentComplete != null ? ` · ${arcFacts.percentComplete}% complete` : ''} · {arcFacts.totalPasses > 1 ? `pass ${arcFacts.currentPass ?? 1} of ${arcFacts.totalPasses}` : 'one visible pass'}{arcFacts.watchNextDate ? ` · watch ${arcFacts.watchNextType?.replace('_', ' ')} ${formatShortDate(arcFacts.watchNextDate)}` : ''}.
+        </p>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2 text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
@@ -382,7 +387,7 @@ export default async function TransitRoomPage() {
         </p>
         {activeMajorArcs.length > 0 ? (
           <div className="space-y-4">
-            {activeMajorArcs.map((arc) => <MajorTransitCard key={arc.key} arc={arc} memory={waveMemory} aiReading={aiReadings[majorTransitReadingKey(arc)]} />)}
+            {activeMajorArcs.map((arc) => <MajorTransitCard key={arc.key} arc={arc} memory={waveMemory} chart={richChart} aiReading={aiReadings[majorTransitReadingKey(arc)]} />)}
           </div>
         ) : (
           <div className="rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5">
@@ -399,7 +404,7 @@ export default async function TransitRoomPage() {
             Building next
           </p>
           <div className="space-y-4">
-            {upcomingMajorArcs.map((arc) => <MajorTransitCard key={arc.key} arc={arc} memory={waveMemory} aiReading={aiReadings[majorTransitReadingKey(arc)]} />)}
+            {upcomingMajorArcs.map((arc) => <MajorTransitCard key={arc.key} arc={arc} memory={waveMemory} chart={richChart} aiReading={aiReadings[majorTransitReadingKey(arc)]} />)}
           </div>
         </section>
       )}

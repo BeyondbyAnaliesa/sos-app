@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server';
 import AppBackLink from '@/components/AppBackLink';
 import AeonFloatingButton from '@/components/AeonFloatingButton';
 import BottomNav from '@/components/BottomNav';
+import { buildTransitArcJudgment } from '@/lib/astrology/transit-arc-judgment';
 import { buildReadingContext } from '@/lib/transit-reading-context';
 import type { MajorTransitArc } from '@/lib/astrology/major-transits';
 import { getOrCreateMajorTransitAiReadings, majorTransitReadingKey } from '@/lib/major-transit-ai-reading';
@@ -72,6 +73,7 @@ export default async function MajorTransitDetailPage({ params }: { params: Promi
   const aeonQuestion = reading?.aeonQuestion ?? `What is this ${title} wave asking me to see?`;
   const timing = buildTransitTiming(arc);
   const passMemory = buildPassMemoryCue(arc, context.memory.lifeSignals ?? []);
+  const arcFacts = buildTransitArcJudgment({ arc, chart: context.chart, memory: context.memory, date: context.date });
 
   return (
     <main className="mx-auto w-full max-w-xl px-5 pb-24 pt-10 sm:px-6 sm:pt-14">
@@ -114,6 +116,28 @@ export default async function MajorTransitDetailPage({ params }: { params: Promi
         {passMemory.hasMemory && (
           <p className="mt-3 text-xs leading-relaxed text-[var(--color-electric)]">This is the comparison layer: what repeated, what changed, and what is no longer negotiable.</p>
         )}
+      </section>
+
+      <section className="mb-6 rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5">
+        <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--color-copper)]">Arc spine</p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <div className="rounded-[10px] border border-[var(--color-border-subtle)] px-4 py-3">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper)]">Lifecycle</p>
+            <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-muted)]">{arcFacts.daysActive} of {arcFacts.durationDays} days active{arcFacts.percentComplete != null ? ` · ${arcFacts.percentComplete}% complete` : ''}</p>
+          </div>
+          <div className="rounded-[10px] border border-[var(--color-border-subtle)] px-4 py-3">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper)]">Current pass</p>
+            <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-muted)]">{arcFacts.totalPasses > 1 ? `Pass ${arcFacts.currentPass ?? 1} of ${arcFacts.totalPasses}` : 'One visible pass'} · {arcFacts.phaseLabel.replaceAll('_', ' ')}</p>
+          </div>
+          <div className="rounded-[10px] border border-[var(--color-border-subtle)] px-4 py-3">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper)]">Watch next</p>
+            <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-muted)]">{arcFacts.watchNextDate ? `${formatLongDate(arcFacts.watchNextDate)} · ${arcFacts.watchNextType?.replace('_', ' ')}` : 'No future marker in this scan.'}</p>
+          </div>
+          <div className="rounded-[10px] border border-[var(--color-border-subtle)] px-4 py-3">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper)]">Memory linkage</p>
+            <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-muted)]">{arcFacts.memoryLinkage.matchedSignalCount > 0 ? `${arcFacts.memoryLinkage.matchedSignalCount} saved signals linked${arcFacts.memoryLinkage.mostRecentSignalDate ? ` · latest ${formatLongDate(arcFacts.memoryLinkage.mostRecentSignalDate)}` : ''}` : 'No saved signal linked closely enough yet.'}</p>
+          </div>
+        </div>
       </section>
 
       <section className="mb-6 rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5">

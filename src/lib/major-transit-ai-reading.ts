@@ -3,11 +3,14 @@ import OpenAI from 'openai';
 import { createAdminClient } from '@/lib/supabase/server';
 import type { MajorTransitArc } from '@/lib/astrology/major-transits';
 import type { NatalChart } from '@/lib/astrology/types';
+import { buildArcFocusedJudgment } from '@/lib/astrology/judgment';
+import { buildTransitArcJudgment } from '@/lib/astrology/transit-arc-judgment';
+import type { AstrologyJudgment } from '@/lib/astrology/judgment-types';
 import type { MajorWaveMemoryInput } from '@/lib/major-transit-reading';
 import { transitTitle } from '@/lib/transit-copy';
 import { logError, logWarn } from '@/lib/logger';
 
-export const MAJOR_TRANSIT_READING_PROMPT_VERSION = 'major-wave-full-memory-v1';
+export const MAJOR_TRANSIT_READING_PROMPT_VERSION = 'major-wave-full-memory-v4';
 export const MAJOR_TRANSIT_READING_MODEL = 'gpt-4o';
 
 export type MajorTransitAiReading = {
@@ -102,7 +105,39 @@ function readingKey(arc: MajorTransitArc) {
   return [arc.key, arc.startDate, arc.endDate, arc.phase].join('|');
 }
 
-export function buildMajorTransitAiReadingMemoryHash(arc: MajorTransitArc, memory: MajorWaveMemoryInput) {
+function judgmentSnapshot(judgment: AstrologyJudgment) {
+  return {
+    mainStory: judgment.mainStory,
+    practicalDemand: judgment.practicalDemand,
+    timing: judgment.timing,
+    foreground: judgment.foreground.slice(0, 3).map((signal) => ({
+      id: signal.id,
+      scope: signal.scope,
+      score: signal.score,
+      demand: signal.demand,
+      title: signal.title,
+      collectiveBridge: signal.collectiveBridge ?? null,
+      receipts: signal.receipts.slice(0, 2),
+    })),
+    currentSky: judgment.currentSky,
+  };
+}
+
+function buildMajorTransitJudgmentForArc(arc: MajorTransitArc, chart: NatalChart, arcs: MajorTransitArc[], memory: MajorWaveMemoryInput, date?: string) {
+  const computationDate = date ?? new Date().toISOString().split('T')[0];
+
+  return buildArcFocusedJudgment({
+    date: computationDate,
+    chart,
+    arc,
+    majorArcs: arcs,
+    todayTransits: { date: computationDate, transits: [arc.transit] },
+    guidance: [],
+    memory: { ...memory, priorReadings: memory.priorReadings },
+  });
+}
+
+export function buildMajorTransitAiReadingMemoryHash(arc: MajorTransitArc, memory: MajorWaveMemoryInput, judgment?: AstrologyJudgment) {
   const lifeSignals = (memory.lifeSignals ?? []).slice(0, 12).map((signal) => ({
     text: compactText(signal.content_text, 260),
     themes: signal.themes_json?.slice(0, 5) ?? [],
@@ -121,6 +156,7 @@ export function buildMajorTransitAiReadingMemoryHash(arc: MajorTransitArc, memor
       stations: arc.stations,
       context: arc.context,
     },
+    judgment: judgment ? judgmentSnapshot(judgment) : null,
     reportThemes: memory.report?.themes ?? [],
     reportReading: compactText(memory.report?.chartReading, 600),
     natalReading: compactText(memory.natalReading, 800),
@@ -146,8 +182,10 @@ function buildPrompt(params: {
   arcs: MajorTransitArc[];
   chart: NatalChart;
   memory: MajorWaveMemoryInput;
+  judgments: Record<string, AstrologyJudgment>;
 }) {
   const { arcs, chart, memory } = params;
+  const date = new Date().toISOString().split('T')[0];
   const placements = chart.placements
     .map((p) => `${p.label}: ${p.sign} ${p.degree}°${p.minute}′${p.retrograde ? ' Rx' : ''}`)
     .join('\n');
@@ -166,7 +204,9 @@ function buildPrompt(params: {
       stations: arc.stations,
       passes: arc.activeRunCount,
     },
+    lifecycleFacts: buildTransitArcJudgment({ arc, chart, memory, date }),
     natalContext: arc.context,
+    judgment: params.judgments[readingKey(arc)] ?? null,
   }));
 
   const lifeSignals = (memory.lifeSignals ?? []).slice(0, 12).map((signal) => ({
@@ -179,12 +219,14 @@ function buildPrompt(params: {
   const system = `You are SOS, a serious personal astrology intelligence layer. Write premium transit-wave readings.
 
 Rules:
+- The structured judgment for each arc is the source of truth. Use it first, then use the other payload only to clarify or quote receipts.
 - Interpret each major transit as a personal lifecycle, not a daily horoscope.
 - Use the user's saved memory when it is present: natal chart, onboarding report, prior readings, journal/Aeon life signals, recurring themes.
 - Do not say you know something unless it is in the provided data. If memory is thin, say the reading will sharpen as SOS gets more signals.
-- Be specific, adult, useful, and a little startling. No vague spiritual theater. No fortune-cookie copy. No "the stars are aligning" language.
+- Be specific, adult, useful, and direct. No poetic language, vague spiritual theater, fortune-cookie copy, or "the stars are aligning" language.
 - Avoid em dashes.
 - Do not mention internal table names, prompts, hashes, or implementation.
+- If the judgment says current-sky coverage is partial, do not pretend a full collective rarity scan exists.
 
 Return only valid JSON:
 {
@@ -208,7 +250,7 @@ Return only valid JSON:
   return { system, user };
 }
 
-async function fetchCachedRows(userId: string, arcs: MajorTransitArc[], memory: MajorWaveMemoryInput) {
+async function fetchCachedRows(userId: string, arcs: MajorTransitArc[], memory: MajorWaveMemoryInput, judgments: Record<string, AstrologyJudgment>) {
   const admin = createAdminClient();
   const keys = arcs.map((arc) => arc.key);
   const { data, error } = await admin
@@ -219,7 +261,7 @@ async function fetchCachedRows(userId: string, arcs: MajorTransitArc[], memory: 
 
   if (error) throw error;
 
-  const expected = new Map(arcs.map((arc) => [readingKey(arc), buildMajorTransitAiReadingMemoryHash(arc, memory)]));
+  const expected = new Map(arcs.map((arc) => [readingKey(arc), buildMajorTransitAiReadingMemoryHash(arc, memory, judgments[readingKey(arc)])]));
   const rows = (data ?? []) as CacheRow[];
   const found: ReadingMap = {};
 
@@ -237,6 +279,8 @@ export async function getMajorTransitAiReadingsCacheStatus(params: {
   userId: string;
   arcs: MajorTransitArc[];
   memory: MajorWaveMemoryInput;
+  chart?: NatalChart;
+  judgments?: Record<string, AstrologyJudgment>;
 }): Promise<MajorTransitAiReadingCacheStatusEntry[]> {
   const arcs = params.arcs.slice(0, 14);
   if (arcs.length === 0) return [];
@@ -252,9 +296,13 @@ export async function getMajorTransitAiReadingsCacheStatus(params: {
 
   const rows = (data ?? []) as CacheStatusRow[];
 
+  const judgments = params.judgments ?? (params.chart
+    ? Object.fromEntries(arcs.map((arc) => [readingKey(arc), buildMajorTransitJudgmentForArc(arc, params.chart as NatalChart, arcs, params.memory)]))
+    : {});
+
   return arcs.map((arc) => {
     const key = readingKey(arc);
-    const expectedHash = buildMajorTransitAiReadingMemoryHash(arc, params.memory);
+    const expectedHash = buildMajorTransitAiReadingMemoryHash(arc, params.memory, judgments[key]);
     const matchingRows = rows.filter((row) => [row.arc_key, row.lifecycle_start_date, row.lifecycle_end_date, row.phase].join('|') === key);
     const latestRow = matchingRows
       .slice()
@@ -283,6 +331,7 @@ async function saveGeneratedRows(params: {
   arcs: MajorTransitArc[];
   memory: MajorWaveMemoryInput;
   readings: ReadingMap;
+  judgments: Record<string, AstrologyJudgment>;
 }) {
   const admin = createAdminClient();
   const rows = params.arcs
@@ -299,7 +348,7 @@ async function saveGeneratedRows(params: {
         lifecycle_start_date: arc.startDate,
         lifecycle_end_date: arc.endDate,
         phase: arc.phase,
-        memory_hash: buildMajorTransitAiReadingMemoryHash(arc, params.memory),
+        memory_hash: buildMajorTransitAiReadingMemoryHash(arc, params.memory, params.judgments[key]),
         reading_json: reading,
         prompt_version: MAJOR_TRANSIT_READING_PROMPT_VERSION,
         model: MAJOR_TRANSIT_READING_MODEL,
@@ -320,8 +369,8 @@ async function saveGeneratedRows(params: {
   if (error) throw error;
 }
 
-async function generateReadings(arcs: MajorTransitArc[], chart: NatalChart, memory: MajorWaveMemoryInput) {
-  const { system, user } = buildPrompt({ arcs, chart, memory });
+async function generateReadings(arcs: MajorTransitArc[], chart: NatalChart, memory: MajorWaveMemoryInput, judgments: Record<string, AstrologyJudgment>) {
+  const { system, user } = buildPrompt({ arcs, chart, memory, judgments });
   const openai = getOpenAIClient();
   const completion = await openai.chat.completions.create({
     model: MAJOR_TRANSIT_READING_MODEL,
@@ -344,14 +393,14 @@ async function generateReadings(arcs: MajorTransitArc[], chart: NatalChart, memo
   return byKey;
 }
 
-async function generateReadingsWithSingleMissingRetry(arcs: MajorTransitArc[], chart: NatalChart, memory: MajorWaveMemoryInput) {
-  const generated = await generateReadings(arcs, chart, memory);
+async function generateReadingsWithSingleMissingRetry(arcs: MajorTransitArc[], chart: NatalChart, memory: MajorWaveMemoryInput, judgments: Record<string, AstrologyJudgment>) {
+  const generated = await generateReadings(arcs, chart, memory, judgments);
   let missing = arcs.filter((arc) => !generated[readingKey(arc)]);
   let retried = false;
 
   if (missing.length > 0) {
     retried = true;
-    const retryGenerated = await generateReadings(missing, chart, memory);
+    const retryGenerated = await generateReadings(missing, chart, memory, judgments);
     Object.assign(generated, retryGenerated);
     missing = missing.filter((arc) => !generated[readingKey(arc)]);
   }
@@ -368,13 +417,18 @@ export async function getOrCreateMajorTransitAiReadings(params: {
   arcs: MajorTransitArc[];
   chart: NatalChart;
   memory: MajorWaveMemoryInput;
+  judgments?: Record<string, AstrologyJudgment>;
   onPartial?: PartialHandlingMode;
 }) {
   const arcs = params.arcs.slice(0, 14);
   if (arcs.length === 0) return {} as ReadingMap;
 
+  const judgments = params.judgments ?? Object.fromEntries(
+    arcs.map((arc) => [readingKey(arc), buildMajorTransitJudgmentForArc(arc, params.chart, arcs, params.memory)]),
+  );
+
   try {
-    const cached = await fetchCachedRows(params.userId, arcs, params.memory);
+    const cached = await fetchCachedRows(params.userId, arcs, params.memory, judgments);
     const missing = arcs.filter((arc) => !cached[readingKey(arc)]);
     if (missing.length === 0) return cached;
 
@@ -382,12 +436,14 @@ export async function getOrCreateMajorTransitAiReadings(params: {
       missing,
       params.chart,
       params.memory,
+      judgments,
     );
     await saveGeneratedRows({
       userId: params.userId,
       arcs: missing,
       memory: params.memory,
       readings: generated,
+      judgments,
     });
 
     if (missingKeys.length > 0) {
@@ -418,7 +474,7 @@ export async function getOrCreateMajorTransitAiReadings(params: {
     if (message.includes('major_transit_readings') || message.includes('does not exist') || message.includes('schema cache')) {
       logWarn('major_transit_reading_cache_unavailable_generating_uncached', { message });
       try {
-        return await generateReadings(arcs, params.chart, params.memory);
+        return await generateReadings(arcs, params.chart, params.memory, judgments);
       } catch (generationError) {
         logError(generationError, { route: 'major-transit-ai-reading', action: 'uncached-generation-fallback' });
         return {} as ReadingMap;

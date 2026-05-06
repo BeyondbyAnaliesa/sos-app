@@ -1,4 +1,5 @@
 import type { NatalSummary, DailyTransits } from '@/lib/astrology/domain-types';
+import type { AstrologyJudgment } from '@/lib/astrology/judgment-types';
 import { buildTransitOverview, interpretTransits } from '@/lib/interpret';
 
 const ASPECT_FEEL: Record<string, string> = {
@@ -63,13 +64,110 @@ function describeChart(chart: NatalSummary): string {
   ].filter(Boolean).join('\n');
 }
 
+export function buildAstrologyPromptJudgmentSnapshot(judgment: AstrologyJudgment) {
+  const leadSignals = [...judgment.foreground, ...judgment.supporting, ...judgment.background]
+    .slice(0, 4)
+    .map((signal) => ({
+      id: signal.id,
+      tier: signal.tier,
+      scope: signal.scope,
+      source: signal.source,
+      title: signal.title,
+      summary: signal.summary,
+      demand: signal.demand,
+      lifeAreas: signal.lifeAreas,
+      supportNotes: signal.supportNotes.slice(0, 3),
+      collectiveBridge: signal.collectiveBridge
+        ? {
+          event: signal.collectiveBridge.collectiveEvent,
+          matchReasons: signal.collectiveBridge.matchReasons,
+          bridgeStrengthTier: signal.collectiveBridge.bridgeStrengthTier,
+          promoteScopeToBoth: signal.collectiveBridge.promoteScopeToBoth,
+        }
+        : null,
+      receipts: signal.receipts.slice(0, 2).map((receipt) => ({
+        arcKey: receipt.arcKey ?? null,
+        transitPlanet: receipt.transitPlanet,
+        aspect: receipt.aspect,
+        natalTarget: receipt.natalTarget,
+        targetLabel: receipt.targetLabel,
+        lifeArea: receipt.lifeArea,
+        orb: receipt.orb,
+        phase: receipt.phase,
+        exactDate: receipt.exactDate,
+        peakDate: receipt.peakDate,
+        startDate: receipt.startDate,
+        endDate: receipt.endDate,
+        memorySummary: receipt.memorySummary,
+        natalProjection: receipt.natalProjection
+          ? {
+            house: receipt.natalProjection.house,
+            angularity: receipt.natalProjection.angularity,
+            targetIsAngle: receipt.natalProjection.targetIsAngle,
+            targetIsModernChartRuler: receipt.natalProjection.targetIsModernChartRuler,
+            targetIsTraditionalChartRuler: receipt.natalProjection.targetIsTraditionalChartRuler,
+            repeatedLifeAreaSignalCount: receipt.natalProjection.repeatedLifeAreaSignalCount,
+          }
+          : null,
+        collectiveBridge: receipt.collectiveBridge
+          ? {
+            event: receipt.collectiveBridge.collectiveEvent,
+            matchReasons: receipt.collectiveBridge.matchReasons,
+            bridgeStrengthTier: receipt.collectiveBridge.bridgeStrengthTier,
+            promoteScopeToBoth: receipt.collectiveBridge.promoteScopeToBoth,
+          }
+          : null,
+        arcLifecycle: receipt.arcLifecycle
+          ? {
+            phaseLabel: receipt.arcLifecycle.phaseLabel,
+            phaseDemand: receipt.arcLifecycle.phaseDemand,
+            currentPass: receipt.arcLifecycle.currentPass,
+            totalPasses: receipt.arcLifecycle.totalPasses,
+            watchNextDate: receipt.arcLifecycle.watchNextDate,
+            watchNextType: receipt.arcLifecycle.watchNextType,
+          }
+          : null,
+      })),
+    }));
+
+  return {
+    status: 'structured-astrology-judgment-v1',
+    date: judgment.date,
+    mainStory: judgment.mainStory,
+    practicalDemand: judgment.practicalDemand,
+    activatedLifeAreas: judgment.activatedLifeAreas,
+    timing: judgment.timing,
+    leadSignals,
+    currentSky: {
+      status: judgment.currentSky.status,
+      summary: judgment.currentSky.summary,
+      events: judgment.currentSky.events.slice(0, 4),
+      limitations: judgment.currentSky.limitations,
+    },
+    receipts: judgment.receipts.slice(0, 6).map((receipt) => ({
+      transitPlanet: receipt.transitPlanet,
+      aspect: receipt.aspect,
+      natalTarget: receipt.natalTarget,
+      targetLabel: receipt.targetLabel,
+      lifeArea: receipt.lifeArea,
+      orb: receipt.orb,
+      phase: receipt.phase,
+      exactDate: receipt.exactDate,
+      peakDate: receipt.peakDate,
+      memorySummary: receipt.memorySummary,
+    })),
+  };
+}
+
 export function buildSystemPrompt(
   natalChart: NatalSummary,
   dailyTransits: DailyTransits,
   userContext?: string,
+  options?: { judgment?: AstrologyJudgment | null },
 ): string {
   const guidance = interpretTransits(dailyTransits.transits, natalChart);
   const overview = buildTransitOverview(dailyTransits.transits, natalChart);
+  const judgmentSnapshot = options?.judgment ? buildAstrologyPromptJudgmentSnapshot(options.judgment) : null;
 
   const guidanceSummary = guidance
     .map((g) => `${g.title} (${g.intensity} activation, ${g.summary}): ${g.message}`)
@@ -81,7 +179,7 @@ HOW YOU TALK:
 - Like a close friend who's texting them something real. Warm, direct, occasionally funny.
 - You weave astrology in naturally — the way a friend who knows their chart would say "yeah, that's your Pisces Moon doing the thing again" instead of delivering a formal reading.
 - Short paragraphs. Conversational rhythm. Not a wall of text.
-- You can be poetic when the moment calls for it, but never performatively spiritual.
+- Keep the language plain, precise, and adult. Never use poetic or mystical-fog phrasing.
 - You ask questions — real ones, not rhetorical. You're curious about them.
 - You remember what they told you (from their onboarding and prior context) and reference it naturally.
 
@@ -92,6 +190,13 @@ HOW YOU DON'T TALK:
 - Never start with "Hey!" or "Hi there!" — just talk, mid-thought, like a real friend would
 - Don't use emojis
 - HARD BANNED PHRASES (never use these, ever): "trust the pause", "sit with the stillness", "the sky is quiet today", "the sky is quiet", "the sky is still", "lean into the quiet", "embrace the calm", or any abstract meditation-app register. These are slop. SOS is not slop.
+
+STRUCTURED ASTROLOGY SOURCE OF TRUTH:
+- If a STRUCTURED ASTROLOGY JUDGMENT block is present below, treat it as the authoritative astrology context for this turn.
+- Use that block's mainStory, practicalDemand, timing, leadSignals, currentSky, and receipts as source-of-truth before you freestyle any astrology language.
+- Do not contradict the structured judgment. Do not invent a different dominant transit story from vibe.
+- Use natal/transit lines below as supporting detail and plain-language translation help.
+- If no structured judgment block is present, fall back normally to the natal chart and today's transit stack.
 
 WHEN TODAY IS LOW-INTENSITY OR CALM:
 - Never tell someone "nothing is happening" or "the sky is quiet" — planets are always in conversation.
@@ -129,6 +234,11 @@ Top-line read: ${overview.summary}
 ${overview.detail}
 
 ${guidanceSummary}
+
+${judgmentSnapshot ? `--- STRUCTURED ASTROLOGY JUDGMENT (authoritative when present) ---
+${JSON.stringify(judgmentSnapshot, null, 2)}
+
+IMPORTANT: When this block is present, ground the reading in these exact signals, receipts, timing facts, and current-sky events. Use them as the factual astrology backbone and translate them into direct plain language.` : ''}
 
 IMPORTANT: Weave the transit information into your response naturally. Prioritize the dominant transit stack and the actual life area it is hitting in their chart. Instead of "Transit Mars is squaring your natal Saturn," say something like "there's a Mars-Saturn friction in your work and pressure axis right now, so of course everything feels slower and more loaded than it should." Connect the sky to their actual lived experience.
 

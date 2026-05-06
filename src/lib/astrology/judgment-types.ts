@@ -1,0 +1,213 @@
+import type { AstrologyMeaningFactors } from '@/lib/astrology/meaning-kernel';
+import type { NatalProjection } from '@/lib/astrology/natal-projection';
+
+export type JudgmentTier = 'foreground' | 'supporting' | 'background' | 'noise';
+export type JudgmentSource = 'major_arc' | 'daily_transit' | 'guidance' | 'memory';
+export type JudgmentScope = 'personal' | 'collective' | 'both';
+export type JudgmentPhase = 'applying' | 'exact' | 'separating';
+export type CollectiveSkyEventKind = 'transit_aspect' | 'station_proximity' | 'sign_ingress_proximity';
+export type JudgmentDemandType =
+  | 'pressure'
+  | 'expansion'
+  | 'clarification'
+  | 'restructuring'
+  | 'destabilization'
+  | 'support';
+
+export type ArcLifecycleDurationClass = 'event' | 'short' | 'medium' | 'long' | 'structural' | 'generational';
+export type ArcLifecycleDemand = 'prepare' | 'respond' | 'integrate';
+
+export interface ArcLifecyclePassFact {
+  passNumber: number;
+  hitDate: string;
+  kind: 'exact' | 'closest';
+  orb: number;
+  direction: 'direct' | 'retrograde' | 'unknown';
+  status: 'past' | 'current' | 'upcoming';
+  daysFromNow: number;
+}
+
+export interface ArcLifecycleMemoryLinkage {
+  matchedSignalCount: number;
+  repeatedLifeAreaSignalCount: number;
+  mostRecentSignalDate: string | null;
+  matchedDomains: string[];
+  excerpts: string[];
+  confidence: 'high' | 'medium' | 'low' | 'none';
+}
+
+export interface ArcLifecycleNatalSummary {
+  targetLabel: string;
+  targetType: 'planet' | 'angle';
+  targetSign: string | null;
+  targetDegree: number | null;
+  targetHouse: number | null;
+  houseLabel: string;
+  axisLabel: string | null;
+  angularity: NatalProjection['angularity'];
+  targetIsAngle: boolean;
+  targetIsModernChartRuler: boolean;
+  targetIsTraditionalChartRuler: boolean;
+  dignity: NatalProjection['dignity'];
+  natalAspects: NatalProjection['natalAspects'];
+}
+
+export interface ArcLifecycleJudgment {
+  durationDays: number;
+  daysActive: number;
+  daysRemaining: number;
+  percentComplete: number | null;
+  durationClass: ArcLifecycleDurationClass;
+  totalPasses: number;
+  currentPass: number | null;
+  exactHitCount: number;
+  passSequence: ArcLifecyclePassFact[];
+  stationMarkers: Array<{
+    date: string;
+    kind: 'retrograde' | 'direct';
+    degree: number;
+    sign: string;
+    daysFromNow: number;
+    status: 'past' | 'upcoming';
+  }>;
+  currentOrb: number;
+  phaseLabel: string;
+  phaseDemand: ArcLifecycleDemand;
+  natalSummary: ArcLifecycleNatalSummary;
+  memoryLinkage: ArcLifecycleMemoryLinkage;
+  watchNextDate: string | null;
+  watchNextType: 'exact_hit' | 'station' | 'arc_close' | null;
+  limitations: string[];
+}
+
+export interface AstrologyCollectiveBridgeFact {
+  id: string;
+  kind: CollectiveSkyEventKind;
+  bodies: string[];
+  aspect: string | null;
+  tier: JudgmentTier;
+  score: number;
+}
+
+export interface AstrologyCollectiveBridge {
+  collectiveEvent: AstrologyCollectiveBridgeFact;
+  matchReasons: string[];
+  bridgeStrengthScore: number;
+  bridgeStrengthTier: 'foreground' | 'supporting' | 'background';
+  promoteScopeToBoth: boolean;
+  limitations: string[];
+}
+
+export interface AstrologyJudgmentReceipt {
+  arcKey?: string;
+  transitPlanet: string;
+  aspect: string;
+  natalTarget: string;
+  targetLabel: string;
+  orb: number;
+  phase: JudgmentPhase;
+  transitSign: string | null;
+  transitDegree: number | null;
+  natalSign: string | null;
+  natalHouse: number | null;
+  lifeArea: string;
+  exactDate: string | null;
+  peakDate: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  passCount: number | null;
+  currentPass: number | null;
+  stations: Array<{
+    date: string;
+    kind: 'retrograde' | 'direct';
+    degree: number;
+    sign: string;
+  }>;
+  memorySummary: string | null;
+  natalProjection: NatalProjection | null;
+  meaningFactors?: AstrologyMeaningFactors | null;
+  collectiveBridge?: AstrologyCollectiveBridge | null;
+  arcLifecycle?: ArcLifecycleJudgment | null;
+}
+
+export interface AstrologyJudgmentSignal {
+  id: string;
+  tier: JudgmentTier;
+  scope: JudgmentScope;
+  source: JudgmentSource;
+  title: string;
+  summary: string;
+  lifeAreas: string[];
+  demand: JudgmentDemandType;
+  score: number;
+  receipts: AstrologyJudgmentReceipt[];
+  collectiveBridge?: AstrologyCollectiveBridge | null;
+  supportNotes: string[];
+}
+
+export interface AstrologyJudgmentTiming {
+  currentPhase: JudgmentPhase | null;
+  exactDate: string | null;
+  peakWindowStart: string | null;
+  peakWindowEnd: string | null;
+  nextWatchDate: string | null;
+  activeTransitCount: number;
+}
+
+export interface CollectiveSkyBodyState {
+  body: string;
+  sign: string;
+  degree: number;
+  longitude: number;
+  speed: number;
+  retrograde: boolean;
+}
+
+export interface CollectiveSkyScoringNote {
+  score: number;
+  basis: 'heuristic';
+  limitations: string[];
+  historicalGapYears: null;
+}
+
+export interface AstrologyCollectiveSkyEvent {
+  id: string;
+  kind: CollectiveSkyEventKind;
+  tier: JudgmentTier;
+  score: number;
+  scope: 'collective';
+  bodies: string[];
+  aspect: string | null;
+  orb: number | null;
+  phase: JudgmentPhase | null;
+  applyingStateKnown: boolean;
+  sign: string | null;
+  exactnessBand: 'exact' | 'near_exact' | 'wide' | null;
+  rarity: CollectiveSkyScoringNote;
+  consequence: CollectiveSkyScoringNote;
+  summary: string;
+  receipts: string[];
+  limitations: string[];
+}
+
+export interface AstrologyJudgmentCurrentSky {
+  status: 'collective-scan-v1';
+  summary: string;
+  scannedBodies: string[];
+  events: AstrologyCollectiveSkyEvent[];
+  limitations: string[];
+}
+
+export interface AstrologyJudgment {
+  date: string;
+  foreground: AstrologyJudgmentSignal[];
+  supporting: AstrologyJudgmentSignal[];
+  background: AstrologyJudgmentSignal[];
+  noise: AstrologyJudgmentSignal[];
+  mainStory: string;
+  practicalDemand: string;
+  timing: AstrologyJudgmentTiming;
+  activatedLifeAreas: string[];
+  currentSky: AstrologyJudgmentCurrentSky;
+  receipts: AstrologyJudgmentReceipt[];
+}

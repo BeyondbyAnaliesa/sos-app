@@ -5,12 +5,14 @@ import { createAdminClient } from '@/lib/supabase/server';
 import type { MajorTransitArc } from '@/lib/astrology/major-transits';
 import type { DailyTransits } from '@/lib/astrology/domain-types';
 import type { NatalChart } from '@/lib/astrology/types';
+import { buildAstrologyJudgment } from '@/lib/astrology/judgment';
+import type { AstrologyJudgment } from '@/lib/astrology/judgment-types';
 import type { GuidanceResult } from '@/lib/interpret';
 import type { MajorWaveMemoryInput } from '@/lib/major-transit-reading';
 import { transitTitle } from '@/lib/transit-copy';
 import { logError, logWarn } from '@/lib/logger';
 
-export const DAILY_AI_READING_PROMPT_VERSION = 'daily-full-memory-v1';
+export const DAILY_AI_READING_PROMPT_VERSION = 'daily-full-memory-v3';
 export const DAILY_AI_READING_MODEL = 'gpt-4o';
 
 export type DailyAiReading = {
@@ -75,6 +77,54 @@ function sanitizeReading(reading: Partial<DailyAiReading>, fallbackDate: string)
   };
 }
 
+function buildHashJudgmentSnapshot(judgment: AstrologyJudgment) {
+  return {
+    mainStory: judgment.mainStory,
+    practicalDemand: judgment.practicalDemand,
+    activatedLifeAreas: judgment.activatedLifeAreas,
+    timing: judgment.timing,
+    foreground: judgment.foreground.slice(0, 4).map((signal) => ({
+      id: signal.id,
+      tier: signal.tier,
+      scope: signal.scope,
+      demand: signal.demand,
+      score: signal.score,
+      title: signal.title,
+      collectiveBridge: signal.collectiveBridge ?? null,
+      receipts: signal.receipts.slice(0, 2),
+    })),
+    supporting: judgment.supporting.slice(0, 3).map((signal) => ({
+      id: signal.id,
+      tier: signal.tier,
+      scope: signal.scope,
+      demand: signal.demand,
+      score: signal.score,
+      title: signal.title,
+      collectiveBridge: signal.collectiveBridge ?? null,
+    })),
+    currentSky: judgment.currentSky,
+  };
+}
+
+function resolveJudgment(params: {
+  date: string;
+  chart: NatalChart;
+  todayTransits: DailyTransits;
+  majorArcs: MajorTransitArc[];
+  guidance: GuidanceResult[];
+  memory: MajorWaveMemoryInput;
+  judgment?: AstrologyJudgment;
+}) {
+  return params.judgment ?? buildAstrologyJudgment({
+    date: params.date,
+    chart: params.chart,
+    todayTransits: params.todayTransits,
+    majorArcs: params.majorArcs,
+    guidance: params.guidance,
+    memory: params.memory,
+  });
+}
+
 export function buildDailyAiReadingMemoryHash(params: {
   date: string;
   chart: NatalChart;
@@ -82,8 +132,17 @@ export function buildDailyAiReadingMemoryHash(params: {
   majorArcs: MajorTransitArc[];
   guidance: GuidanceResult[];
   memory: MajorWaveMemoryInput;
+  judgment?: AstrologyJudgment;
 }) {
   const stableTransitSnapshot = calculateTransitsForDate(new Date(`${params.date}T12:00:00Z`), params.chart);
+  const judgment = params.judgment ?? buildAstrologyJudgment({
+    date: params.date,
+    chart: params.chart,
+    todayTransits: stableTransitSnapshot,
+    majorArcs: params.majorArcs,
+    guidance: params.guidance,
+    memory: params.memory,
+  });
 
   return stableHash({
     prompt: DAILY_AI_READING_PROMPT_VERSION,
@@ -94,17 +153,7 @@ export function buildDailyAiReadingMemoryHash(params: {
       mc: params.chart.angles.midheaven,
     },
     todayTransits: stableTransitSnapshot.transits.slice(0, 16),
-    majorArcs: params.majorArcs.slice(0, 8).map((arc) => ({
-      key: arc.key,
-      title: transitTitle(arc.transit),
-      start: arc.startDate,
-      end: arc.endDate,
-      phase: arc.phase,
-      exactHits: arc.exactHits,
-      stations: arc.stations,
-      context: arc.context,
-    })),
-    guidance: params.guidance.slice(0, 6).map((g) => [g.domain, g.title, g.intensity, g.summary]),
+    judgment: buildHashJudgmentSnapshot(judgment),
     reportThemes: params.memory.report?.themes ?? [],
     reportReading: compactText(params.memory.report?.chartReading, 600),
     natalReading: compactText(params.memory.natalReading, 800),
@@ -125,6 +174,7 @@ function buildPrompt(params: {
   majorArcs: MajorTransitArc[];
   guidance: GuidanceResult[];
   memory: MajorWaveMemoryInput;
+  judgment: AstrologyJudgment;
 }) {
   const placements = params.chart.placements
     .map((p) => `${p.label}: ${p.sign} ${p.degree}°${p.minute}′${p.retrograde ? ' Rx' : ''}`)
@@ -146,13 +196,14 @@ function buildPrompt(params: {
   const system = `You are SOS, a serious personal daily astrology intelligence layer. Write one premium daily reading.
 
 Rules:
-- The daily reading must synthesize the full saved SOS memory spine, not just today's transits.
-- Treat major personal transit waves as the main signal. Treat daily sky contacts as triggers/weather.
+- The structured judgment object is the source of truth. Use it first, then use the supporting payload only to clarify receipts.
+- Treat major personal transit waves as the main signal. Treat daily sky contacts as triggers and weather.
 - Use the user's saved memory when present: onboarding report, natal reading, journal/Aeon life signals, recurring patterns.
 - Do not invent life facts. If memory is thin, say that briefly and explain how SOS will sharpen.
-- Be specific, adult, useful, and direct. No vague spiritual theater. No fortune-cookie copy. No "the stars are aligning" language.
+- Be specific, adult, useful, and direct. No poetic language, vague spiritual theater, fortune-cookie copy, or "the stars are aligning" language.
 - Avoid em dashes.
 - Do not mention internal table names, prompts, hashes, or implementation.
+- If the judgment says current-sky coverage is partial, do not pretend a full collective rarity scan exists.
 
 Return only valid JSON:
 {
@@ -165,7 +216,7 @@ Return only valid JSON:
   "memoryNote": "brief note on what saved memory shaped this, or that memory is still thin"
 }`;
 
-  const user = `Date: ${params.date}\n\n--- NATAL CHART ---\n${placements}\nAscendant: ${params.chart.angles.ascendant.sign} ${params.chart.angles.ascendant.degree}°${params.chart.angles.ascendant.minute}′\nMidheaven: ${params.chart.angles.midheaven.sign} ${params.chart.angles.midheaven.degree}°${params.chart.angles.midheaven.minute}′\n\n--- MAJOR PERSONAL TRANSIT WAVES ---\n${JSON.stringify(majorArcPayload, null, 2)}\n\n--- DAILY SKY WEATHER ---\n${JSON.stringify(params.todayTransits.transits.slice(0, 16), null, 2)}\n\n--- NEXT 7 DAYS ---\n${JSON.stringify(params.lookAheadTransits.map((d) => ({ date: d.date, transits: d.transits.slice(0, 5) })), null, 2)}\n\n--- CURRENT DETERMINISTIC GUIDANCE CANDIDATES ---\n${JSON.stringify(params.guidance.slice(0, 6), null, 2)}\n\n--- ONBOARDING / FIRST REPORT MEMORY ---\nThemes: ${(params.memory.report?.themes ?? []).join(' | ') || 'none saved'}\nChart reading: ${compactText(params.memory.report?.chartReading, 1400) || 'none saved'}\nLook ahead: ${compactText(params.memory.report?.lookAhead, 700) || 'none saved'}\n\n--- PRIOR NATAL / READING MEMORY ---\n${compactText(params.memory.natalReading, 1500) || 'none saved'}\n\n--- RECENT LIFE SIGNALS FROM JOURNAL / AEON MEMORY ---\n${JSON.stringify(lifeSignals, null, 2)}`;
+  const user = `Date: ${params.date}\n\n--- STRUCTURED JUDGMENT (SOURCE OF TRUTH) ---\n${JSON.stringify(params.judgment, null, 2)}\n\n--- NATAL CHART ---\n${placements}\nAscendant: ${params.chart.angles.ascendant.sign} ${params.chart.angles.ascendant.degree}°${params.chart.angles.ascendant.minute}′\nMidheaven: ${params.chart.angles.midheaven.sign} ${params.chart.angles.midheaven.degree}°${params.chart.angles.midheaven.minute}′\n\n--- MAJOR PERSONAL TRANSIT WAVES ---\n${JSON.stringify(majorArcPayload, null, 2)}\n\n--- DAILY SKY WEATHER ---\n${JSON.stringify(params.todayTransits.transits.slice(0, 16), null, 2)}\n\n--- NEXT 7 DAYS ---\n${JSON.stringify(params.lookAheadTransits.map((d) => ({ date: d.date, transits: d.transits.slice(0, 5) })), null, 2)}\n\n--- CURRENT DETERMINISTIC GUIDANCE CANDIDATES ---\n${JSON.stringify(params.guidance.slice(0, 6), null, 2)}\n\n--- ONBOARDING / FIRST REPORT MEMORY ---\nThemes: ${(params.memory.report?.themes ?? []).join(' | ') || 'none saved'}\nChart reading: ${compactText(params.memory.report?.chartReading, 1400) || 'none saved'}\nLook ahead: ${compactText(params.memory.report?.lookAhead, 700) || 'none saved'}\n\n--- PRIOR NATAL / READING MEMORY ---\n${compactText(params.memory.natalReading, 1500) || 'none saved'}\n\n--- RECENT LIFE SIGNALS FROM JOURNAL / AEON MEMORY ---\n${JSON.stringify(lifeSignals, null, 2)}`;
 
   return { system, user };
 }
@@ -206,6 +257,7 @@ export async function getDailyAiReadingCacheStatus(params: {
   majorArcs: MajorTransitArc[];
   guidance: GuidanceResult[];
   memory: MajorWaveMemoryInput;
+  judgment?: AstrologyJudgment;
 }) : Promise<DailyAiReadingCacheStatus> {
   const priorReadings = await fetchPriorReadings(params.userId, params.date).catch(() => []);
   const memory = { ...params.memory, priorReadings };
@@ -264,6 +316,7 @@ async function generateReading(params: {
   majorArcs: MajorTransitArc[];
   guidance: GuidanceResult[];
   memory: MajorWaveMemoryInput;
+  judgment: AstrologyJudgment;
 }) {
   const { system, user } = buildPrompt(params);
   const openai = getOpenAIClient();
@@ -289,17 +342,19 @@ export async function getOrCreateDailyAiReading(params: {
   majorArcs: MajorTransitArc[];
   guidance: GuidanceResult[];
   memory: MajorWaveMemoryInput;
+  judgment?: AstrologyJudgment;
 }) {
-  const baseHash = buildDailyAiReadingMemoryHash(params);
+  const judgment = resolveJudgment(params);
+  const baseHash = buildDailyAiReadingMemoryHash({ ...params, judgment });
 
   try {
     const priorReadings = await fetchPriorReadings(params.userId, params.date).catch(() => []);
     const memory = { ...params.memory, priorReadings };
-    const hash = buildDailyAiReadingMemoryHash({ ...params, memory });
+    const hash = buildDailyAiReadingMemoryHash({ ...params, memory, judgment });
     const cached = await fetchCached(params.userId, params.date, hash);
     if (cached) return cached;
 
-    const generated = await generateReading({ ...params, memory });
+    const generated = await generateReading({ ...params, memory, judgment });
     await saveReading(params.userId, params.date, hash, generated);
     return generated;
   } catch (error) {
@@ -307,7 +362,7 @@ export async function getOrCreateDailyAiReading(params: {
     if (message.includes('daily_ai_readings') || message.includes('does not exist') || message.includes('schema cache')) {
       logWarn('daily_ai_reading_cache_unavailable_generating_uncached', { message });
       try {
-        return await generateReading(params);
+        return await generateReading({ ...params, judgment });
       } catch (generationError) {
         logError(generationError, { route: 'daily-ai-reading', action: 'uncached-generation-fallback', baseHash });
         return null;

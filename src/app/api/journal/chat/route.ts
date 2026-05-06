@@ -4,8 +4,10 @@ import OpenAI from 'openai';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { buildSystemPrompt } from '@/lib/prompt';
 import { calculateTransitsForRange } from '@/lib/astrology/calculate-transits';
+import { calculateMajorTransitArcs } from '@/lib/astrology/major-transits';
 import type { NatalChart as RichChart } from '@/lib/astrology/types';
 import { buildNatalSummary } from '@/lib/astrology/domain-types';
+import { buildAstrologyJudgment } from '@/lib/astrology/judgment';
 import {
   buildRecurringTransitContext,
   createJournalLifeSignals,
@@ -15,9 +17,11 @@ import { getRelevantTransitMemoryForToday } from '@/lib/astrology/memory-store';
 import { buildArcMemorySystemSection } from '@/lib/astrology/pure-fns';
 import type { DailyTransits } from '@/lib/astrology/domain-types';
 import { extractLifeSignals } from '@/lib/astrology/life-signal-extract';
+import { listSecureLifeSignals } from '@/lib/astrology/secure-life-signals';
 import { track } from '@/lib/analytics';
 import { logError } from '@/lib/logger';
 import { consumeAeonTurn, getAeonUsageStatus } from '@/lib/aeon/usage';
+import { interpretTransits } from '@/lib/interpret';
 import {
   createSecureJournalEntry,
   insertSecureJournalMessage,
@@ -101,9 +105,11 @@ export async function POST(request: Request) {
     // --- Load user's chart and context ---
     let userContext: string | undefined;
 
-    const [chartResult, profileResult] = await Promise.all([
+    const [chartResult, profileResult, reportResult, natalReadingResult] = await Promise.all([
       admin.from('natal_charts').select('placements_json, angles_json, houses_json, aspects_json, metadata_json').eq('user_id', user.id).single(),
       admin.from('profiles').select('user_context').eq('id', user.id).single(),
+      admin.from('onboarding_reports').select('report_json').eq('user_id', user.id).maybeSingle(),
+      admin.from('natal_readings').select('reading_json').eq('user_id', user.id).maybeSingle(),
     ]);
 
     if (profileResult.data?.user_context) {
@@ -152,6 +158,36 @@ export async function POST(request: Request) {
         staleArcCount: todayMemory.staleArcCount,
       },
     };
+
+    const guidance = interpretTransits(todayTransits.transits, natalSummary);
+    const { arcs: majorArcs } = calculateMajorTransitArcs(richChart, {
+      centerDate: today,
+      pastDays: 150,
+      futureDays: 240,
+    });
+    const lifeSignals = await listSecureLifeSignals(admin, { userId: user.id, limit: 12 }).catch(() => []);
+    const astrologyJudgment = (() => {
+      try {
+        return buildAstrologyJudgment({
+          date: todayTransits.date,
+          chart: richChart,
+          todayTransits,
+          majorArcs,
+          guidance,
+          memory: {
+            report: (reportResult.data?.report_json ?? null) as { themes?: string[] | null; chartReading?: string | null; lookAhead?: string | null } | null,
+            natalReading: natalReadingResult.data?.reading_json ?? null,
+            lifeSignals,
+          },
+        });
+      } catch (error) {
+        logError(error, { route: '/api/journal/chat', userId: user.id, area: 'astrology_judgment_context' });
+        return null;
+      }
+    })();
+
+    journalMemoryAudit['hasStructuredAstrologyJudgment'] = Boolean(astrologyJudgment);
+    journalMemoryAudit['structuredAstrologyLead'] = astrologyJudgment?.foreground[0]?.title ?? astrologyJudgment?.supporting[0]?.title ?? null;
 
     const { createdLifeSignalIds } = entryText?.trim()
       ? await createJournalLifeSignals({
@@ -253,7 +289,7 @@ export async function POST(request: Request) {
     }
 
     // --- Build conversation ---
-    const systemPrompt = buildSystemPrompt(natalSummary, todayTransits, userContext) + arcMemorySection + recurringTransitContext + upcomingContext + priorEntriesContext;
+    const systemPrompt = buildSystemPrompt(natalSummary, todayTransits, userContext, { judgment: astrologyJudgment }) + arcMemorySection + recurringTransitContext + upcomingContext + priorEntriesContext;
 
     const existingMessages = await listSecureJournalMessages(admin, {
       entryId: resolvedEntryId,

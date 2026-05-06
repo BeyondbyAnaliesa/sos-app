@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MajorTransitArc } from '@/lib/astrology/major-transits';
 import type { NatalChart } from '@/lib/astrology/types';
 import type { MajorWaveMemoryInput } from '@/lib/major-transit-reading';
+import type { AstrologyJudgment } from '@/lib/astrology/judgment-types';
 
 const completionCreateMock = vi.fn();
 const logWarnMock = vi.fn();
@@ -100,6 +101,32 @@ const chart: NatalChart = {
 };
 
 const memory: MajorWaveMemoryInput = { report: null, natalReading: null, lifeSignals: [] };
+const judgment: AstrologyJudgment = {
+  date: '2026-05-06',
+  foreground: [],
+  supporting: [],
+  background: [],
+  noise: [],
+  mainStory: 'Main wave',
+  practicalDemand: 'Do the thing',
+  timing: {
+    currentPhase: 'applying',
+    exactDate: '2026-06-15',
+    peakWindowStart: '2026-05-01',
+    peakWindowEnd: '2026-08-01',
+    nextWatchDate: '2026-06-15',
+    activeTransitCount: 1,
+  },
+  activatedLifeAreas: ['identity'],
+  currentSky: {
+    status: 'collective-scan-v1',
+    summary: 'Collective sky',
+    scannedBodies: [],
+    events: [],
+    limitations: [],
+  },
+  receipts: [],
+};
 
 async function loadModule() {
   vi.resetModules();
@@ -118,6 +145,66 @@ afterEach(() => {
 });
 
 describe('getOrCreateMajorTransitAiReadings', () => {
+  it('changes the hash when the structured judgment changes', async () => {
+    const { buildMajorTransitAiReadingMemoryHash } = await loadModule();
+
+    expect(buildMajorTransitAiReadingMemoryHash(arcs[0], memory, judgment)).not.toBe(
+      buildMajorTransitAiReadingMemoryHash(arcs[0], memory, { ...judgment, mainStory: 'Different wave' }),
+    );
+  });
+
+  it('changes the hash when collective bridge facts change inside the judgment snapshot', async () => {
+    const { buildMajorTransitAiReadingMemoryHash } = await loadModule();
+    const judgmentWithBridge: AstrologyJudgment = {
+      ...judgment,
+      foreground: [
+        {
+          id: arcs[0].key,
+          tier: 'foreground',
+          scope: 'both',
+          source: 'major_arc',
+          title: 'Saturn square Sun',
+          summary: 'Main wave',
+          lifeAreas: ['identity'],
+          demand: 'restructuring',
+          score: 4.4,
+          collectiveBridge: {
+            collectiveEvent: {
+              id: 'aspect:Saturn:conjunction:Neptune',
+              kind: 'transit_aspect',
+              bodies: ['Saturn', 'Neptune'],
+              aspect: 'conjunction',
+              tier: 'foreground',
+              score: 8.9,
+            },
+            matchReasons: ['Collective event includes transit body Saturn.'],
+            bridgeStrengthScore: 2.4,
+            bridgeStrengthTier: 'supporting',
+            promoteScopeToBoth: true,
+            limitations: ['heuristic'],
+          },
+          receipts: [],
+          supportNotes: [],
+        },
+      ],
+    };
+
+    expect(buildMajorTransitAiReadingMemoryHash(arcs[0], memory, judgmentWithBridge)).not.toBe(
+      buildMajorTransitAiReadingMemoryHash(arcs[0], memory, {
+        ...judgmentWithBridge,
+        foreground: [
+          {
+            ...judgmentWithBridge.foreground[0],
+            collectiveBridge: {
+              ...judgmentWithBridge.foreground[0]!.collectiveBridge!,
+              bridgeStrengthScore: 2.8,
+            },
+          },
+        ],
+      }),
+    );
+  });
+
   it('retries once for only the missing arcs before returning partial output', async () => {
     const { getOrCreateMajorTransitAiReadings, majorTransitReadingKey } = await loadModule();
     completionCreateMock

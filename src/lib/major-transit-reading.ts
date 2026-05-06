@@ -1,4 +1,6 @@
 import type { MajorTransitArc } from '@/lib/astrology/major-transits';
+import { buildTransitArcJudgment, findRelevantArcLifeSignals } from '@/lib/astrology/transit-arc-judgment';
+import type { NatalChart } from '@/lib/astrology/types';
 import { transitTitle } from '@/lib/transit-copy';
 
 type OnboardingMemory = {
@@ -33,31 +35,16 @@ function firstSentence(text: string | null | undefined) {
   return match?.[1] ?? cleaned.slice(0, 220);
 }
 
-function relevantSignals(arc: MajorTransitArc, signals: LifeSignalMemory[]) {
-  const areaWords = arc.context.lifeArea.toLowerCase().split(/[^a-z]+/).filter((w) => w.length > 3);
-  const target = arc.context.targetLabel.toLowerCase();
-  return signals
-    .filter((signal) => {
-      const haystack = [
-        signal.content_text,
-        signal.life_domain,
-        ...(signal.themes_json ?? []),
-        ...(signal.emotions_json ?? []),
-      ].join(' ').toLowerCase();
-      return haystack.includes(target) || areaWords.some((word) => haystack.includes(word));
-    })
-    .slice(0, 3);
-}
-
 function fallbackSignals(signals: LifeSignalMemory[]) {
   return signals.filter((signal) => cleanText(signal.content_text) || (signal.themes_json?.length ?? 0) > 0).slice(0, 2);
 }
 
-export function buildMajorWaveMemoryReading(arc: MajorTransitArc, memory: MajorWaveMemoryInput) {
+export function buildMajorWaveMemoryReading(arc: MajorTransitArc, memory: MajorWaveMemoryInput, chart?: NatalChart, date = new Date().toISOString().split('T')[0]) {
   const reportThemes = memory.report?.themes?.filter(Boolean).slice(0, 3) ?? [];
   const signals = memory.lifeSignals ?? [];
-  const matchedSignals = relevantSignals(arc, signals);
+  const matchedSignals = findRelevantArcLifeSignals(arc, memory).slice(0, 3);
   const usableSignals = matchedSignals.length > 0 ? matchedSignals : fallbackSignals(signals);
+  const arcJudgment = chart ? buildTransitArcJudgment({ arc, chart, memory, date }) : null;
   const themeLine = reportThemes.length > 0
     ? `This should be read against the core themes SOS already found in the first report: ${reportThemes.join('; ')}.`
     : '';
@@ -69,13 +56,15 @@ export function buildMajorWaveMemoryReading(arc: MajorTransitArc, memory: MajorW
     }).join(' / ')}`
     : 'No recent saved life signal is close enough to quote here yet. This wave will get sharper as the user journals and chats with Aeon.';
 
-  const lifecycleLine = arc.exactHits.length > 1
-    ? `This is not a one-day event. It has ${arc.exactHits.length} key hits across the lifecycle, so the pattern may repeat with more information each time.`
-    : `This is not a one-day event. The key hit is ${arc.exactHits[0] ? `${arc.exactHits[0].kind} on ${arc.exactHits[0].date}` : `near ${arc.peakDate}`}.`;
+  const lifecycleLine = arcJudgment
+    ? `This arc has been active ${arcJudgment.daysActive} of ${arcJudgment.durationDays} days${arcJudgment.percentComplete != null ? ` (${arcJudgment.percentComplete}% complete)` : ''}. ${arcJudgment.totalPasses > 1 ? `Pass ${arcJudgment.currentPass ?? 1} of ${arcJudgment.totalPasses}.` : 'One visible pass in this scan.'} ${arcJudgment.watchNextDate ? `Watch next ${arcJudgment.watchNextType?.replace('_', ' ')} on ${arcJudgment.watchNextDate}.` : ''}`
+    : arc.exactHits.length > 1
+      ? `This is not a one-day event. It has ${arc.exactHits.length} key hits across the lifecycle, so the pattern may repeat with more information each time.`
+      : `This is not a one-day event. The key hit is ${arc.exactHits[0] ? `${arc.exactHits[0].kind} on ${arc.exactHits[0].date}` : `near ${arc.peakDate}`}.`;
 
   return {
     memoryLine: [themeLine, signalLine].filter(Boolean).join(' '),
     lifecycleLine,
-    personalLine: `${transitTitle(arc.transit)} is landing in ${arc.context.lifeArea}. Read it through what the person has already shown SOS, not as a generic sky event.`,
+    personalLine: `${transitTitle(arc.transit)} is landing in ${arcJudgment?.natalSummary.houseLabel ?? arc.context.lifeArea}. Read it through what the person has already shown SOS, not as a generic sky event.`,
   };
 }

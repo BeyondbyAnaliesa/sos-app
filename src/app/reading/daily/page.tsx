@@ -21,6 +21,7 @@ import AeonFloatingButton from '@/components/AeonFloatingButton';
 import { listSecureLifeSignals } from '@/lib/astrology/secure-life-signals';
 import type { MajorWaveMemoryInput } from '@/lib/major-transit-reading';
 import { getOrCreateDailyAiReading } from '@/lib/daily-ai-reading';
+import { buildTransitTimingSummary } from '@/lib/transit-timing';
 
 // DOMAIN_LABELS and describeHiddenDomains have been extracted to pure-fns.ts.
 // buildMemoryCue has been extracted to pure-fns.ts as buildDailyMemoryCue.
@@ -127,16 +128,18 @@ export default async function DailyReadingPage() {
   };
   const activeMajorArcs = majorArcs.filter((arc) => arc.activeToday).slice(0, paid ? 8 : 3);
   const upcomingMajorArcs = majorArcs.filter((arc) => !arc.activeToday).slice(0, paid ? 4 : 1);
+  const displayedMajorArcs = [...activeMajorArcs, ...upcomingMajorArcs];
   const dailyAiReading = await getOrCreateDailyAiReading({
     userId: user.id,
     date: todayTransits.date,
     chart: richChart,
     todayTransits,
     lookAheadTransits,
-    majorArcs: [...activeMajorArcs, ...upcomingMajorArcs],
+    majorArcs: displayedMajorArcs,
     guidance,
     memory: dailyMemory,
   });
+  const timingSummary = buildTransitTimingSummary(displayedMajorArcs, todayTransits.date);
 
   const memoryCue = buildDailyMemoryCue({
     signal: signalResult.data as { life_domain?: string | null; themes_json?: string[] | null } | null,
@@ -184,6 +187,17 @@ export default async function DailyReadingPage() {
           </p>
         )}
       </section>
+
+      {timingSummary && (
+        <section className="mb-6 rounded-2xl border border-[var(--color-electric)]/45 bg-[rgba(239,68,136,0.05)] px-5 py-5">
+          <p className="text-xs font-medium uppercase tracking-[0.25em] text-[var(--color-electric)]">Timing alert</p>
+          <p className="mt-2 text-[15px] leading-relaxed text-[var(--color-text)]">{timingSummary.headline}</p>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">{timingSummary.body}</p>
+          <Link href={timingSummary.href} className="mt-4 inline-flex text-xs uppercase tracking-[0.18em] text-[var(--color-electric)] hover:underline">
+            Open wave details →
+          </Link>
+        </section>
+      )}
 
       {dailyAiReading && (
         <section className="mb-8 rounded-2xl border border-[var(--color-electric)]/40 bg-[linear-gradient(180deg,rgba(239,68,136,0.09),rgba(22,20,34,0.92))] px-5 py-6 sm:px-6">

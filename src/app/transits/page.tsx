@@ -27,6 +27,7 @@ import { buildMajorWaveMemoryReading } from '@/lib/major-transit-reading';
 import type { MajorWaveMemoryInput } from '@/lib/major-transit-reading';
 import { getOrCreateMajorTransitAiReadings, majorTransitReadingKey } from '@/lib/major-transit-ai-reading';
 import type { MajorTransitAiReading } from '@/lib/major-transit-ai-reading';
+import { buildTransitTiming, buildTransitTimingSummary } from '@/lib/transit-timing';
 
 /**
  * Transit Room — the free-user thirst trap for the Transits card.
@@ -78,6 +79,7 @@ function diffDaysLocal(a: string, b: string) {
 
 function MajorTransitCard({ arc, memory, aiReading }: { arc: MajorTransitArc; memory: MajorWaveMemoryInput; aiReading?: MajorTransitAiReading }) {
   const memoryReading = buildMajorWaveMemoryReading(arc, memory);
+  const timing = buildTransitTiming(arc);
   const color = transitColor(arc.transit);
   return (
     <div className="rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5">
@@ -134,6 +136,12 @@ function MajorTransitCard({ arc, memory, aiReading }: { arc: MajorTransitArc; me
         <p className="mt-2 text-[11px] leading-relaxed text-[var(--color-text-muted)]">
           Active lifecycle: {arcWindow(arc)} · {arc.totalDays} days from first contact to final fade in this scan.
         </p>
+      </div>
+
+      <div className="mt-4 rounded-[10px] border border-[var(--color-electric)]/35 bg-[rgba(239,68,136,0.04)] px-4 py-3">
+        <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-electric)]">Timing</p>
+        <p className="mt-1 text-sm leading-relaxed text-[var(--color-text)]">{timing.peakLine}</p>
+        <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-muted)]">{timing.nextHitLine}</p>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2 text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
@@ -312,6 +320,7 @@ export default async function TransitRoomPage() {
     chart: richChart,
     memory: waveMemory,
   });
+  const timingSummary = buildTransitTimingSummary(displayedMajorArcs, todayTransits.date);
 
   return (
     <main className="mx-auto w-full max-w-xl px-5 pb-24 pt-10 sm:px-6 sm:pt-14">
@@ -326,6 +335,17 @@ export default async function TransitRoomPage() {
         </time>
         <div className="mt-6 h-px w-full bg-gradient-to-r from-transparent via-[var(--color-border-subtle)] to-transparent" />
       </header>
+
+      {timingSummary && (
+        <section className="mb-8 rounded-[10px] border border-[var(--color-electric)]/45 bg-[rgba(239,68,136,0.05)] px-5 py-5">
+          <p className="text-xs font-medium uppercase tracking-widest text-[var(--color-electric)]">Transit timing alert</p>
+          <p className="mt-2 text-[15px] leading-relaxed text-[var(--color-text)]">{timingSummary.headline}</p>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">{timingSummary.body}</p>
+          <Link href={timingSummary.href} className="mt-4 inline-flex text-xs uppercase tracking-[0.18em] text-[var(--color-electric)] hover:underline">
+            Open timing details →
+          </Link>
+        </section>
+      )}
 
       <section className="mb-8 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-4 py-5 sm:px-5">
         <div className="mb-5 flex items-start justify-between gap-4">

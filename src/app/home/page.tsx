@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation';
 import { buildTransitOverview, interpretTransits } from '@/lib/interpret';
 import type { GuidanceResult } from '@/lib/interpret';
 import { calculateTransitsForDate, calculateTransitsForRange } from '@/lib/astrology/calculate-transits';
+import { calculateMajorTransitArcs } from '@/lib/astrology/major-transits';
 import type { NatalChart as RichChart } from '@/lib/astrology/types';
 import { buildNatalSummary } from '@/lib/astrology/domain-types';
 import { getSubscription, isActive } from '@/lib/subscription';
@@ -18,6 +19,7 @@ import LandingPage from '@/components/LandingPage';
 import LifeWheel from '@/components/LifeWheel';
 import type { LifeSegmentData, LifeSignal } from '@/components/LifeWheel';
 import BottomNav from '@/components/BottomNav';
+import { buildTransitTimingSummary } from '@/lib/transit-timing';
 
 // H-1: Short life-area tags for locked transit rows. Matches existing domain taxonomy.
 const HOME_DOMAIN_TAGS = {
@@ -104,6 +106,15 @@ export default async function Home() {
   );
   const guidance = interpretTransits(activeTransits, natalSummary);
   const overview = buildTransitOverview(activeTransits, natalSummary, { lookAheadTransits });
+  const { arcs: majorArcs } = calculateMajorTransitArcs(richChart, {
+    centerDate: new Date(),
+    pastDays: 150,
+    futureDays: 240,
+  });
+  const timingSummary = buildTransitTimingSummary([
+    ...majorArcs.filter((arc) => arc.activeToday).slice(0, paid ? 8 : 3),
+    ...majorArcs.filter((arc) => !arc.activeToday).slice(0, paid ? 4 : 1),
+  ], todayDate);
   const lifeSegments = buildLifeSegments(guidance);
   const stateText = buildStateText(guidance);
   // Arc memory: fetch structured transit memory context (non-fatal — falls back to signal-based cue)
@@ -166,6 +177,17 @@ export default async function Home() {
           </p>
         )}
       </section>
+
+      {timingSummary && (
+        <div className="mb-4 rounded-[10px] border border-[var(--color-electric)]/45 bg-[rgba(239,68,136,0.05)] px-5 py-5">
+          <p className="text-xs font-medium uppercase tracking-[0.25em] text-[var(--color-electric)]">Timing alert</p>
+          <p className="mt-2 text-[15px] leading-relaxed text-[var(--color-text)]">{timingSummary.headline}</p>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">{timingSummary.body}</p>
+          <Link href={timingSummary.href} className="mt-4 inline-flex text-xs uppercase tracking-[0.18em] text-[var(--color-electric)] hover:underline">
+            Open wave details →
+          </Link>
+        </div>
+      )}
 
       <div className="rounded-[10px] border border-[var(--color-electric)]/60 bg-[linear-gradient(180deg,rgba(239,68,136,0.12),rgba(239,68,136,0.02))] px-5 py-5">
         <p className="text-xs font-medium uppercase tracking-[0.25em] text-[var(--color-electric)]">

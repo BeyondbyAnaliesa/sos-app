@@ -10,6 +10,7 @@ import { buildReadingContext } from '@/lib/transit-reading-context';
 import type { MajorTransitArc } from '@/lib/astrology/major-transits';
 import { getOrCreateMajorTransitAiReadings, majorTransitReadingKey } from '@/lib/major-transit-ai-reading';
 import { buildTransitFeel, buildTransitReading, buildWaveUse, transitColor, transitTitle } from '@/lib/transit-copy';
+import { buildTransitTiming } from '@/lib/transit-timing';
 
 function formatShortDate(date: string) {
   return new Date(`${date}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -69,6 +70,7 @@ export default async function MajorTransitDetailPage({ params }: { params: Promi
   const color = transitColor(arc.transit);
   const title = transitTitle(arc.transit);
   const aeonQuestion = reading?.aeonQuestion ?? `What is this ${title} wave asking me to see?`;
+  const timing = buildTransitTiming(arc);
 
   return (
     <main className="mx-auto w-full max-w-xl px-5 pb-24 pt-10 sm:px-6 sm:pt-14">
@@ -84,6 +86,25 @@ export default async function MajorTransitDetailPage({ params }: { params: Promi
           {formatLongDate(arc.startDate)} to {formatLongDate(arc.endDate)} · {phaseCopy(arc)} · {arc.totalDays} day lifecycle
         </p>
       </header>
+
+      <section className="mb-6 rounded-2xl border border-[var(--color-electric)]/45 bg-[rgba(239,68,136,0.05)] px-5 py-5">
+        <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--color-electric)]">Timing alert</p>
+        <p className="mt-2 text-lg leading-snug text-[var(--color-text)]">{timing.peakLine}</p>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <div className="rounded-[10px] border border-[var(--color-border-subtle)] px-4 py-3">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper)]">Next hit</p>
+            <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-muted)]">{timing.nextHitLine}</p>
+          </div>
+          <div className="rounded-[10px] border border-[var(--color-border-subtle)] px-4 py-3">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper)]">Pass count</p>
+            <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-muted)]">{timing.passLine}</p>
+          </div>
+          <div className="rounded-[10px] border border-[var(--color-border-subtle)] px-4 py-3 sm:col-span-2">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper)]">Station watch</p>
+            <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-muted)]">{timing.stationLine}</p>
+          </div>
+        </div>
+      </section>
 
       <section className="mb-6 rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5">
         <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)]">

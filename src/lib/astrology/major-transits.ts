@@ -9,6 +9,7 @@ export const MAJOR_TRANSIT_PLANETS = new Set([
   'Uranus',
   'Neptune',
   'Pluto',
+  'Chiron',
   'North Node',
 ]);
 
@@ -27,6 +28,14 @@ export interface MajorTransitStation {
   sign: string;
 }
 
+export interface MajorTransitContext {
+  targetLabel: string;
+  targetSign: string | null;
+  targetHouse: number | null;
+  targetDegree: number | null;
+  lifeArea: string;
+}
+
 export interface MajorTransitArc {
   key: string;
   transit: Transit;
@@ -43,6 +52,7 @@ export interface MajorTransitArc {
   exactHits: MajorTransitHit[];
   stations: MajorTransitStation[];
   activeRunCount: number;
+  context: MajorTransitContext;
 }
 
 type TransitEntry = { date: string; transit: Transit };
@@ -67,6 +77,55 @@ function formatLongitude(longitude: number) {
   const signIndex = Math.floor(normalized / 30);
   const degree = Number((normalized - signIndex * 30).toFixed(2));
   return { sign: SIGNS[signIndex], degree };
+}
+
+const HOUSE_AREAS: Record<number, string> = {
+  1: 'identity, body, and how life meets you',
+  2: 'money, self-worth, appetite, and what you rely on',
+  3: 'thoughts, siblings, messages, decisions, and daily movement',
+  4: 'home, family, roots, privacy, and emotional ground',
+  5: 'desire, creativity, children, dating, and aliveness',
+  6: 'work rhythm, health, habits, service, and the daily load',
+  7: 'partnership, clients, mirrors, and direct relationship patterns',
+  8: 'shared money, sex, grief, power, trust, and deep entanglements',
+  9: 'beliefs, travel, study, publishing, faith, and larger meaning',
+  10: 'career, visibility, reputation, authority, and public direction',
+  11: 'friends, networks, audience, groups, and future plans',
+  12: 'rest, endings, hidden material, solitude, and what works under the surface',
+};
+
+function getHouse(longitude: number, cusps: number[]) {
+  for (let i = 0; i < 12; i++) {
+    const nextI = (i + 1) % 12;
+    const start = cusps[i];
+    const end = cusps[nextI];
+    if (start < end) {
+      if (longitude >= start && longitude < end) return i + 1;
+    } else if (longitude >= start || longitude < end) {
+      return i + 1;
+    }
+  }
+  return null;
+}
+
+function buildContext(natalChart: NatalChart, natalPoint: string): MajorTransitContext {
+  const placement = natalChart.placements.find((p) => p.key === natalPoint);
+  const angle = natalPoint === 'ascendant'
+    ? natalChart.angles.ascendant
+    : natalPoint === 'midheaven'
+      ? natalChart.angles.midheaven
+      : null;
+  const source = placement ?? angle;
+  const house = source?.longitude != null && natalChart.houses?.length === 12 ? getHouse(source.longitude, natalChart.houses) : null;
+  const targetLabel = placement?.label ?? (natalPoint === 'ascendant' ? 'Ascendant' : natalPoint === 'midheaven' ? 'Midheaven' : natalPoint.charAt(0).toUpperCase() + natalPoint.slice(1));
+
+  return {
+    targetLabel,
+    targetSign: source?.sign ?? null,
+    targetHouse: house,
+    targetDegree: source?.degree ?? null,
+    lifeArea: house ? HOUSE_AREAS[house] : 'a core chart point',
+  };
 }
 
 function isoDate(date: Date) {
@@ -231,6 +290,7 @@ export function calculateMajorTransitArcs(
       const exactHits = buildHits(cycle);
       const stations = buildStations(startDate, endDate, peak.transit.transitPlanet);
       const activeRunCount = splitActiveRuns(cycle).length;
+      const context = buildContext(natalChart, peak.transit.natalPlanet);
 
       // Keep currently active arcs and near-future arcs. Drop old completed arcs from the main list.
       if (activeToday || daysUntilPeak >= 0 || exactHits.some((hit) => diffDays(hit.date, todayStr) >= 0)) {
@@ -250,6 +310,7 @@ export function calculateMajorTransitArcs(
           exactHits,
           stations,
           activeRunCount,
+          context,
         });
       }
       cycle = [];

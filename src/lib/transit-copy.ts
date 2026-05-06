@@ -19,6 +19,7 @@ const PLANET_FEEL: Record<string, string> = {
   Uranus: 'disruption, liberation, restlessness, and the part of life that will not stay managed',
   Neptune: 'sensitivity, longing, fog, imagination, and the places where the truth needs better edges',
   Pluto: 'power, compulsion, endings, deep fear, and the pattern that wants to be transformed rather than decorated',
+  Chiron: 'old pain, repair, sensitivity, and the place that becomes wisdom when handled cleanly',
   'North Node': 'direction, unfamiliar growth, and the choice that pulls you out of the old loop',
 };
 
@@ -74,6 +75,28 @@ export function buildTransitReading(t: Transit) {
   const natal = NATAL_FEEL[t.natalPlanet] ?? formatNatalPoint(t.natalPlanet);
   const aspect = ASPECT_MEANING[t.aspect];
   return `${aspect} ${t.transitPlanet} brings up ${planet}; your natal ${formatNatalPoint(t.natalPlanet)} describes ${natal}. With a ${t.orb}° orb, this is ${t.orb <= 1 ? 'very close and worth treating as active now' : t.orb <= 3 ? 'active enough to shape the day' : 'background-level, but still part of the field'}.`;
+}
+
+export function buildWaveUse(t: Transit, lifeArea?: string) {
+  const where = lifeArea ? `This is landing in ${lifeArea}. ` : '';
+  switch (t.transitPlanet) {
+    case 'Jupiter':
+      return `${where}Use it to choose the opportunity that can actually grow, not the one that only looks bigger.`;
+    case 'Saturn':
+      return `${where}Use it to remove weak structures, make the agreement clearer, and stop paying for what is not working.`;
+    case 'Uranus':
+      return `${where}Use it to test a different route before life forces one. Build room for the thing that will not stay controlled.`;
+    case 'Neptune':
+      return `${where}Use it to check where hope, fear, or fantasy is blurring the facts. Better edges help here.`;
+    case 'Pluto':
+      return `${where}Use it to stop managing the symptom and deal with the power pattern underneath it.`;
+    case 'Chiron':
+      return `${where}Use it to handle the old sore spot without making it your whole identity.`;
+    case 'North Node':
+      return `${where}Use it to practice the unfamiliar choice. The old loop will feel easier, but easier is not the point.`;
+    default:
+      return `${where}Use this window by treating the pattern as real and watching what repeats.`;
+  }
 }
 
 export function buildTransitFeel(t: Transit) {

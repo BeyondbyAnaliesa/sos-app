@@ -19,7 +19,7 @@ import UnlockCTA from '@/components/UnlockCTA';
 import BottomNav from '@/components/BottomNav';
 import AppBackLink from '@/components/AppBackLink';
 import AeonFloatingButton from '@/components/AeonFloatingButton';
-import { buildTransitFeel, buildTransitReading, transitColor, transitTitle } from '@/lib/transit-copy';
+import { buildTransitFeel, buildTransitReading, buildWaveUse, transitColor, transitTitle } from '@/lib/transit-copy';
 import CalendarGrid from '@/app/calendar/CalendarGrid';
 
 /**
@@ -129,8 +129,36 @@ function MajorTransitCard({ arc }: { arc: MajorTransitArc }) {
         </p>
       </div>
 
-      <p className="mt-4 text-sm leading-relaxed text-[var(--color-text-muted)]">{buildTransitReading(arc.transit)}</p>
-      <p className="mt-2 text-xs leading-relaxed text-[var(--color-text-muted)] opacity-80">{buildTransitFeel(arc.transit)}</p>
+      <div className="mt-4 grid grid-cols-2 gap-2 text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
+        {arc.context.targetSign && (
+          <div className="rounded-[10px] border border-[var(--color-border-subtle)] px-3 py-2">
+            {arc.context.targetSign}{arc.context.targetDegree != null ? ` ${arc.context.targetDegree}°` : ''}
+          </div>
+        )}
+        {arc.context.targetHouse && (
+          <div className="rounded-[10px] border border-[var(--color-border-subtle)] px-3 py-2">
+            House {arc.context.targetHouse}
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 space-y-3">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper)]">What this is</p>
+          <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-muted)]">{buildTransitReading(arc.transit)}</p>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper)]">Where it lands</p>
+          <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-muted)]">
+            This is hitting your natal {arc.context.targetLabel}{arc.context.targetHouse ? ` in the ${arc.context.targetHouse} house` : ''}: {arc.context.lifeArea}.
+          </p>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper)]">How to use it</p>
+          <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-muted)]">{buildWaveUse(arc.transit, arc.context.lifeArea)}</p>
+        </div>
+      </div>
+      <p className="mt-3 text-xs leading-relaxed text-[var(--color-text-muted)] opacity-80">{buildTransitFeel(arc.transit)}</p>
       <a
         href={`/journal?starter=${encodeURIComponent(`Go deeper on this ${transitTitle(arc.transit)} transit.`)}&context=${encodeURIComponent(`${transitTitle(arc.transit)} is active ${arcWindow(arc)} and ${phaseCopy(arc).toLowerCase()}.`)}`}
         className="mt-4 flex items-center justify-between rounded-[10px] border border-[var(--color-border-subtle)] px-4 py-3 text-xs uppercase tracking-[0.18em] text-[var(--color-electric)] hover:border-[var(--color-electric)]"

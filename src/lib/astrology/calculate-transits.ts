@@ -13,6 +13,7 @@ const transitPlanets = [
   { key: 'uranus',    label: 'Uranus',     id: constants.SE_URANUS    },
   { key: 'neptune',   label: 'Neptune',    id: constants.SE_NEPTUNE   },
   { key: 'pluto',     label: 'Pluto',      id: constants.SE_PLUTO     },
+  { key: 'chiron',    label: 'Chiron',     id: constants.SE_CHIRON    },
   { key: 'northNode', label: 'North Node', id: constants.SE_TRUE_NODE },
 ] as const;
 

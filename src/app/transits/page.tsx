@@ -3,10 +3,12 @@ export const runtime = 'nodejs'; // required for sweph
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { calculateTransitsForDate, calculateTransitsForRange } from '@/lib/astrology/calculate-transits';
+import { calculateMajorTransitArcs } from '@/lib/astrology/major-transits';
+import type { MajorTransitArc } from '@/lib/astrology/major-transits';
 import { interpretTransits, buildTransitOverview } from '@/lib/interpret';
 import type { NatalChart as RichChart } from '@/lib/astrology/types';
 import { buildNatalSummary } from '@/lib/astrology/domain-types';
-import type { DailyTransits, Transit } from '@/lib/astrology/domain-types';
+import type { DailyTransits } from '@/lib/astrology/domain-types';
 import { getSubscription, isActive } from '@/lib/subscription';
 import {
   partitionTransitRoomGuidance,
@@ -17,7 +19,7 @@ import UnlockCTA from '@/components/UnlockCTA';
 import BottomNav from '@/components/BottomNav';
 import AppBackLink from '@/components/AppBackLink';
 import AeonFloatingButton from '@/components/AeonFloatingButton';
-import { buildOrbTimeframe, buildTransitFeel, buildTransitReading, transitColor, transitKey, transitTitle } from '@/lib/transit-copy';
+import { buildTransitFeel, buildTransitReading, transitColor, transitTitle } from '@/lib/transit-copy';
 import CalendarGrid from '@/app/calendar/CalendarGrid';
 
 /**
@@ -35,16 +37,68 @@ function formatShortDate(date: string) {
   return new Date(`${date}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function transitWindow(transit: Transit, days: DailyTransits[]) {
-  const key = transitKey(transit);
-  const dates = days
-    .filter((day) => day.transits.some((t) => transitKey(t) === key))
-    .map((day) => day.date)
-    .sort();
-  if (dates.length === 0) return 'Active today';
-  const start = dates[0];
-  const end = dates[dates.length - 1];
-  return start === end ? formatShortDate(start) : `${formatShortDate(start)}–${formatShortDate(end)}`;
+function arcWindow(arc: MajorTransitArc) {
+  return `${formatShortDate(arc.startDate)}–${formatShortDate(arc.endDate)}`;
+}
+
+function phaseCopy(arc: MajorTransitArc) {
+  if (arc.phase === 'peaking') return 'Peaking now';
+  if (arc.phase === 'building') return arc.daysUntilPeak === 1 ? 'Peaks tomorrow' : `Peaks in ${arc.daysUntilPeak} days`;
+  const daysPast = Math.abs(arc.daysUntilPeak);
+  return daysPast === 1 ? 'Peaked yesterday' : `Peaked ${daysPast} days ago`;
+}
+
+function progressPercent(arc: MajorTransitArc) {
+  const elapsed = Math.max(0, Math.min(arc.totalDays, diffDaysLocal(new Date().toISOString().split('T')[0], arc.startDate)));
+  return Math.max(4, Math.min(100, Math.round((elapsed / Math.max(1, arc.totalDays)) * 100)));
+}
+
+function diffDaysLocal(a: string, b: string) {
+  return Math.round((new Date(`${a}T12:00:00Z`).getTime() - new Date(`${b}T12:00:00Z`).getTime()) / 86_400_000);
+}
+
+function MajorTransitCard({ arc }: { arc: MajorTransitArc }) {
+  const color = transitColor(arc.transit);
+  return (
+    <div className="rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <span className="mt-1.5 h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+          <div>
+            <p className="text-sm font-medium text-[var(--color-text)]">{transitTitle(arc.transit)}</p>
+            <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[var(--color-electric)]">{phaseCopy(arc)}</p>
+          </div>
+        </div>
+        <span className="shrink-0 text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper-dim)]">
+          {arc.todayOrb != null ? `${arc.todayOrb}° now` : `${arc.peakOrb}° peak`}
+        </span>
+      </div>
+
+      <div className="mt-4">
+        <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
+          <span>{formatShortDate(arc.startDate)}</span>
+          <span>Peak {formatShortDate(arc.peakDate)}</span>
+          <span>{formatShortDate(arc.endDate)}</span>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-[rgba(244,239,232,0.08)]">
+          <div className="h-full rounded-full" style={{ width: `${progressPercent(arc)}%`, backgroundColor: color }} />
+        </div>
+        <p className="mt-2 text-[11px] leading-relaxed text-[var(--color-text-muted)]">
+          Active window: {arcWindow(arc)} · {arc.totalDays} days in this calculated arc.
+        </p>
+      </div>
+
+      <p className="mt-4 text-sm leading-relaxed text-[var(--color-text-muted)]">{buildTransitReading(arc.transit)}</p>
+      <p className="mt-2 text-xs leading-relaxed text-[var(--color-text-muted)] opacity-80">{buildTransitFeel(arc.transit)}</p>
+      <a
+        href={`/journal?starter=${encodeURIComponent(`Go deeper on this ${transitTitle(arc.transit)} transit.`)}&context=${encodeURIComponent(`${transitTitle(arc.transit)} is active ${arcWindow(arc)} and ${phaseCopy(arc).toLowerCase()}.`)}`}
+        className="mt-4 flex items-center justify-between rounded-[10px] border border-[var(--color-border-subtle)] px-4 py-3 text-xs uppercase tracking-[0.18em] text-[var(--color-electric)] hover:border-[var(--color-electric)]"
+      >
+        <span>Ask Aeon about this wave</span>
+        <span>→</span>
+      </a>
+    </div>
+  );
 }
 
 export default async function TransitRoomPage() {
@@ -97,10 +151,16 @@ export default async function TransitRoomPage() {
   const calcStart = new Date(year, month, 1 - startDayOfWeek);
   const totalDays = startDayOfWeek + daysInMonth;
   const gridDays = Math.ceil(totalDays / 7) * 7;
-  const monthTransits: DailyTransits[] = calculateTransitsForRange(calcStart, gridDays, richChart).map((d) => ({
-    ...d,
-    transits: d.transits.filter((t) => t.transitPlanet !== 'Moon'),
-  }));
+  const gridEnd = new Date(calcStart);
+  gridEnd.setDate(gridEnd.getDate() + gridDays - 1);
+  const { arcs: majorArcs, days: majorDays, todayStr } = calculateMajorTransitArcs(richChart, {
+    centerDate: now,
+    pastDays: 150,
+    futureDays: 240,
+  });
+  const startStr = calcStart.toISOString().split('T')[0];
+  const endStr = gridEnd.toISOString().split('T')[0];
+  const monthTransits: DailyTransits[] = majorDays.filter((day) => day.date >= startStr && day.date <= endStr);
   const tomorrowRef = new Date(todayRef);
   tomorrowRef.setUTCDate(tomorrowRef.getUTCDate() + 1);
   // DR-2: 72-hour look-ahead for calm-day context in the transit room.
@@ -123,7 +183,8 @@ export default async function TransitRoomPage() {
   });
 
   const lockedDomainLabels = locked.map((r) => getTransitDomainLabel(r.domain));
-  const todayStr = todayTransits.date;
+  const activeMajorArcs = majorArcs.filter((arc) => arc.activeToday).slice(0, paid ? 8 : 2);
+  const upcomingMajorArcs = majorArcs.filter((arc) => !arc.activeToday).slice(0, paid ? 6 : 2);
 
   return (
     <main className="mx-auto w-full max-w-xl px-5 pb-24 pt-10 sm:px-6 sm:pt-14">
@@ -146,7 +207,7 @@ export default async function TransitRoomPage() {
               Transit calendar
             </p>
             <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-muted)]">
-              Each dot is a live transit. Matching colors connect the day to the transit list below.
+              Each dot is a major personal transit wave. Matching colors connect the calendar to the arcs below.
             </p>
           </div>
           {paid && (
@@ -164,10 +225,38 @@ export default async function TransitRoomPage() {
         />
       </section>
 
-      {/* Sky overview */}
+      <section className="mb-8">
+        <p className="mb-4 text-[10px] uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
+          Major waves active now
+        </p>
+        {activeMajorArcs.length > 0 ? (
+          <div className="space-y-4">
+            {activeMajorArcs.map((arc) => <MajorTransitCard key={arc.key} arc={arc} />)}
+          </div>
+        ) : (
+          <div className="rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5">
+            <p className="text-sm leading-relaxed text-[var(--color-text-muted)]">
+              No major long-arc transit is exact enough today in the current calculation window. The daily weather below can still trigger shorter moments, but the big waves are quiet right now.
+            </p>
+          </div>
+        )}
+      </section>
+
+      {upcomingMajorArcs.length > 0 && (
+        <section className="mb-8">
+          <p className="mb-4 text-[10px] uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
+            Building next
+          </p>
+          <div className="space-y-4">
+            {upcomingMajorArcs.map((arc) => <MajorTransitCard key={arc.key} arc={arc} />)}
+          </div>
+        </section>
+      )}
+
+      {/* Daily weather, demoted: useful triggers, not the main transit product. */}
       <section className="mb-8 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5 sm:px-6">
         <p className="mb-1 text-xs font-medium uppercase tracking-widest text-[var(--color-copper)]">
-          ◎ Today&apos;s Sky
+          Daily sky weather
         </p>
         <p className="mt-3 text-sm leading-relaxed text-[var(--color-text)]">
           {overview.summary}
@@ -177,36 +266,10 @@ export default async function TransitRoomPage() {
             {overview.detail}
           </p>
         )}
+        <p className="mt-3 text-[11px] leading-relaxed text-[var(--color-text-muted)] opacity-70">
+          These are short-term contacts. They can describe mood, timing, or a quick trigger, but the major waves above are the real Transit Info layer.
+        </p>
       </section>
-
-      {todayTransits.transits.length > 0 && (
-        <section className="mb-8 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5 sm:px-6">
-          <p className="mb-4 text-xs font-medium uppercase tracking-widest text-[var(--color-copper)]">
-            What is active now
-          </p>
-          <div className="space-y-4">
-            {todayTransits.transits.slice(0, paid ? 8 : 3).map((transit, i) => (
-              <div key={`${transitTitle(transit)}-${i}`} className="border-b border-[var(--color-border-subtle)] pb-4 last:border-b-0 last:pb-0">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-2">
-                    <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: transitColor(transit) }} />
-                    <div>
-                      <p className="text-sm font-medium text-[var(--color-text)]">{transitTitle(transit)}</p>
-                      <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[var(--color-electric)]">
-                        Active in this month view: {transitWindow(transit, monthTransits)}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="shrink-0 text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper-dim)]">{transit.orb}° orb</span>
-                </div>
-                <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">{buildTransitReading(transit)}</p>
-                <p className="mt-2 text-xs leading-relaxed text-[var(--color-text-muted)] opacity-80">{buildTransitFeel(transit)}</p>
-                <p className="mt-2 text-[11px] leading-relaxed text-[var(--color-electric)]">{buildOrbTimeframe(transit.orb)}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
 
       {/* Free unlocked transit — full depth reading */}
       {visible.length > 0 && (

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { calculateTransitsForDate, calculateTransitsForRange } from '@/lib/astrology/calculate-transits';
+import { calculateMajorTransitArcs } from '@/lib/astrology/major-transits';
 import { interpretTransits, buildTransitOverview, scanIncomingHighlights } from '@/lib/interpret';
 import type { IncomingHighlight } from '@/lib/interpret';
 import type { NatalChart as RichChart } from '@/lib/astrology/types';
@@ -17,6 +18,9 @@ import { buildExplainabilityNote, buildDailyMemoryCue, describeHiddenDomains } f
 import UnlockCTA from '@/components/UnlockCTA';
 import AppBackLink from '@/components/AppBackLink';
 import AeonFloatingButton from '@/components/AeonFloatingButton';
+import { listSecureLifeSignals } from '@/lib/astrology/secure-life-signals';
+import type { MajorWaveMemoryInput } from '@/lib/major-transit-reading';
+import { getOrCreateDailyAiReading } from '@/lib/daily-ai-reading';
 
 // DOMAIN_LABELS and describeHiddenDomains have been extracted to pure-fns.ts.
 // buildMemoryCue has been extracted to pure-fns.ts as buildDailyMemoryCue.
@@ -28,7 +32,7 @@ export default async function DailyReadingPage() {
 
   if (!user) redirect('/auth/login');
 
-  const [chartResult, signalResult, reportResult, sub] = await Promise.all([
+  const [chartResult, signalResult, reportResult, natalReadingResult, sub] = await Promise.all([
     supabase
       .from('natal_charts')
       .select('placements_json, angles_json, houses_json, aspects_json, metadata_json')
@@ -44,6 +48,11 @@ export default async function DailyReadingPage() {
     supabase
       .from('onboarding_reports')
       .select('report_json')
+      .eq('user_id', user.id)
+      .maybeSingle(),
+    supabase
+      .from('natal_readings')
+      .select('reading_json')
       .eq('user_id', user.id)
       .maybeSingle(),
     getSubscription(user.id),
@@ -71,7 +80,8 @@ export default async function DailyReadingPage() {
   };
 
   const natalSummary = buildNatalSummary(richChart);
-  const todayTransits = calculateTransitsForDate(new Date(), richChart);
+  const now = new Date();
+  const todayTransits = calculateTransitsForDate(now, richChart);
   const todayRef = new Date(`${todayTransits.date}T12:00:00Z`);
   const tomorrowRef = new Date(todayRef);
   tomorrowRef.setUTCDate(tomorrowRef.getUTCDate() + 1);
@@ -84,6 +94,11 @@ export default async function DailyReadingPage() {
   );
   const guidance = interpretTransits(todayTransits.transits, natalSummary);
   const overview = buildTransitOverview(todayTransits.transits, natalSummary, { lookAheadTransits });
+  const { arcs: majorArcs } = calculateMajorTransitArcs(richChart, {
+    centerDate: now,
+    pastDays: 150,
+    futureDays: 240,
+  });
 
   const today = todayRef.toLocaleDateString('en-US', {
     weekday: 'long',
@@ -102,8 +117,26 @@ export default async function DailyReadingPage() {
   // Arc memory: fetch structured transit memory context (non-fatal — falls back to signal-based cue)
   const arcMemory = await getRelevantTransitMemoryForToday(user.id).catch(() => null);
 
-  const onboardingReport = reportResult.data?.report_json as { themes?: string[] | null; chartReading?: string | null } | null;
+  const onboardingReport = reportResult.data?.report_json as { themes?: string[] | null; chartReading?: string | null; lookAhead?: string | null } | null;
   const personalTheme = Array.isArray(onboardingReport?.themes) ? onboardingReport?.themes?.[0] : null;
+  const lifeSignals = await listSecureLifeSignals(supabase, { userId: user.id, limit: 12 }).catch(() => []);
+  const dailyMemory: MajorWaveMemoryInput = {
+    report: onboardingReport,
+    natalReading: natalReadingResult.data?.reading_json ?? null,
+    lifeSignals,
+  };
+  const activeMajorArcs = majorArcs.filter((arc) => arc.activeToday).slice(0, paid ? 8 : 3);
+  const upcomingMajorArcs = majorArcs.filter((arc) => !arc.activeToday).slice(0, paid ? 4 : 1);
+  const dailyAiReading = await getOrCreateDailyAiReading({
+    userId: user.id,
+    date: todayTransits.date,
+    chart: richChart,
+    todayTransits,
+    lookAheadTransits,
+    majorArcs: [...activeMajorArcs, ...upcomingMajorArcs],
+    guidance,
+    memory: dailyMemory,
+  });
 
   const memoryCue = buildDailyMemoryCue({
     signal: signalResult.data as { life_domain?: string | null; themes_json?: string[] | null } | null,
@@ -151,6 +184,41 @@ export default async function DailyReadingPage() {
           </p>
         )}
       </section>
+
+      {dailyAiReading && (
+        <section className="mb-8 rounded-2xl border border-[var(--color-electric)]/40 bg-[linear-gradient(180deg,rgba(239,68,136,0.09),rgba(22,20,34,0.92))] px-5 py-6 sm:px-6">
+          <p className="text-xs font-medium uppercase tracking-[0.25em] text-[var(--color-electric)]">
+            SOS daily intelligence
+          </p>
+          <h2 className="mt-3 text-xl font-light leading-tight text-[var(--color-text)]">
+            {dailyAiReading.headline}
+          </h2>
+          <div className="mt-4 space-y-4 text-[15px] leading-relaxed text-[var(--color-text-muted)]">
+            <p>{dailyAiReading.signal}</p>
+            <p>{dailyAiReading.whyPersonal}</p>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-[10px] border border-[var(--color-border-subtle)] bg-[rgba(244,239,232,0.03)] px-4 py-4">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper)]">Watch</p>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">{dailyAiReading.watch}</p>
+            </div>
+            <div className="rounded-[10px] border border-[var(--color-border-subtle)] bg-[rgba(244,239,232,0.03)] px-4 py-4">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper)]">Do today</p>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">{dailyAiReading.doToday}</p>
+            </div>
+          </div>
+          {dailyAiReading.memoryNote && (
+            <p className="mt-4 text-xs leading-relaxed text-[var(--color-text-muted)] opacity-75">{dailyAiReading.memoryNote}</p>
+          )}
+          <Link
+            href={`/journal?starter=${encodeURIComponent(dailyAiReading.askAeon)}&context=${encodeURIComponent(`${dailyAiReading.headline}: ${dailyAiReading.signal}`)}`}
+            className="mt-5 flex items-center justify-between rounded-[10px] border border-[var(--color-electric)]/45 px-4 py-3 text-xs uppercase tracking-[0.18em] text-[var(--color-electric)] hover:border-[var(--color-electric)]"
+          >
+            <span>Ask Aeon about today</span>
+            <span>→</span>
+          </Link>
+        </section>
+      )}
 
       {personalTheme && (
         <section className="mb-6 rounded-2xl border border-[var(--color-electric)]/45 bg-[rgba(239,68,136,0.05)] px-5 py-5">

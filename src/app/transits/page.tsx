@@ -21,6 +21,9 @@ import AppBackLink from '@/components/AppBackLink';
 import AeonFloatingButton from '@/components/AeonFloatingButton';
 import { buildTransitFeel, buildTransitReading, buildWaveUse, transitColor, transitTitle } from '@/lib/transit-copy';
 import CalendarGrid from '@/app/calendar/CalendarGrid';
+import { listSecureLifeSignals } from '@/lib/astrology/secure-life-signals';
+import { buildMajorWaveMemoryReading } from '@/lib/major-transit-reading';
+import type { MajorWaveMemoryInput } from '@/lib/major-transit-reading';
 
 /**
  * Transit Room — the free-user thirst trap for the Transits card.
@@ -70,7 +73,8 @@ function diffDaysLocal(a: string, b: string) {
   return Math.round((new Date(`${a}T12:00:00Z`).getTime() - new Date(`${b}T12:00:00Z`).getTime()) / 86_400_000);
 }
 
-function MajorTransitCard({ arc }: { arc: MajorTransitArc }) {
+function MajorTransitCard({ arc, memory }: { arc: MajorTransitArc; memory: MajorWaveMemoryInput }) {
+  const memoryReading = buildMajorWaveMemoryReading(arc, memory);
   const color = transitColor(arc.transit);
   return (
     <div className="rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5">
@@ -154,6 +158,12 @@ function MajorTransitCard({ arc }: { arc: MajorTransitArc }) {
           </p>
         </div>
         <div>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper)]">Memory read</p>
+          <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-muted)]">{memoryReading.personalLine}</p>
+          <p className="mt-2 text-xs leading-relaxed text-[var(--color-text-muted)] opacity-80">{memoryReading.memoryLine}</p>
+          <p className="mt-2 text-xs leading-relaxed text-[var(--color-electric)]">{memoryReading.lifecycleLine}</p>
+        </div>
+        <div>
           <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper)]">How to use it</p>
           <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-muted)]">{buildWaveUse(arc.transit, arc.context.lifeArea)}</p>
         </div>
@@ -178,7 +188,7 @@ export default async function TransitRoomPage() {
 
   if (!user) redirect('/auth/login');
 
-  const [chartResult, sub] = await Promise.all([
+  const [chartResult, reportResult, sub] = await Promise.all([
     supabase
       .from('natal_charts')
       .select(
@@ -186,6 +196,11 @@ export default async function TransitRoomPage() {
       )
       .eq('user_id', user.id)
       .single(),
+    supabase
+      .from('onboarding_reports')
+      .select('report_json')
+      .eq('user_id', user.id)
+      .maybeSingle(),
     getSubscription(user.id),
   ]);
 
@@ -252,6 +267,11 @@ export default async function TransitRoomPage() {
   });
 
   const lockedDomainLabels = locked.map((r) => getTransitDomainLabel(r.domain));
+  const lifeSignals = await listSecureLifeSignals(supabase, { userId: user.id, limit: 12 }).catch(() => []);
+  const waveMemory: MajorWaveMemoryInput = {
+    report: (reportResult.data?.report_json ?? null) as MajorWaveMemoryInput['report'],
+    lifeSignals,
+  };
   const activeMajorArcs = majorArcs.filter((arc) => arc.activeToday).slice(0, paid ? 8 : 2);
   const upcomingMajorArcs = majorArcs.filter((arc) => !arc.activeToday).slice(0, paid ? 6 : 2);
 
@@ -300,7 +320,7 @@ export default async function TransitRoomPage() {
         </p>
         {activeMajorArcs.length > 0 ? (
           <div className="space-y-4">
-            {activeMajorArcs.map((arc) => <MajorTransitCard key={arc.key} arc={arc} />)}
+            {activeMajorArcs.map((arc) => <MajorTransitCard key={arc.key} arc={arc} memory={waveMemory} />)}
           </div>
         ) : (
           <div className="rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5">
@@ -317,7 +337,7 @@ export default async function TransitRoomPage() {
             Building next
           </p>
           <div className="space-y-4">
-            {upcomingMajorArcs.map((arc) => <MajorTransitCard key={arc.key} arc={arc} />)}
+            {upcomingMajorArcs.map((arc) => <MajorTransitCard key={arc.key} arc={arc} memory={waveMemory} />)}
           </div>
         </section>
       )}

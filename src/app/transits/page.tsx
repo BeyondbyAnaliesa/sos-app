@@ -53,6 +53,15 @@ function progressPercent(arc: MajorTransitArc) {
   return Math.max(4, Math.min(100, Math.round((elapsed / Math.max(1, arc.totalDays)) * 100)));
 }
 
+function percentForDate(arc: MajorTransitArc, date: string) {
+  const elapsed = Math.max(0, Math.min(arc.totalDays, diffDaysLocal(date, arc.startDate)));
+  return Math.max(2, Math.min(98, Math.round((elapsed / Math.max(1, arc.totalDays)) * 100)));
+}
+
+function hitLabel(kind: 'exact' | 'closest') {
+  return kind === 'exact' ? 'Exact' : 'Closest';
+}
+
 function diffDaysLocal(a: string, b: string) {
   return Math.round((new Date(`${a}T12:00:00Z`).getTime() - new Date(`${b}T12:00:00Z`).getTime()) / 86_400_000);
 }
@@ -77,14 +86,29 @@ function MajorTransitCard({ arc }: { arc: MajorTransitArc }) {
       <div className="mt-4">
         <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
           <span>{formatShortDate(arc.startDate)}</span>
-          <span>Peak {formatShortDate(arc.peakDate)}</span>
+          <span>{arc.activeRunCount > 1 ? `${arc.activeRunCount} passes` : 'One pass'}</span>
           <span>{formatShortDate(arc.endDate)}</span>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-[rgba(244,239,232,0.08)]">
-          <div className="h-full rounded-full" style={{ width: `${progressPercent(arc)}%`, backgroundColor: color }} />
+        <div className="relative h-3 rounded-full bg-[rgba(244,239,232,0.08)]">
+          <div className="absolute left-0 top-0 h-full rounded-full opacity-80" style={{ width: `${progressPercent(arc)}%`, backgroundColor: color }} />
+          {arc.exactHits.map((hit, index) => (
+            <span
+              key={`${hit.date}-${index}`}
+              className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--color-void)] shadow-[0_0_0_1px_rgba(244,239,232,0.35)]"
+              style={{ left: `${percentForDate(arc, hit.date)}%`, backgroundColor: color }}
+              aria-label={`${hitLabel(hit.kind)} hit ${formatShortDate(hit.date)}`}
+            />
+          ))}
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {arc.exactHits.map((hit, index) => (
+            <span key={`${hit.date}-chip-${index}`} className="rounded-full border border-[var(--color-border-subtle)] px-3 py-1 text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
+              {hitLabel(hit.kind)} {formatShortDate(hit.date)} · {hit.orb}°
+            </span>
+          ))}
         </div>
         <p className="mt-2 text-[11px] leading-relaxed text-[var(--color-text-muted)]">
-          Active window: {arcWindow(arc)} · {arc.totalDays} days in this calculated arc.
+          Active lifecycle: {arcWindow(arc)} · {arc.totalDays} days from first contact to final fade in this scan.
         </p>
       </div>
 

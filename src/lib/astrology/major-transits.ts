@@ -14,6 +14,12 @@ export const MAJOR_TRANSIT_PLANETS = new Set([
 
 export type MajorTransitPhase = 'building' | 'peaking' | 'fading';
 
+export interface MajorTransitHit {
+  date: string;
+  orb: number;
+  kind: 'exact' | 'closest';
+}
+
 export interface MajorTransitArc {
   key: string;
   transit: Transit;
@@ -27,7 +33,11 @@ export interface MajorTransitArc {
   daysUntilPeak: number;
   totalDays: number;
   visibleDates: string[];
+  exactHits: MajorTransitHit[];
+  activeRunCount: number;
 }
+
+type TransitEntry = { date: string; transit: Transit };
 
 function isoDate(date: Date) {
   return date.toISOString().split('T')[0];
@@ -58,6 +68,60 @@ function phaseFor(today: string, peak: string, todayOrb: number | null): MajorTr
   return days > 0 ? 'building' : 'fading';
 }
 
+function splitActiveRuns(entries: TransitEntry[]) {
+  const runs: TransitEntry[][] = [];
+  let run: TransitEntry[] = [];
+
+  for (const entry of entries) {
+    const prev = run[run.length - 1];
+    if (prev && diffDays(entry.date, prev.date) > 1) {
+      runs.push(run);
+      run = [];
+    }
+    run.push(entry);
+  }
+
+  if (run.length) runs.push(run);
+  return runs;
+}
+
+function buildHits(entries: TransitEntry[]): MajorTransitHit[] {
+  const runs = splitActiveRuns(entries);
+  const hits: MajorTransitHit[] = [];
+
+  for (const run of runs) {
+    if (run.length === 0) continue;
+    const localHits: MajorTransitHit[] = [];
+
+    for (let i = 0; i < run.length; i++) {
+      const prev = run[i - 1];
+      const curr = run[i];
+      const next = run[i + 1];
+      const isLocalMin = (!prev || curr.transit.orb <= prev.transit.orb) && (!next || curr.transit.orb <= next.transit.orb);
+      if (isLocalMin && curr.transit.orb <= 1.25) {
+        localHits.push({
+          date: curr.date,
+          orb: curr.transit.orb,
+          kind: curr.transit.orb <= 0.25 ? 'exact' : 'closest',
+        });
+      }
+    }
+
+    if (localHits.length > 0) {
+      hits.push(...localHits);
+    } else {
+      const closest = run.reduce((best, item) => item.transit.orb < best.transit.orb ? item : best, run[0]);
+      hits.push({ date: closest.date, orb: closest.transit.orb, kind: 'closest' });
+    }
+  }
+
+  // Deduplicate adjacent equal minima while keeping multi-pass hits.
+  return hits
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .filter((hit, index, arr) => index === 0 || diffDays(hit.date, arr[index - 1].date) > 2)
+    .slice(0, 6);
+}
+
 export function calculateMajorTransitArcs(
   natalChart: NatalChart,
   options?: { centerDate?: Date; pastDays?: number; futureDays?: number },
@@ -74,7 +138,7 @@ export function calculateMajorTransitArcs(
     transits: day.transits.filter(isMajorTransit),
   }));
 
-  const grouped = new Map<string, Array<{ date: string; transit: Transit }>>();
+  const grouped = new Map<string, TransitEntry[]>();
   for (const day of days) {
     for (const transit of day.transits) {
       const key = transitKey(transit);
@@ -88,24 +152,29 @@ export function calculateMajorTransitArcs(
   for (const [key, entries] of grouped.entries()) {
     entries.sort((a, b) => a.date.localeCompare(b.date));
 
-    let segment: Array<{ date: string; transit: Transit }> = [];
+    // A real outer-planet transit can leave orb and come back months later because of retrograde motion.
+    // Treat gaps under ~4 months as one lifecycle with multiple active runs/hits, not separate “daily” events.
+    let cycle: TransitEntry[] = [];
     const flush = () => {
-      if (segment.length < 5) {
-        segment = [];
+      if (cycle.length < 5) {
+        cycle = [];
         return;
       }
-      const peak = segment.reduce((best, item) => item.transit.orb < best.transit.orb ? item : best, segment[0]);
-      const todayEntry = segment.find((item) => item.date === todayStr);
-      const startDate = segment[0].date;
-      const endDate = segment[segment.length - 1].date;
-      const visibleDates = segment.map((item) => item.date);
+
+      const peak = cycle.reduce((best, item) => item.transit.orb < best.transit.orb ? item : best, cycle[0]);
+      const todayEntry = cycle.find((item) => item.date === todayStr);
+      const startDate = cycle[0].date;
+      const endDate = cycle[cycle.length - 1].date;
+      const visibleDates = cycle.map((item) => item.date);
       const todayOrb = todayEntry?.transit.orb ?? null;
       const activeToday = Boolean(todayEntry);
       const daysUntilPeak = diffDays(peak.date, todayStr);
       const totalDays = diffDays(endDate, startDate) + 1;
+      const exactHits = buildHits(cycle);
+      const activeRunCount = splitActiveRuns(cycle).length;
 
       // Keep currently active arcs and near-future arcs. Drop old completed arcs from the main list.
-      if (activeToday || daysUntilPeak >= 0) {
+      if (activeToday || daysUntilPeak >= 0 || exactHits.some((hit) => diffDays(hit.date, todayStr) >= 0)) {
         arcs.push({
           key,
           transit: todayEntry?.transit ?? peak.transit,
@@ -119,15 +188,17 @@ export function calculateMajorTransitArcs(
           daysUntilPeak,
           totalDays,
           visibleDates,
+          exactHits,
+          activeRunCount,
         });
       }
-      segment = [];
+      cycle = [];
     };
 
     for (const entry of entries) {
-      const prev = segment[segment.length - 1];
-      if (prev && diffDays(entry.date, prev.date) > 1) flush();
-      segment.push(entry);
+      const prev = cycle[cycle.length - 1];
+      if (prev && diffDays(entry.date, prev.date) > 120) flush();
+      cycle.push(entry);
     }
     flush();
   }

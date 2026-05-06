@@ -118,7 +118,66 @@ afterEach(() => {
 });
 
 describe('getOrCreateMajorTransitAiReadings', () => {
-  it('logs an explicit partial-generation warning when the model omits requested arcs', async () => {
+  it('retries once for only the missing arcs before returning partial output', async () => {
+    const { getOrCreateMajorTransitAiReadings, majorTransitReadingKey } = await loadModule();
+    completionCreateMock
+      .mockResolvedValueOnce({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                readings: [
+                  {
+                    key: majorTransitReadingKey(arcs[0]),
+                    headline: 'Hold the line',
+                    wave: 'One wave only',
+                    whyYou: 'Specific to you',
+                    feel: 'Pressurized',
+                    use: 'Stay steady',
+                    doNotForce: 'Do not rush',
+                    aeonQuestion: 'What am I bracing for?',
+                  },
+                ],
+              }),
+            },
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                readings: [
+                  {
+                    key: majorTransitReadingKey(arcs[1]),
+                    headline: 'Open the windows',
+                    wave: 'Second try lands',
+                    whyYou: 'Now it is specific',
+                    feel: 'Room to breathe',
+                    use: 'Say yes carefully',
+                    doNotForce: 'Do not overpromise',
+                    aeonQuestion: 'What wants to expand?',
+                  },
+                ],
+              }),
+            },
+          },
+        ],
+      });
+
+    const readings = await getOrCreateMajorTransitAiReadings({ userId: 'user-1', arcs, chart, memory });
+
+    expect(Object.keys(readings).sort()).toEqual([
+      majorTransitReadingKey(arcs[0]),
+      majorTransitReadingKey(arcs[1]),
+    ].sort());
+    expect(completionCreateMock).toHaveBeenCalledTimes(2);
+    expect(upsertMock).toHaveBeenCalledTimes(1);
+    expect(logWarnMock).not.toHaveBeenCalled();
+  });
+
+  it('logs an explicit partial-generation warning when the retry still omits requested arcs', async () => {
     const { getOrCreateMajorTransitAiReadings, majorTransitReadingKey } = await loadModule();
     completionCreateMock.mockResolvedValue({
       choices: [
@@ -146,12 +205,14 @@ describe('getOrCreateMajorTransitAiReadings', () => {
     const readings = await getOrCreateMajorTransitAiReadings({ userId: 'user-1', arcs, chart, memory });
 
     expect(Object.keys(readings)).toEqual([majorTransitReadingKey(arcs[0])]);
+    expect(completionCreateMock).toHaveBeenCalledTimes(2);
     expect(upsertMock).toHaveBeenCalledTimes(1);
     expect(logWarnMock).toHaveBeenCalledWith(
       'major_transit_reading_partial_generation',
       expect.objectContaining({
         requestedCount: 2,
         generatedCount: 1,
+        retried: true,
         missingKeys: [majorTransitReadingKey(arcs[1])],
       }),
     );
@@ -186,6 +247,7 @@ describe('getOrCreateMajorTransitAiReadings', () => {
       getOrCreateMajorTransitAiReadings({ userId: 'user-1', arcs, chart, memory, onPartial: 'throw' }),
     ).rejects.toThrow('partial output');
 
+    expect(completionCreateMock).toHaveBeenCalledTimes(2);
     expect(upsertMock).toHaveBeenCalledTimes(1);
     expect(logErrorMock).toHaveBeenCalledWith(
       expect.any(Error),

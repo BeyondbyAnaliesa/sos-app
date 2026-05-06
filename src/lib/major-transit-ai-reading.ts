@@ -344,6 +344,25 @@ async function generateReadings(arcs: MajorTransitArc[], chart: NatalChart, memo
   return byKey;
 }
 
+async function generateReadingsWithSingleMissingRetry(arcs: MajorTransitArc[], chart: NatalChart, memory: MajorWaveMemoryInput) {
+  const generated = await generateReadings(arcs, chart, memory);
+  let missing = arcs.filter((arc) => !generated[readingKey(arc)]);
+  let retried = false;
+
+  if (missing.length > 0) {
+    retried = true;
+    const retryGenerated = await generateReadings(missing, chart, memory);
+    Object.assign(generated, retryGenerated);
+    missing = missing.filter((arc) => !generated[readingKey(arc)]);
+  }
+
+  return {
+    generated,
+    missingKeys: missing.map((arc) => readingKey(arc)),
+    retried,
+  };
+}
+
 export async function getOrCreateMajorTransitAiReadings(params: {
   userId: string;
   arcs: MajorTransitArc[];
@@ -359,17 +378,17 @@ export async function getOrCreateMajorTransitAiReadings(params: {
     const missing = arcs.filter((arc) => !cached[readingKey(arc)]);
     if (missing.length === 0) return cached;
 
-    const generated = await generateReadings(missing, params.chart, params.memory);
+    const { generated, missingKeys, retried } = await generateReadingsWithSingleMissingRetry(
+      missing,
+      params.chart,
+      params.memory,
+    );
     await saveGeneratedRows({
       userId: params.userId,
       arcs: missing,
       memory: params.memory,
       readings: generated,
     });
-
-    const missingKeys = missing
-      .map((arc) => readingKey(arc))
-      .filter((key) => !generated[key]);
 
     if (missingKeys.length > 0) {
       if (params.onPartial === 'throw') {
@@ -379,6 +398,7 @@ export async function getOrCreateMajorTransitAiReadings(params: {
       logWarn('major_transit_reading_partial_generation', {
         requestedCount: missing.length,
         generatedCount: Object.keys(generated).length,
+        retried,
         missingKeys,
       });
     }

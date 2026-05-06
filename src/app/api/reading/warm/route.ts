@@ -28,7 +28,6 @@ async function resolveUserIds(admin: ReturnType<typeof createAdminClient>, reque
   const { data, error } = await admin
     .from('natal_charts')
     .select('user_id')
-    .order('updated_at', { ascending: false })
     .limit(Math.max(1, Math.min(limit, 25)));
 
   if (error) throw error;
@@ -92,6 +91,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, processed: results.length, results });
   } catch (error) {
     logError(error, { route: '/api/reading/warm' });
-    return NextResponse.json({ error: 'Something went wrong' }, { status: 500 });
+    return NextResponse.json({
+      error: 'Something went wrong',
+      detail: error instanceof Error ? error.message : String(error),
+    }, { status: 500 });
   }
 }

@@ -27,7 +27,7 @@ import { buildMajorWaveMemoryReading } from '@/lib/major-transit-reading';
 import type { MajorWaveMemoryInput } from '@/lib/major-transit-reading';
 import { getOrCreateMajorTransitAiReadings, majorTransitReadingKey } from '@/lib/major-transit-ai-reading';
 import type { MajorTransitAiReading } from '@/lib/major-transit-ai-reading';
-import { buildTransitTiming, buildTransitTimingSummary } from '@/lib/transit-timing';
+import { buildPassMemoryCue, buildTransitTiming, buildTransitTimingSummary } from '@/lib/transit-timing';
 
 /**
  * Transit Room — the free-user thirst trap for the Transits card.
@@ -80,6 +80,7 @@ function diffDaysLocal(a: string, b: string) {
 function MajorTransitCard({ arc, memory, aiReading }: { arc: MajorTransitArc; memory: MajorWaveMemoryInput; aiReading?: MajorTransitAiReading }) {
   const memoryReading = buildMajorWaveMemoryReading(arc, memory);
   const timing = buildTransitTiming(arc);
+  const passMemory = buildPassMemoryCue(arc, memory.lifeSignals ?? []);
   const color = transitColor(arc.transit);
   return (
     <div className="rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5">
@@ -142,6 +143,9 @@ function MajorTransitCard({ arc, memory, aiReading }: { arc: MajorTransitArc; me
         <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-electric)]">Timing</p>
         <p className="mt-1 text-sm leading-relaxed text-[var(--color-text)]">{timing.peakLine}</p>
         <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-muted)]">{timing.nextHitLine}</p>
+        {arc.exactHits.length > 1 && (
+          <p className="mt-2 text-xs leading-relaxed text-[var(--color-text-muted)] opacity-80">{passMemory.headline}</p>
+        )}
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2 text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)]">

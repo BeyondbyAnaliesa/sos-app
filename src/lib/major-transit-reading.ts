@@ -7,11 +7,12 @@ type OnboardingMemory = {
   lookAhead?: string | null;
 };
 
-type LifeSignalMemory = {
+export type LifeSignalMemory = {
   content_text?: string | null;
   themes_json?: string[] | null;
   life_domain?: string | null;
   emotions_json?: string[] | null;
+  signal_timestamp?: string | null;
 };
 
 export type MajorWaveMemoryInput = {

@@ -1,4 +1,5 @@
 import type { MajorTransitArc } from '@/lib/astrology/major-transits';
+import type { LifeSignalMemory } from '@/lib/major-transit-reading';
 import { transitTitle } from '@/lib/transit-copy';
 
 function daysBetween(a: string, b: string) {
@@ -65,6 +66,71 @@ export function buildTransitTiming(arc: MajorTransitArc, today = new Date().toIS
     nextHit,
     nextStation,
     peakDays,
+  };
+}
+
+function compactSignalText(signal: LifeSignalMemory) {
+  const text = signal.content_text?.replace(/\s+/g, ' ').trim();
+  if (text) return text.slice(0, 180);
+  const themes = signal.themes_json?.filter(Boolean).slice(0, 3).join(', ');
+  if (themes) return themes;
+  return signal.life_domain ?? 'saved signal';
+}
+
+function withinDays(date: string, center: string, windowDays: number) {
+  return Math.abs(daysBetween(date, center)) <= windowDays;
+}
+
+export function buildPassMemoryCue(
+  arc: MajorTransitArc,
+  lifeSignals: LifeSignalMemory[] = [],
+  today = new Date().toISOString().split('T')[0],
+) {
+  const previousHits = arc.exactHits.filter((hit) => daysBetween(hit.date, today) < 0);
+  const nextHit = getNextExactHit(arc, today);
+  const previousHit = previousHits[previousHits.length - 1] ?? null;
+
+  if (!previousHit && arc.exactHits.length <= 1) {
+    return {
+      headline: 'First pass in this scan.',
+      body: 'There is no earlier hit to compare yet. Start watching what repeats now.',
+      hasMemory: false,
+      previousHit: null,
+      signals: [],
+    };
+  }
+
+  if (!previousHit) {
+    return {
+      headline: `Pass 1 of ${arc.exactHits.length}.`,
+      body: nextHit ? `The next comparison point is ${formatTimingDate(nextHit.date)}.` : 'The next pass will give SOS something to compare.',
+      hasMemory: false,
+      previousHit: null,
+      signals: [],
+    };
+  }
+
+  const matchingSignals = lifeSignals
+    .filter((signal) => signal.signal_timestamp)
+    .filter((signal) => withinDays(signal.signal_timestamp!.slice(0, 10), previousHit.date, 21))
+    .slice(0, 3);
+
+  if (matchingSignals.length === 0) {
+    return {
+      headline: `Previous pass: ${formatTimingDate(previousHit.date)}.`,
+      body: 'SOS does not have a saved journal or Aeon signal close enough to that pass yet. This comparison gets sharper when you log what happened.',
+      hasMemory: false,
+      previousHit,
+      signals: [],
+    };
+  }
+
+  return {
+    headline: `Previous pass: ${formatTimingDate(previousHit.date)}.`,
+    body: `Compare this pass with what was saved near the earlier hit: ${matchingSignals.map(compactSignalText).join(' / ')}`,
+    hasMemory: true,
+    previousHit,
+    signals: matchingSignals,
   };
 }
 

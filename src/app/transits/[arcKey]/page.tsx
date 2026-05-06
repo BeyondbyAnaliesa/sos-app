@@ -10,7 +10,7 @@ import { buildReadingContext } from '@/lib/transit-reading-context';
 import type { MajorTransitArc } from '@/lib/astrology/major-transits';
 import { getOrCreateMajorTransitAiReadings, majorTransitReadingKey } from '@/lib/major-transit-ai-reading';
 import { buildTransitFeel, buildTransitReading, buildWaveUse, transitColor, transitTitle } from '@/lib/transit-copy';
-import { buildTransitTiming } from '@/lib/transit-timing';
+import { buildPassMemoryCue, buildTransitTiming } from '@/lib/transit-timing';
 
 function formatShortDate(date: string) {
   return new Date(`${date}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -71,6 +71,7 @@ export default async function MajorTransitDetailPage({ params }: { params: Promi
   const title = transitTitle(arc.transit);
   const aeonQuestion = reading?.aeonQuestion ?? `What is this ${title} wave asking me to see?`;
   const timing = buildTransitTiming(arc);
+  const passMemory = buildPassMemoryCue(arc, context.memory.lifeSignals ?? []);
 
   return (
     <main className="mx-auto w-full max-w-xl px-5 pb-24 pt-10 sm:px-6 sm:pt-14">
@@ -104,6 +105,15 @@ export default async function MajorTransitDetailPage({ params }: { params: Promi
             <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-muted)]">{timing.stationLine}</p>
           </div>
         </div>
+      </section>
+
+      <section className="mb-6 rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5">
+        <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--color-copper)]">Pass memory</p>
+        <p className="mt-2 text-[15px] leading-relaxed text-[var(--color-text)]">{passMemory.headline}</p>
+        <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">{passMemory.body}</p>
+        {passMemory.hasMemory && (
+          <p className="mt-3 text-xs leading-relaxed text-[var(--color-electric)]">This is the comparison layer: what repeated, what changed, and what is no longer negotiable.</p>
+        )}
       </section>
 
       <section className="mb-6 rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5">

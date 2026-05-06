@@ -31,7 +31,7 @@ function getAngleDifference(a: number, b: number) {
 }
 
 // Calculate where all planets are on a given date
-function getPlanetaryPositions(date: Date) {
+export function getPlanetaryPositions(date: Date) {
   const year  = date.getUTCFullYear();
   const month = date.getUTCMonth() + 1;
   const day   = date.getUTCDate();

@@ -1,4 +1,4 @@
-import { calculateTransitsForRange } from '@/lib/astrology/calculate-transits';
+import { calculateTransitsForRange, getPlanetaryPositions } from '@/lib/astrology/calculate-transits';
 import type { DailyTransits, Transit } from '@/lib/astrology/domain-types';
 import type { NatalChart } from '@/lib/astrology/types';
 import { transitKey } from '@/lib/transit-copy';
@@ -20,6 +20,13 @@ export interface MajorTransitHit {
   kind: 'exact' | 'closest';
 }
 
+export interface MajorTransitStation {
+  date: string;
+  kind: 'retrograde' | 'direct';
+  degree: number;
+  sign: string;
+}
+
 export interface MajorTransitArc {
   key: string;
   transit: Transit;
@@ -34,10 +41,33 @@ export interface MajorTransitArc {
   totalDays: number;
   visibleDates: string[];
   exactHits: MajorTransitHit[];
+  stations: MajorTransitStation[];
   activeRunCount: number;
 }
 
 type TransitEntry = { date: string; transit: Transit };
+
+const SIGNS = [
+  'Aries',
+  'Taurus',
+  'Gemini',
+  'Cancer',
+  'Leo',
+  'Virgo',
+  'Libra',
+  'Scorpio',
+  'Sagittarius',
+  'Capricorn',
+  'Aquarius',
+  'Pisces',
+];
+
+function formatLongitude(longitude: number) {
+  const normalized = ((longitude % 360) + 360) % 360;
+  const signIndex = Math.floor(normalized / 30);
+  const degree = Number((normalized - signIndex * 30).toFixed(2));
+  return { sign: SIGNS[signIndex], degree };
+}
 
 function isoDate(date: Date) {
   return date.toISOString().split('T')[0];
@@ -83,6 +113,34 @@ function splitActiveRuns(entries: TransitEntry[]) {
 
   if (run.length) runs.push(run);
   return runs;
+}
+
+function buildStations(startDate: string, endDate: string, transitPlanet: string): MajorTransitStation[] {
+  const start = dateAtUtcNoon(startDate);
+  const total = diffDays(endDate, startDate) + 1;
+  const daily = Array.from({ length: total }, (_, i) => {
+    const date = addDays(start, i);
+    const position = getPlanetaryPositions(date).find((p) => p.label === transitPlanet);
+    return position ? { date: isoDate(date), speed: position.speed, longitude: position.longitude } : null;
+  }).filter((value): value is { date: string; speed: number; longitude: number } => value != null);
+
+  const stations: MajorTransitStation[] = [];
+  for (let i = 1; i < daily.length; i++) {
+    const prev = daily[i - 1];
+    const curr = daily[i];
+    if ((prev.speed >= 0 && curr.speed < 0) || (prev.speed <= 0 && curr.speed > 0)) {
+      const station = Math.abs(prev.speed) <= Math.abs(curr.speed) ? prev : curr;
+      const { sign, degree } = formatLongitude(station.longitude);
+      stations.push({
+        date: station.date,
+        kind: curr.speed < 0 ? 'retrograde' : 'direct',
+        degree,
+        sign,
+      });
+    }
+  }
+
+  return stations.filter((station, index, arr) => index === 0 || diffDays(station.date, arr[index - 1].date) > 5).slice(0, 6);
 }
 
 function buildHits(entries: TransitEntry[]): MajorTransitHit[] {
@@ -171,6 +229,7 @@ export function calculateMajorTransitArcs(
       const daysUntilPeak = diffDays(peak.date, todayStr);
       const totalDays = diffDays(endDate, startDate) + 1;
       const exactHits = buildHits(cycle);
+      const stations = buildStations(startDate, endDate, peak.transit.transitPlanet);
       const activeRunCount = splitActiveRuns(cycle).length;
 
       // Keep currently active arcs and near-future arcs. Drop old completed arcs from the main list.
@@ -189,6 +248,7 @@ export function calculateMajorTransitArcs(
           totalDays,
           visibleDates,
           exactHits,
+          stations,
           activeRunCount,
         });
       }

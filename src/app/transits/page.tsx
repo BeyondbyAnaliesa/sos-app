@@ -62,6 +62,10 @@ function hitLabel(kind: 'exact' | 'closest') {
   return kind === 'exact' ? 'Exact' : 'Closest';
 }
 
+function stationLabel(kind: 'retrograde' | 'direct') {
+  return kind === 'retrograde' ? 'Rx station' : 'Direct station';
+}
+
 function diffDaysLocal(a: string, b: string) {
   return Math.round((new Date(`${a}T12:00:00Z`).getTime() - new Date(`${b}T12:00:00Z`).getTime()) / 86_400_000);
 }
@@ -99,11 +103,24 @@ function MajorTransitCard({ arc }: { arc: MajorTransitArc }) {
               aria-label={`${hitLabel(hit.kind)} hit ${formatShortDate(hit.date)}`}
             />
           ))}
+          {arc.stations.map((station, index) => (
+            <span
+              key={`${station.date}-station-${index}`}
+              className="absolute top-1/2 h-5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[var(--color-void)] bg-[var(--color-text)] shadow-[0_0_0_1px_rgba(239,68,136,0.45)]"
+              style={{ left: `${percentForDate(arc, station.date)}%` }}
+              aria-label={`${stationLabel(station.kind)} ${formatShortDate(station.date)}`}
+            />
+          ))}
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           {arc.exactHits.map((hit, index) => (
             <span key={`${hit.date}-chip-${index}`} className="rounded-full border border-[var(--color-border-subtle)] px-3 py-1 text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
               {hitLabel(hit.kind)} {formatShortDate(hit.date)} · {hit.orb}°
+            </span>
+          ))}
+          {arc.stations.map((station, index) => (
+            <span key={`${station.date}-station-chip-${index}`} className="rounded-full border border-[var(--color-electric)]/45 px-3 py-1 text-[10px] uppercase tracking-[0.14em] text-[var(--color-electric)]">
+              {stationLabel(station.kind)} {formatShortDate(station.date)} · {station.degree}° {station.sign}
             </span>
           ))}
         </div>

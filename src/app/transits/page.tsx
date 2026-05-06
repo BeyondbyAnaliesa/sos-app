@@ -6,6 +6,7 @@ import { calculateTransitsForDate, calculateTransitsForRange } from '@/lib/astro
 import { interpretTransits, buildTransitOverview } from '@/lib/interpret';
 import type { NatalChart as RichChart } from '@/lib/astrology/types';
 import { buildNatalSummary } from '@/lib/astrology/domain-types';
+import type { DailyTransits, Transit } from '@/lib/astrology/domain-types';
 import { getSubscription, isActive } from '@/lib/subscription';
 import {
   partitionTransitRoomGuidance,
@@ -16,7 +17,8 @@ import UnlockCTA from '@/components/UnlockCTA';
 import BottomNav from '@/components/BottomNav';
 import AppBackLink from '@/components/AppBackLink';
 import AeonFloatingButton from '@/components/AeonFloatingButton';
-import { buildOrbTimeframe, buildTransitFeel, buildTransitReading, transitTitle } from '@/lib/transit-copy';
+import { buildOrbTimeframe, buildTransitFeel, buildTransitReading, transitColor, transitKey, transitTitle } from '@/lib/transit-copy';
+import CalendarGrid from '@/app/calendar/CalendarGrid';
 
 /**
  * Transit Room — the free-user thirst trap for the Transits card.
@@ -29,6 +31,22 @@ import { buildOrbTimeframe, buildTransitFeel, buildTransitReading, transitTitle 
  *
  * H-1 spec: https://github.com/BeyondbyAnaliesa/SOS-App (sos-decisions-2026-04-27.md)
  */
+function formatShortDate(date: string) {
+  return new Date(`${date}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function transitWindow(transit: Transit, days: DailyTransits[]) {
+  const key = transitKey(transit);
+  const dates = days
+    .filter((day) => day.transits.some((t) => transitKey(t) === key))
+    .map((day) => day.date)
+    .sort();
+  if (dates.length === 0) return 'Active today';
+  const start = dates[0];
+  const end = dates[dates.length - 1];
+  return start === end ? formatShortDate(start) : `${formatShortDate(start)}–${formatShortDate(end)}`;
+}
+
 export default async function TransitRoomPage() {
   const supabase = await createClient();
   const {
@@ -68,8 +86,21 @@ export default async function TransitRoomPage() {
   };
 
   const natalSummary = buildNatalSummary(richChart);
-  const todayTransits = calculateTransitsForDate(new Date(), richChart);
+  const now = new Date();
+  const todayTransits = calculateTransitsForDate(now, richChart);
   const todayRef = new Date(`${todayTransits.date}T12:00:00Z`);
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const monthStart = new Date(year, month, 1);
+  const startDayOfWeek = monthStart.getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const calcStart = new Date(year, month, 1 - startDayOfWeek);
+  const totalDays = startDayOfWeek + daysInMonth;
+  const gridDays = Math.ceil(totalDays / 7) * 7;
+  const monthTransits: DailyTransits[] = calculateTransitsForRange(calcStart, gridDays, richChart).map((d) => ({
+    ...d,
+    transits: d.transits.filter((t) => t.transitPlanet !== 'Moon'),
+  }));
   const tomorrowRef = new Date(todayRef);
   tomorrowRef.setUTCDate(tomorrowRef.getUTCDate() + 1);
   // DR-2: 72-hour look-ahead for calm-day context in the transit room.
@@ -92,6 +123,7 @@ export default async function TransitRoomPage() {
   });
 
   const lockedDomainLabels = locked.map((r) => getTransitDomainLabel(r.domain));
+  const todayStr = todayTransits.date;
 
   return (
     <main className="mx-auto w-full max-w-xl px-5 pb-24 pt-10 sm:px-6 sm:pt-14">
@@ -107,15 +139,30 @@ export default async function TransitRoomPage() {
         <div className="mt-6 h-px w-full bg-gradient-to-r from-transparent via-[var(--color-border-subtle)] to-transparent" />
       </header>
 
-      {paid && (
-        <a
-          href="/calendar"
-          className="mb-6 flex items-center justify-between rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-4 text-xs uppercase tracking-[0.18em] text-[var(--color-copper)] hover:border-[var(--color-border)]"
-        >
-          <span>Open 30-day calendar</span>
-          <span>→</span>
-        </a>
-      )}
+      <section className="mb-8 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-4 py-5 sm:px-5">
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-widest text-[var(--color-copper)]">
+              Transit calendar
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-muted)]">
+              Each dot is a live transit. Matching colors connect the day to the transit list below.
+            </p>
+          </div>
+          {paid && (
+            <a href="/calendar" className="shrink-0 text-[10px] uppercase tracking-[0.18em] text-[var(--color-electric)] hover:underline">
+              Month →
+            </a>
+          )}
+        </div>
+        <CalendarGrid
+          transitDays={monthTransits}
+          todayStr={todayStr}
+          currentMonth={month}
+          startDayOfWeek={startDayOfWeek}
+          daysInMonth={daysInMonth}
+        />
+      </section>
 
       {/* Sky overview */}
       <section className="mb-8 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5 sm:px-6">
@@ -141,7 +188,15 @@ export default async function TransitRoomPage() {
             {todayTransits.transits.slice(0, paid ? 8 : 3).map((transit, i) => (
               <div key={`${transitTitle(transit)}-${i}`} className="border-b border-[var(--color-border-subtle)] pb-4 last:border-b-0 last:pb-0">
                 <div className="flex items-start justify-between gap-3">
-                  <p className="text-sm font-medium text-[var(--color-text)]">{transitTitle(transit)}</p>
+                  <div className="flex items-start gap-2">
+                    <span className="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: transitColor(transit) }} />
+                    <div>
+                      <p className="text-sm font-medium text-[var(--color-text)]">{transitTitle(transit)}</p>
+                      <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-[var(--color-electric)]">
+                        Active in this month view: {transitWindow(transit, monthTransits)}
+                      </p>
+                    </div>
+                  </div>
                   <span className="shrink-0 text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper-dim)]">{transit.orb}° orb</span>
                 </div>
                 <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">{buildTransitReading(transit)}</p>

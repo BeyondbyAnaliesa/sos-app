@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { DailyTransits, Aspect, Transit } from '@/lib/astrology/domain-types';
-import { buildOrbTimeframe, buildTransitFeel, buildTransitReading, transitKey } from '@/lib/transit-copy';
+import { buildOrbTimeframe, buildTransitFeel, buildTransitReading, transitColor, transitKey } from '@/lib/transit-copy';
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -131,18 +131,15 @@ export default function CalendarGrid({
               </span>
 
               {hasTransits && cell.inMonth && (
-                <div className="mt-1 flex gap-0.5">
-                  {(() => {
-                    const aspects = new Set(cell.transits.transits.map((t) => t.aspect));
-                    const sorted: Aspect[] = ['conjunction', 'opposition', 'square', 'trine', 'sextile'];
-                    const active = sorted.filter((a) => aspects.has(a)).slice(0, 3);
-                    return active.map((aspect) => (
-                      <span
-                        key={aspect}
-                        className={`h-1.5 w-1.5 rounded-full ${ASPECT_ENERGY[aspect].dot}`}
-                      />
-                    ));
-                  })()}
+                <div className="mt-1 flex max-w-[42px] flex-wrap justify-center gap-0.5">
+                  {cell.transits.transits.slice(0, 12).map((transit, i) => (
+                    <span
+                      key={`${transitKey(transit)}-${i}`}
+                      className="h-1.5 w-1.5 rounded-full"
+                      style={{ backgroundColor: transitColor(transit) }}
+                      aria-label={`${transit.transitPlanet} ${transit.aspect} ${formatPlanetName(transit.natalPlanet)}`}
+                    />
+                  ))}
                 </div>
               )}
             </button>
@@ -150,15 +147,9 @@ export default function CalendarGrid({
         })}
       </div>
 
-      {/* Legend */}
-      <div className="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-1">
-        {(['conjunction', 'square', 'trine', 'sextile'] as Aspect[]).map((aspect) => (
-          <div key={aspect} className="flex items-center gap-1.5">
-            <span className={`h-1.5 w-1.5 rounded-full ${ASPECT_ENERGY[aspect].dot}`} />
-            <span className="text-[10px] text-[var(--color-text-muted)]">{ASPECT_ENERGY[aspect].label}</span>
-          </div>
-        ))}
-      </div>
+      <p className="mt-5 text-center text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+        Tap a day to see active transits and windows
+      </p>
 
       {/* Selected day detail */}
       {selectedDay && (
@@ -188,10 +179,11 @@ export default function CalendarGrid({
               return (
                 <div key={i} className="border-b border-[var(--color-border-subtle)] pb-4 last:border-b-0 last:pb-0">
                   <div className="flex items-start justify-between gap-3 text-sm">
-                    <span className="text-[var(--color-text)]">
-                      {t.transitPlanet}{' '}
+                    <span className="flex items-start gap-2 text-[var(--color-text)]">
+                      <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: transitColor(t) }} />
+                      <span>{t.transitPlanet}{' '}
                       <span className="text-[var(--color-text-muted)]">{ASPECT_LABELS[t.aspect]}</span>{' '}
-                      {formatPlanetName(t.natalPlanet)}
+                      {formatPlanetName(t.natalPlanet)}</span>
                     </span>
                     <div className="flex shrink-0 items-center gap-2">
                       <span className="text-[10px] text-[var(--color-text-muted)]">

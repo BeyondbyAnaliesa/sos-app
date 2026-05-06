@@ -45,6 +45,26 @@ export function transitKey(t: Transit) {
   return `${t.transitPlanet}:${t.aspect}:${t.natalPlanet}`;
 }
 
+const TRANSIT_PALETTE = [
+  '#EF4488',
+  '#C9A27A',
+  '#F4EFE8',
+  '#D9A06F',
+  '#B86B8B',
+  '#E7C48F',
+  '#A987C9',
+  '#E87474',
+  '#9FC2B0',
+  '#D7A7C8',
+];
+
+export function transitColor(input: Transit | string) {
+  const key = typeof input === 'string' ? input : transitKey(input);
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  return TRANSIT_PALETTE[hash % TRANSIT_PALETTE.length];
+}
+
 export function transitTitle(t: Transit) {
   return `${t.transitPlanet} ${t.aspect} ${formatNatalPoint(t.natalPlanet)}`;
 }

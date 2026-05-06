@@ -27,6 +27,26 @@ type CacheRow = {
   memory_hash: string;
 };
 
+type CacheStatusRow = {
+  reading_date: string;
+  memory_hash: string;
+  prompt_version: string;
+  generated_at: string;
+};
+
+export type DailyAiReadingCacheStatus = {
+  date: string;
+  expectedHash: string;
+  priorReadingCount: number;
+  exactMatch: boolean;
+  latest: {
+    readingDate: string;
+    memoryHash: string;
+    promptVersion: string;
+    generatedAt: string;
+  } | null;
+};
+
 function getOpenAIClient() {
   if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY is not configured');
   return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -54,7 +74,7 @@ function sanitizeReading(reading: Partial<DailyAiReading>, fallbackDate: string)
   };
 }
 
-function memoryHash(params: {
+export function buildDailyAiReadingMemoryHash(params: {
   date: string;
   chart: NatalChart;
   todayTransits: DailyTransits;
@@ -175,6 +195,48 @@ async function fetchPriorReadings(userId: string, date: string) {
   return (data ?? []).map((row) => compactText(row.reading_json, 900));
 }
 
+export async function getDailyAiReadingCacheStatus(params: {
+  userId: string;
+  date: string;
+  chart: NatalChart;
+  todayTransits: DailyTransits;
+  majorArcs: MajorTransitArc[];
+  guidance: GuidanceResult[];
+  memory: MajorWaveMemoryInput;
+}) : Promise<DailyAiReadingCacheStatus> {
+  const priorReadings = await fetchPriorReadings(params.userId, params.date).catch(() => []);
+  const memory = { ...params.memory, priorReadings };
+  const expectedHash = buildDailyAiReadingMemoryHash({ ...params, memory });
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from('daily_ai_readings')
+    .select('reading_date,memory_hash,prompt_version,generated_at')
+    .eq('user_id', params.userId)
+    .eq('reading_date', params.date)
+    .order('generated_at', { ascending: false })
+    .limit(5);
+
+  if (error) throw error;
+
+  const rows = (data ?? []) as CacheStatusRow[];
+  const latest = rows[0]
+    ? {
+        readingDate: rows[0].reading_date,
+        memoryHash: rows[0].memory_hash,
+        promptVersion: rows[0].prompt_version,
+        generatedAt: rows[0].generated_at,
+      }
+    : null;
+
+  return {
+    date: params.date,
+    expectedHash,
+    priorReadingCount: priorReadings.length,
+    exactMatch: rows.some((row) => row.memory_hash === expectedHash),
+    latest,
+  };
+}
+
 async function saveReading(userId: string, date: string, hash: string, reading: DailyAiReading) {
   const admin = createAdminClient();
   const { error } = await admin.from('daily_ai_readings').upsert({
@@ -225,12 +287,12 @@ export async function getOrCreateDailyAiReading(params: {
   guidance: GuidanceResult[];
   memory: MajorWaveMemoryInput;
 }) {
-  const baseHash = memoryHash(params);
+  const baseHash = buildDailyAiReadingMemoryHash(params);
 
   try {
     const priorReadings = await fetchPriorReadings(params.userId, params.date).catch(() => []);
     const memory = { ...params.memory, priorReadings };
-    const hash = memoryHash({ ...params, memory });
+    const hash = buildDailyAiReadingMemoryHash({ ...params, memory });
     const cached = await fetchCached(params.userId, params.date, hash);
     if (cached) return cached;
 

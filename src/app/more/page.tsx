@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { getSubscription, isActive } from '@/lib/subscription';
+import { getSubscription, isActive, type Subscription } from '@/lib/subscription';
 import BottomNav from '@/components/BottomNav';
 import AppBackLink from '@/components/AppBackLink';
 import AeonFloatingButton from '@/components/AeonFloatingButton';
@@ -35,8 +35,9 @@ export default async function MorePage() {
   const { data: { user } } = await supabase.auth.getUser();
 
   let paid = false;
+  let sub: Subscription | null = null;
   if (user) {
-    const sub = await getSubscription(user.id);
+    sub = await getSubscription(user.id);
     paid = isActive(sub);
   }
 
@@ -52,7 +53,11 @@ export default async function MorePage() {
       </header>
 
       <div className="space-y-3">
-        <ManagePlanButton paid={paid} />
+        <ManagePlanButton
+          paid={paid}
+          canManagePlan={Boolean(sub?.stripeCustomerId)}
+          testerAccess={sub?.stripePriceId === 'tester_access'}
+        />
         {LINKS.map((link) => {
           const locked = link.paid && !paid;
           const href = locked ? '/upgrade' : link.href;

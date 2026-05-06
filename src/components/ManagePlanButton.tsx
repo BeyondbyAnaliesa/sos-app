@@ -3,7 +3,15 @@
 import { useState } from 'react';
 import Link from 'next/link';
 
-export default function ManagePlanButton({ paid }: { paid: boolean }) {
+export default function ManagePlanButton({
+  paid,
+  canManagePlan = paid,
+  testerAccess = false,
+}: {
+  paid: boolean;
+  canManagePlan?: boolean;
+  testerAccess?: boolean;
+}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,6 +35,16 @@ export default function ManagePlanButton({ paid }: { paid: boolean }) {
       <Link href="/upgrade">
         <PlanCard title="Membership" desc="View plan options" glyph="◇" />
       </Link>
+    );
+  }
+
+  if (!canManagePlan) {
+    return (
+      <PlanCard
+        title={testerAccess ? 'Tester Access' : 'Membership Active'}
+        desc={testerAccess ? 'Free tester access is active' : 'Your account has active access'}
+        glyph="◇"
+      />
     );
   }
 

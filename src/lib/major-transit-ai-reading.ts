@@ -30,6 +30,30 @@ type CacheRow = {
   reading_json: MajorTransitAiReading;
 };
 
+type CacheStatusRow = {
+  arc_key: string;
+  lifecycle_start_date: string;
+  lifecycle_end_date: string;
+  phase: string;
+  memory_hash: string;
+  prompt_version: string;
+  generated_at: string;
+};
+
+export type MajorTransitAiReadingCacheStatusEntry = {
+  key: string;
+  arcKey: string;
+  phase: string;
+  expectedHash: string;
+  exactMatch: boolean;
+  rowCount: number;
+  latest: {
+    memoryHash: string;
+    promptVersion: string;
+    generatedAt: string;
+  } | null;
+};
+
 type ReadingMap = Record<string, MajorTransitAiReading>;
 
 type GenerationPayload = {
@@ -67,7 +91,7 @@ function readingKey(arc: MajorTransitArc) {
   return [arc.key, arc.startDate, arc.endDate, arc.phase].join('|');
 }
 
-function memoryHashForArc(arc: MajorTransitArc, memory: MajorWaveMemoryInput) {
+export function buildMajorTransitAiReadingMemoryHash(arc: MajorTransitArc, memory: MajorWaveMemoryInput) {
   const lifeSignals = (memory.lifeSignals ?? []).slice(0, 12).map((signal) => ({
     text: compactText(signal.content_text, 260),
     themes: signal.themes_json?.slice(0, 5) ?? [],
@@ -184,7 +208,7 @@ async function fetchCachedRows(userId: string, arcs: MajorTransitArc[], memory: 
 
   if (error) throw error;
 
-  const expected = new Map(arcs.map((arc) => [readingKey(arc), memoryHashForArc(arc, memory)]));
+  const expected = new Map(arcs.map((arc) => [readingKey(arc), buildMajorTransitAiReadingMemoryHash(arc, memory)]));
   const rows = (data ?? []) as CacheRow[];
   const found: ReadingMap = {};
 
@@ -196,6 +220,51 @@ async function fetchCachedRows(userId: string, arcs: MajorTransitArc[], memory: 
   }
 
   return found;
+}
+
+export async function getMajorTransitAiReadingsCacheStatus(params: {
+  userId: string;
+  arcs: MajorTransitArc[];
+  memory: MajorWaveMemoryInput;
+}): Promise<MajorTransitAiReadingCacheStatusEntry[]> {
+  const arcs = params.arcs.slice(0, 14);
+  if (arcs.length === 0) return [];
+
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from('major_transit_readings')
+    .select('arc_key,lifecycle_start_date,lifecycle_end_date,phase,memory_hash,prompt_version,generated_at')
+    .eq('user_id', params.userId)
+    .in('arc_key', arcs.map((arc) => arc.key));
+
+  if (error) throw error;
+
+  const rows = (data ?? []) as CacheStatusRow[];
+
+  return arcs.map((arc) => {
+    const key = readingKey(arc);
+    const expectedHash = buildMajorTransitAiReadingMemoryHash(arc, params.memory);
+    const matchingRows = rows.filter((row) => [row.arc_key, row.lifecycle_start_date, row.lifecycle_end_date, row.phase].join('|') === key);
+    const latestRow = matchingRows
+      .slice()
+      .sort((a, b) => new Date(b.generated_at).getTime() - new Date(a.generated_at).getTime())[0] ?? null;
+
+    return {
+      key,
+      arcKey: arc.key,
+      phase: arc.phase,
+      expectedHash,
+      exactMatch: matchingRows.some((row) => row.memory_hash === expectedHash),
+      rowCount: matchingRows.length,
+      latest: latestRow
+        ? {
+            memoryHash: latestRow.memory_hash,
+            promptVersion: latestRow.prompt_version,
+            generatedAt: latestRow.generated_at,
+          }
+        : null,
+    };
+  });
 }
 
 async function saveGeneratedRows(params: {
@@ -219,7 +288,7 @@ async function saveGeneratedRows(params: {
         lifecycle_start_date: arc.startDate,
         lifecycle_end_date: arc.endDate,
         phase: arc.phase,
-        memory_hash: memoryHashForArc(arc, params.memory),
+        memory_hash: buildMajorTransitAiReadingMemoryHash(arc, params.memory),
         reading_json: reading,
         prompt_version: MAJOR_TRANSIT_READING_PROMPT_VERSION,
         model: MAJOR_TRANSIT_READING_MODEL,

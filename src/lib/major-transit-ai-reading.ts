@@ -55,6 +55,7 @@ export type MajorTransitAiReadingCacheStatusEntry = {
 };
 
 type ReadingMap = Record<string, MajorTransitAiReading>;
+type PartialHandlingMode = 'log' | 'throw';
 
 type GenerationPayload = {
   readings: Array<{
@@ -69,6 +70,16 @@ type GenerationPayload = {
     memoryNote?: string;
   }>;
 };
+
+class PartialMajorTransitReadingsError extends Error {
+  missingKeys: string[];
+
+  constructor(missingKeys: string[]) {
+    super(`Major transit reading generation returned partial output for ${missingKeys.length} arc(s)`);
+    this.name = 'PartialMajorTransitReadingsError';
+    this.missingKeys = missingKeys;
+  }
+}
 
 function getOpenAIClient() {
   if (!process.env.OPENAI_API_KEY) {
@@ -338,6 +349,7 @@ export async function getOrCreateMajorTransitAiReadings(params: {
   arcs: MajorTransitArc[];
   chart: NatalChart;
   memory: MajorWaveMemoryInput;
+  onPartial?: PartialHandlingMode;
 }) {
   const arcs = params.arcs.slice(0, 14);
   if (arcs.length === 0) return {} as ReadingMap;
@@ -355,8 +367,33 @@ export async function getOrCreateMajorTransitAiReadings(params: {
       readings: generated,
     });
 
+    const missingKeys = missing
+      .map((arc) => readingKey(arc))
+      .filter((key) => !generated[key]);
+
+    if (missingKeys.length > 0) {
+      if (params.onPartial === 'throw') {
+        throw new PartialMajorTransitReadingsError(missingKeys);
+      }
+
+      logWarn('major_transit_reading_partial_generation', {
+        requestedCount: missing.length,
+        generatedCount: Object.keys(generated).length,
+        missingKeys,
+      });
+    }
+
     return { ...cached, ...generated };
   } catch (error) {
+    if (error instanceof PartialMajorTransitReadingsError && params.onPartial === 'throw') {
+      logError(error, {
+        route: 'major-transit-ai-reading',
+        action: 'partial-generation',
+        missingKeys: error.missingKeys,
+      });
+      throw error;
+    }
+
     const message = error instanceof Error ? error.message : String(error);
     if (message.includes('major_transit_readings') || message.includes('does not exist') || message.includes('schema cache')) {
       logWarn('major_transit_reading_cache_unavailable_generating_uncached', { message });

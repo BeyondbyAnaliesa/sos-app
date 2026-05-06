@@ -77,6 +77,7 @@ export async function POST(request: Request) {
             arcs: selectedMajorArcs,
             chart: context.chart,
             memory: context.memory,
+            onPartial: 'throw',
           });
           majorCount = Object.keys(readings).length;
         }

@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import OpenAI from 'openai';
+import { calculateTransitsForDate } from '@/lib/astrology/calculate-transits';
 import { createAdminClient } from '@/lib/supabase/server';
 import type { MajorTransitArc } from '@/lib/astrology/major-transits';
 import type { DailyTransits } from '@/lib/astrology/domain-types';
@@ -82,6 +83,8 @@ export function buildDailyAiReadingMemoryHash(params: {
   guidance: GuidanceResult[];
   memory: MajorWaveMemoryInput;
 }) {
+  const stableTransitSnapshot = calculateTransitsForDate(new Date(`${params.date}T12:00:00Z`), params.chart);
+
   return stableHash({
     prompt: DAILY_AI_READING_PROMPT_VERSION,
     date: params.date,
@@ -90,7 +93,7 @@ export function buildDailyAiReadingMemoryHash(params: {
       asc: params.chart.angles.ascendant,
       mc: params.chart.angles.midheaven,
     },
-    todayTransits: params.todayTransits.transits.slice(0, 16),
+    todayTransits: stableTransitSnapshot.transits.slice(0, 16),
     majorArcs: params.majorArcs.slice(0, 8).map((arc) => ({
       key: arc.key,
       title: transitTitle(arc.transit),

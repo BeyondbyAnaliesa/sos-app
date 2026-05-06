@@ -68,6 +68,7 @@ export async function POST() {
       arcs: selected,
       chart,
       memory,
+      onPartial: 'throw',
     });
 
     return NextResponse.json({ count: Object.keys(readings).length, readings });

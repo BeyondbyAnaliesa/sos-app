@@ -4,13 +4,14 @@ import { createAdminClient } from '@/lib/supabase/server';
 import type { MajorTransitArc } from '@/lib/astrology/major-transits';
 import type { NatalChart } from '@/lib/astrology/types';
 import { buildArcFocusedJudgment } from '@/lib/astrology/judgment';
-import { buildTransitArcJudgment } from '@/lib/astrology/transit-arc-judgment';
 import type { AstrologyJudgment } from '@/lib/astrology/judgment-types';
+import { buildAstrologyJudgmentPromptSnapshot } from '@/lib/astrology/judgment-prompt-snapshot';
+import { buildTransitArcJudgment } from '@/lib/astrology/transit-arc-judgment';
 import type { MajorWaveMemoryInput } from '@/lib/major-transit-reading';
 import { transitTitle } from '@/lib/transit-copy';
 import { logError, logWarn } from '@/lib/logger';
 
-export const MAJOR_TRANSIT_READING_PROMPT_VERSION = 'major-wave-full-memory-v4';
+export const MAJOR_TRANSIT_READING_PROMPT_VERSION = 'major-wave-full-memory-v5';
 export const MAJOR_TRANSIT_READING_MODEL = 'gpt-4o';
 
 export type MajorTransitAiReading = {
@@ -106,21 +107,7 @@ function readingKey(arc: MajorTransitArc) {
 }
 
 function judgmentSnapshot(judgment: AstrologyJudgment) {
-  return {
-    mainStory: judgment.mainStory,
-    practicalDemand: judgment.practicalDemand,
-    timing: judgment.timing,
-    foreground: judgment.foreground.slice(0, 3).map((signal) => ({
-      id: signal.id,
-      scope: signal.scope,
-      score: signal.score,
-      demand: signal.demand,
-      title: signal.title,
-      collectiveBridge: signal.collectiveBridge ?? null,
-      receipts: signal.receipts.slice(0, 2),
-    })),
-    currentSky: judgment.currentSky,
-  };
+  return buildAstrologyJudgmentPromptSnapshot(judgment);
 }
 
 function buildMajorTransitJudgmentForArc(arc: MajorTransitArc, chart: NatalChart, arcs: MajorTransitArc[], memory: MajorWaveMemoryInput, date?: string) {
@@ -206,7 +193,9 @@ function buildPrompt(params: {
     },
     lifecycleFacts: buildTransitArcJudgment({ arc, chart, memory, date }),
     natalContext: arc.context,
-    judgment: params.judgments[readingKey(arc)] ?? null,
+    judgment: params.judgments[readingKey(arc)]
+      ? buildAstrologyJudgmentPromptSnapshot(params.judgments[readingKey(arc)]!)
+      : null,
   }));
 
   const lifeSignals = (memory.lifeSignals ?? []).slice(0, 12).map((signal) => ({

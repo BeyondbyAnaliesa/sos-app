@@ -1,5 +1,6 @@
 import type { NatalSummary, DailyTransits } from '@/lib/astrology/domain-types';
 import type { AstrologyJudgment } from '@/lib/astrology/judgment-types';
+import { buildAstrologyJudgmentPromptSnapshot } from '@/lib/astrology/judgment-prompt-snapshot';
 import { buildTransitOverview, interpretTransits } from '@/lib/interpret';
 
 const ASPECT_FEEL: Record<string, string> = {
@@ -65,98 +66,7 @@ function describeChart(chart: NatalSummary): string {
 }
 
 export function buildAstrologyPromptJudgmentSnapshot(judgment: AstrologyJudgment) {
-  const leadSignals = [...judgment.foreground, ...judgment.supporting, ...judgment.background]
-    .slice(0, 4)
-    .map((signal) => ({
-      id: signal.id,
-      tier: signal.tier,
-      scope: signal.scope,
-      source: signal.source,
-      title: signal.title,
-      summary: signal.summary,
-      demand: signal.demand,
-      lifeAreas: signal.lifeAreas,
-      supportNotes: signal.supportNotes.slice(0, 3),
-      collectiveBridge: signal.collectiveBridge
-        ? {
-          event: signal.collectiveBridge.collectiveEvent,
-          matchReasons: signal.collectiveBridge.matchReasons,
-          bridgeStrengthTier: signal.collectiveBridge.bridgeStrengthTier,
-          promoteScopeToBoth: signal.collectiveBridge.promoteScopeToBoth,
-        }
-        : null,
-      receipts: signal.receipts.slice(0, 2).map((receipt) => ({
-        arcKey: receipt.arcKey ?? null,
-        transitPlanet: receipt.transitPlanet,
-        aspect: receipt.aspect,
-        natalTarget: receipt.natalTarget,
-        targetLabel: receipt.targetLabel,
-        lifeArea: receipt.lifeArea,
-        orb: receipt.orb,
-        phase: receipt.phase,
-        exactDate: receipt.exactDate,
-        peakDate: receipt.peakDate,
-        startDate: receipt.startDate,
-        endDate: receipt.endDate,
-        memorySummary: receipt.memorySummary,
-        natalProjection: receipt.natalProjection
-          ? {
-            house: receipt.natalProjection.house,
-            angularity: receipt.natalProjection.angularity,
-            targetIsAngle: receipt.natalProjection.targetIsAngle,
-            targetIsModernChartRuler: receipt.natalProjection.targetIsModernChartRuler,
-            targetIsTraditionalChartRuler: receipt.natalProjection.targetIsTraditionalChartRuler,
-            repeatedLifeAreaSignalCount: receipt.natalProjection.repeatedLifeAreaSignalCount,
-          }
-          : null,
-        collectiveBridge: receipt.collectiveBridge
-          ? {
-            event: receipt.collectiveBridge.collectiveEvent,
-            matchReasons: receipt.collectiveBridge.matchReasons,
-            bridgeStrengthTier: receipt.collectiveBridge.bridgeStrengthTier,
-            promoteScopeToBoth: receipt.collectiveBridge.promoteScopeToBoth,
-          }
-          : null,
-        arcLifecycle: receipt.arcLifecycle
-          ? {
-            phaseLabel: receipt.arcLifecycle.phaseLabel,
-            phaseDemand: receipt.arcLifecycle.phaseDemand,
-            currentPass: receipt.arcLifecycle.currentPass,
-            totalPasses: receipt.arcLifecycle.totalPasses,
-            watchNextDate: receipt.arcLifecycle.watchNextDate,
-            watchNextType: receipt.arcLifecycle.watchNextType,
-          }
-          : null,
-      })),
-    }));
-
-  return {
-    status: 'structured-astrology-judgment-v1',
-    date: judgment.date,
-    mainStory: judgment.mainStory,
-    practicalDemand: judgment.practicalDemand,
-    activatedLifeAreas: judgment.activatedLifeAreas,
-    timing: judgment.timing,
-    leadSignals,
-    currentSky: {
-      status: judgment.currentSky.status,
-      summary: judgment.currentSky.summary,
-      events: judgment.currentSky.events.slice(0, 4),
-      limitations: judgment.currentSky.limitations,
-    },
-    receipts: judgment.receipts.slice(0, 6).map((receipt) => ({
-      transitPlanet: receipt.transitPlanet,
-      aspect: receipt.aspect,
-      natalTarget: receipt.natalTarget,
-      targetLabel: receipt.targetLabel,
-      lifeArea: receipt.lifeArea,
-      orb: receipt.orb,
-      phase: receipt.phase,
-      exactDate: receipt.exactDate,
-      peakDate: receipt.peakDate,
-      memorySummary: receipt.memorySummary,
-    })),
-  };
+  return buildAstrologyJudgmentPromptSnapshot(judgment);
 }
 
 export function buildSystemPrompt(

@@ -7,12 +7,13 @@ import type { DailyTransits } from '@/lib/astrology/domain-types';
 import type { NatalChart } from '@/lib/astrology/types';
 import { buildAstrologyJudgment } from '@/lib/astrology/judgment';
 import type { AstrologyJudgment } from '@/lib/astrology/judgment-types';
+import { buildAstrologyJudgmentPromptSnapshot } from '@/lib/astrology/judgment-prompt-snapshot';
 import type { GuidanceResult } from '@/lib/interpret';
 import type { MajorWaveMemoryInput } from '@/lib/major-transit-reading';
 import { transitTitle } from '@/lib/transit-copy';
 import { logError, logWarn } from '@/lib/logger';
 
-export const DAILY_AI_READING_PROMPT_VERSION = 'daily-full-memory-v3';
+export const DAILY_AI_READING_PROMPT_VERSION = 'daily-full-memory-v4';
 export const DAILY_AI_READING_MODEL = 'gpt-4o';
 
 export type DailyAiReading = {
@@ -78,32 +79,7 @@ function sanitizeReading(reading: Partial<DailyAiReading>, fallbackDate: string)
 }
 
 function buildHashJudgmentSnapshot(judgment: AstrologyJudgment) {
-  return {
-    mainStory: judgment.mainStory,
-    practicalDemand: judgment.practicalDemand,
-    activatedLifeAreas: judgment.activatedLifeAreas,
-    timing: judgment.timing,
-    foreground: judgment.foreground.slice(0, 4).map((signal) => ({
-      id: signal.id,
-      tier: signal.tier,
-      scope: signal.scope,
-      demand: signal.demand,
-      score: signal.score,
-      title: signal.title,
-      collectiveBridge: signal.collectiveBridge ?? null,
-      receipts: signal.receipts.slice(0, 2),
-    })),
-    supporting: judgment.supporting.slice(0, 3).map((signal) => ({
-      id: signal.id,
-      tier: signal.tier,
-      scope: signal.scope,
-      demand: signal.demand,
-      score: signal.score,
-      title: signal.title,
-      collectiveBridge: signal.collectiveBridge ?? null,
-    })),
-    currentSky: judgment.currentSky,
-  };
+  return buildAstrologyJudgmentPromptSnapshot(judgment);
 }
 
 function resolveJudgment(params: {
@@ -216,7 +192,9 @@ Return only valid JSON:
   "memoryNote": "brief note on what saved memory shaped this, or that memory is still thin"
 }`;
 
-  const user = `Date: ${params.date}\n\n--- STRUCTURED JUDGMENT (SOURCE OF TRUTH) ---\n${JSON.stringify(params.judgment, null, 2)}\n\n--- NATAL CHART ---\n${placements}\nAscendant: ${params.chart.angles.ascendant.sign} ${params.chart.angles.ascendant.degree}°${params.chart.angles.ascendant.minute}′\nMidheaven: ${params.chart.angles.midheaven.sign} ${params.chart.angles.midheaven.degree}°${params.chart.angles.midheaven.minute}′\n\n--- MAJOR PERSONAL TRANSIT WAVES ---\n${JSON.stringify(majorArcPayload, null, 2)}\n\n--- DAILY SKY WEATHER ---\n${JSON.stringify(params.todayTransits.transits.slice(0, 16), null, 2)}\n\n--- NEXT 7 DAYS ---\n${JSON.stringify(params.lookAheadTransits.map((d) => ({ date: d.date, transits: d.transits.slice(0, 5) })), null, 2)}\n\n--- CURRENT DETERMINISTIC GUIDANCE CANDIDATES ---\n${JSON.stringify(params.guidance.slice(0, 6), null, 2)}\n\n--- ONBOARDING / FIRST REPORT MEMORY ---\nThemes: ${(params.memory.report?.themes ?? []).join(' | ') || 'none saved'}\nChart reading: ${compactText(params.memory.report?.chartReading, 1400) || 'none saved'}\nLook ahead: ${compactText(params.memory.report?.lookAhead, 700) || 'none saved'}\n\n--- PRIOR NATAL / READING MEMORY ---\n${compactText(params.memory.natalReading, 1500) || 'none saved'}\n\n--- RECENT LIFE SIGNALS FROM JOURNAL / AEON MEMORY ---\n${JSON.stringify(lifeSignals, null, 2)}`;
+  const judgmentSnapshot = buildAstrologyJudgmentPromptSnapshot(params.judgment);
+
+  const user = `Date: ${params.date}\n\n--- STRUCTURED JUDGMENT (SOURCE OF TRUTH) ---\n${JSON.stringify(judgmentSnapshot, null, 2)}\n\n--- NATAL CHART ---\n${placements}\nAscendant: ${params.chart.angles.ascendant.sign} ${params.chart.angles.ascendant.degree}°${params.chart.angles.ascendant.minute}′\nMidheaven: ${params.chart.angles.midheaven.sign} ${params.chart.angles.midheaven.degree}°${params.chart.angles.midheaven.minute}′\n\n--- MAJOR PERSONAL TRANSIT WAVES ---\n${JSON.stringify(majorArcPayload, null, 2)}\n\n--- DAILY SKY WEATHER ---\n${JSON.stringify(params.todayTransits.transits.slice(0, 16), null, 2)}\n\n--- NEXT 7 DAYS ---\n${JSON.stringify(params.lookAheadTransits.map((d) => ({ date: d.date, transits: d.transits.slice(0, 5) })), null, 2)}\n\n--- CURRENT DETERMINISTIC GUIDANCE CANDIDATES ---\n${JSON.stringify(params.guidance.slice(0, 6), null, 2)}\n\n--- ONBOARDING / FIRST REPORT MEMORY ---\nThemes: ${(params.memory.report?.themes ?? []).join(' | ') || 'none saved'}\nChart reading: ${compactText(params.memory.report?.chartReading, 1400) || 'none saved'}\nLook ahead: ${compactText(params.memory.report?.lookAhead, 700) || 'none saved'}\n\n--- PRIOR NATAL / READING MEMORY ---\n${compactText(params.memory.natalReading, 1500) || 'none saved'}\n\n--- RECENT LIFE SIGNALS FROM JOURNAL / AEON MEMORY ---\n${JSON.stringify(lifeSignals, null, 2)}`;
 
   return { system, user };
 }

@@ -155,8 +155,11 @@ describe('buildAstrologyPromptJudgmentSnapshot', () => {
     });
     expect(snapshot.currentSky.events[0]).toMatchObject({
       id: 'aspect:Saturn:conjunction:Neptune',
-      scope: 'collective',
+      summary: 'Saturn conjunct Neptune is restructuring collective reality-testing.',
+      rarity: { score: 8.5, historicalGapYears: null },
     });
+    expect(snapshot.currentSky.events[0]).not.toHaveProperty('applyingStateKnown');
+    expect(snapshot.currentSky.events[0]).not.toHaveProperty('rarity.limitations');
   });
 });
 

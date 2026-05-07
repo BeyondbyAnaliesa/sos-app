@@ -110,19 +110,30 @@ function countLifeAreaRepeats(memory: MajorWaveMemoryInput, lifeArea: string, ta
 }
 
 function findCurrentSkyEvent(events: AstrologyCollectiveSkyEvent[], body: string) {
-  return events.find((event) => event.bodies.includes(body)) ?? null;
+  const bodyEvents = events.filter((event) => event.bodies.includes(body));
+  return bodyEvents.find((event) => event.rarity.status === 'computed')
+    ?? bodyEvents.find((event) => event.kind === 'sign_ingress_proximity')
+    ?? bodyEvents[0]
+    ?? null;
 }
 
 function applyCollectiveBridge(receipt: AstrologyJudgmentReceipt, currentSkyEvents: AstrologyCollectiveSkyEvent[]) {
   const collectiveBridge = buildCollectivePersonalBridge(receipt, currentSkyEvents);
-  const currentSkyEvent = collectiveBridge
-    ? currentSkyEvents.find((event) => event.id === collectiveBridge.collectiveEvent.id) ?? findCurrentSkyEvent(currentSkyEvents, receipt.transitPlanet)
-    : findCurrentSkyEvent(currentSkyEvents, receipt.transitPlanet);
+  const bridgeEvent = collectiveBridge
+    ? currentSkyEvents.find((event) => event.id === collectiveBridge.collectiveEvent.id) ?? null
+    : null;
+  const matchedBodyEvent = findCurrentSkyEvent(currentSkyEvents, receipt.transitPlanet);
+  const currentSkyEvent = bridgeEvent ?? matchedBodyEvent;
+  const rarityEvent = bridgeEvent?.rarity.status === 'computed'
+    ? bridgeEvent
+    : matchedBodyEvent?.rarity.status === 'computed'
+      ? matchedBodyEvent
+      : currentSkyEvent;
 
   return {
     ...receipt,
     collectiveBridge,
-    currentSkyRarity: currentSkyEvent?.rarity ?? null,
+    currentSkyRarity: rarityEvent?.rarity ?? null,
     meaningFactors: resolveMeaningFactors({
       transitBody: receipt.transitPlanet,
       aspect: receipt.aspect,

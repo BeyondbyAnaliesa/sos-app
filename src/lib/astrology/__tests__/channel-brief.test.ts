@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { buildAstrologyChannelBrief } from '@/lib/astrology/channel-brief';
 import { buildAstrologyChannelBriefFixture, DEFAULT_CHANNEL_BRIEF_FIXTURE_ID } from '@/lib/astrology/channel-brief-fixture';
 import { buildAstrologyChannelBriefPreview } from '@/lib/astrology/channel-brief-preview';
 
@@ -42,6 +43,168 @@ describe('buildAstrologyChannelBrief', () => {
     expect(serialized).not.toContain('the stars are aligning');
     expect(brief.limitations).toContain('Historical rarity claims remain unavailable unless the engine computes them explicitly.');
     expect(brief.receipts.every((receipt) => receipt.rarity?.status === 'not_computed')).toBe(true);
+  });
+
+
+  it('preserves computed ingress spacing facts in the channel brief without adding fake rarity language', () => {
+    const brief = buildAstrologyChannelBrief({
+      date: '2025-05-25',
+      foreground: [
+        {
+          id: 'saturn-ingress-signal',
+          tier: 'foreground',
+          scope: 'both',
+          source: 'major_arc',
+          title: 'Saturn is crossing a sign boundary',
+          summary: 'The current sky and a personal Saturn transit are lining up at the same boundary.',
+          lifeAreas: ['home'],
+          demand: 'restructuring',
+          score: 8.4,
+          receipts: [
+            {
+              transitPlanet: 'Saturn',
+              aspect: 'opposition',
+              natalTarget: 'venus',
+              targetLabel: 'Venus',
+              orb: 0.4,
+              phase: 'applying',
+              transitSign: 'Aries',
+              transitDegree: 0.03,
+              natalSign: 'Libra',
+              natalHouse: 4,
+              lifeArea: 'home',
+              exactDate: '2025-05-28',
+              peakDate: '2025-05-28',
+              startDate: '2025-05-20',
+              endDate: '2025-06-10',
+              passCount: 1,
+              currentPass: 1,
+              stations: [],
+              memorySummary: null,
+              natalProjection: null,
+              meaningFactors: null,
+              collectiveBridge: {
+                collectiveEvent: {
+                  id: 'ingress:Saturn:post_ingress',
+                  kind: 'sign_ingress_proximity',
+                  bodies: ['Saturn'],
+                  aspect: null,
+                  tier: 'foreground',
+                  score: 8.1,
+                },
+                matchReasons: ['Collective event includes transit body Saturn.'],
+                bridgeStrengthScore: 2.5,
+                bridgeStrengthTier: 'supporting',
+                promoteScopeToBoth: true,
+                limitations: ['heuristic'],
+              },
+              currentSkyRarity: {
+                score: 6.3,
+                basis: 'heuristic',
+                status: 'computed',
+                confidence: 'bounded',
+                recurrence: {
+                  comparator: 'same_body_sign_ingress_spacing_estimate',
+                  scanWindowDays: 400,
+                  priorComparableEventDate: '2025-05-25',
+                  nextComparableEventDate: '2026-06-29',
+                  spacingDays: 400,
+                  spacingYears: 1.1,
+                },
+                limitations: ['Ingress spacing is a bounded sign-boundary estimate from current ephemeris/speed, not a full historical frequency engine.'],
+                historicalGapYears: 1.1,
+              },
+              arcLifecycle: null,
+            },
+          ],
+          collectiveBridge: {
+            collectiveEvent: {
+              id: 'ingress:Saturn:post_ingress',
+              kind: 'sign_ingress_proximity',
+              bodies: ['Saturn'],
+              aspect: null,
+              tier: 'foreground',
+              score: 8.1,
+            },
+            matchReasons: ['Collective event includes transit body Saturn.'],
+            bridgeStrengthScore: 2.5,
+            bridgeStrengthTier: 'supporting',
+            promoteScopeToBoth: true,
+            limitations: ['heuristic'],
+          },
+          supportNotes: [],
+        },
+      ],
+      supporting: [],
+      background: [],
+      noise: [],
+      mainStory: 'Saturn is crossing a sign boundary.',
+      practicalDemand: 'Work with the structural shift directly.',
+      timing: {
+        currentPhase: 'applying',
+        exactDate: '2025-05-28',
+        peakWindowStart: '2025-05-25',
+        peakWindowEnd: '2025-05-28',
+        nextWatchDate: '2025-05-28',
+        activeTransitCount: 1,
+      },
+      activatedLifeAreas: ['home'],
+      currentSky: {
+        status: 'collective-scan-v1',
+        summary: 'Saturn has just crossed into Aries.',
+        scannedBodies: ['Saturn'],
+        events: [
+          {
+            id: 'ingress:Saturn:post_ingress',
+            kind: 'sign_ingress_proximity',
+            tier: 'foreground',
+            score: 8.1,
+            scope: 'collective',
+            bodies: ['Saturn'],
+            aspect: null,
+            orb: 0.03,
+            phase: null,
+            applyingStateKnown: false,
+            sign: 'Aries',
+            exactnessBand: 'exact',
+            rarity: {
+              score: 6.3,
+              basis: 'heuristic',
+              status: 'computed',
+              confidence: 'bounded',
+              recurrence: {
+                comparator: 'same_body_sign_ingress_spacing_estimate',
+                scanWindowDays: 400,
+                priorComparableEventDate: '2025-05-25',
+                nextComparableEventDate: '2026-06-29',
+                spacingDays: 400,
+                spacingYears: 1.1,
+              },
+              limitations: ['Ingress spacing is a bounded sign-boundary estimate from current ephemeris/speed, not a full historical frequency engine.'],
+              historicalGapYears: 1.1,
+            },
+            consequence: {
+              score: 5.4,
+              basis: 'heuristic',
+              limitations: ['heuristic'],
+              historicalGapYears: null,
+            },
+            summary: 'Saturn is within 0.03° of a sign boundary (post_ingress).',
+            receipts: ['Saturn: Aries 0.03°'],
+            limitations: ['bounded estimate only'],
+          },
+        ],
+        limitations: ['Historical rarity claims remain unavailable unless the engine computes them explicitly.'],
+      },
+      receipts: [],
+    });
+
+    expect(brief.receipts[0]?.rarity).toMatchObject({
+      status: 'computed',
+      confidence: 'bounded',
+      historicalGapYears: 1.1,
+    });
+    expect(JSON.stringify(brief).toLowerCase()).not.toContain('rare celestial moment');
   });
 
   it('serializes a preview wrapper that keeps v1 shape and internal-only privacy status', () => {

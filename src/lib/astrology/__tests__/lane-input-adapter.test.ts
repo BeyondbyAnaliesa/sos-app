@@ -71,6 +71,28 @@ describe('buildAstrologyLaneInputBundle', () => {
     expect('finalPublicCopy' in bundle.lanes.aeonLore).toBe(false);
   });
 
+
+  it('preserves computed ingress spacing facts through the lane adapter while keeping claim guardrails', () => {
+    const fixture = buildAstrologyChannelBriefFixture();
+    fixture.channelBrief.receipts[0]!.rarity = {
+      status: 'computed',
+      confidence: 'bounded',
+      historicalGapYears: 1.1,
+      limitations: ['Ingress spacing is a bounded sign-boundary estimate from current ephemeris/speed, not a full historical frequency engine.'],
+    };
+    fixture.channelBrief.dominantStory.currentSkyRarity = fixture.channelBrief.receipts[0]!.rarity;
+
+    const bundle = buildAstrologyLaneInputBundle(fixture.channelBrief);
+
+    expect(bundle.lanes.socials.requiredReceipts[0]?.rarity).toMatchObject({
+      status: 'computed',
+      confidence: 'bounded',
+      historicalGapYears: 1.1,
+    });
+    expect(bundle.lanes.substack.doNotClaim).toContain('Do not claim historical rarity unless the engine computes it.');
+    expect(JSON.stringify(bundle).toLowerCase()).not.toContain('rare celestial moment');
+  });
+
   it('stays plain, non-poetic, and uses preview metadata when adapting from preview', () => {
     const fixture = buildAstrologyChannelBriefFixture();
     const preview = buildAstrologyChannelBriefPreview({

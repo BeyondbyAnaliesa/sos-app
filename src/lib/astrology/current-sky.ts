@@ -7,7 +7,10 @@ import type {
   JudgmentTier,
 } from '@/lib/astrology/judgment-types';
 import { detectLunationEvents } from '@/lib/astrology/lunation-events';
-import { buildNotComputedHistoricalRarityFact } from '@/lib/astrology/rarity-facts';
+import {
+  buildNotComputedHistoricalRarityFact,
+  buildSlowBodyIngressHistoricalRarityFact,
+} from '@/lib/astrology/rarity-facts';
 
 const SIGNS = [
   'Aries',
@@ -251,7 +254,12 @@ function buildStationEvent(body: CollectiveSkyBodyState, threshold: number): Ast
   };
 }
 
-function buildIngressEvent(body: CollectiveSkyBodyState, direction: 'pre_ingress' | 'post_ingress', degreesFromBoundary: number): AstrologyCollectiveSkyEvent {
+function buildIngressEvent(
+  body: CollectiveSkyBodyState,
+  direction: 'pre_ingress' | 'post_ingress',
+  degreesFromBoundary: number,
+  date: Date | null,
+): AstrologyCollectiveSkyEvent {
   const ingressBase = INGRESS_RARITY[body.body] ?? 2;
   const score = Number((2.5 + relativeClassWeight(body.body) + ingressBase * 0.45 + orbCloseness(degreesFromBoundary)).toFixed(2));
   return {
@@ -267,10 +275,15 @@ function buildIngressEvent(body: CollectiveSkyBodyState, direction: 'pre_ingress
     applyingStateKnown: false,
     sign: body.sign,
     exactnessBand: exactnessBand(degreesFromBoundary),
-    rarity: buildNotComputedHistoricalRarityFact({
+    rarity: buildSlowBodyIngressHistoricalRarityFact({
       score: Math.min(10, Number((ingressBase + (direction === 'post_ingress' ? 0.3 : 0)).toFixed(2))),
+      body: body.body,
+      degree: body.degree,
+      speed: body.speed,
+      retrograde: body.retrograde,
+      date,
       limitations: [
-        'Ingress rarity uses fixed body-class weights and does not compute prior-ingress history yet.',
+        'Ingress rarity uses fixed body-class weighting plus bounded sign-spacing only when the current scanner can support it conservatively.',
       ],
     }),
     consequence: {
@@ -288,7 +301,7 @@ function buildIngressEvent(body: CollectiveSkyBodyState, direction: 'pre_ingress
       `Degrees from boundary: ${degreesFromBoundary.toFixed(2)}°`,
     ],
     limitations: [
-      'This slice flags sign-boundary pressure but does not compute exact ingress timestamps.',
+      'This slice flags sign-boundary pressure and only estimates ingress spacing for supported slow direct bodies from current sign position/speed.',
     ],
   };
 }
@@ -324,9 +337,9 @@ export function scanCurrentSkyFromPositions(positions: CollectiveSkyBodyState[],
     }
 
     if (body.degree >= 28) {
-      events.push(buildIngressEvent(body, 'pre_ingress', 30 - body.degree));
+      events.push(buildIngressEvent(body, 'pre_ingress', 30 - body.degree, options?.date ?? null));
     } else if (body.degree <= 2) {
-      events.push(buildIngressEvent(body, 'post_ingress', body.degree));
+      events.push(buildIngressEvent(body, 'post_ingress', body.degree, options?.date ?? null));
     }
 
     for (let inner = index + 1; inner < positions.length; inner += 1) {
@@ -361,7 +374,7 @@ export function scanCurrentSkyFromPositions(positions: CollectiveSkyBodyState[],
     limitations: [
       'Current sky scan covers Tier 1 transit-to-transit major aspects, near-stations, sign-boundary proximity, and lunation/eclipse detection only.',
       'Rarity and consequence scores are heuristic and explicitly do not claim historical proof.',
-      'Historical-gap enrichment is currently bounded to lunation/eclipse event-class lookbacks only.',
+      'Historical-gap enrichment is currently bounded to lunation/eclipse lookbacks and supported slow-body ingress spacing estimates only.',
       'No multi-body configuration detector is included in this slice.',
     ],
   };

@@ -184,6 +184,32 @@ describe('buildAstrologyJudgment', () => {
     expect(judgment.currentSky.events.some((event) => event.kind === 'lunation')).toBe(true);
     expect(eclipse?.rarity.status).toBe('computed');
     expect(eclipse?.rarity.recurrence?.scanWindowDays).toBe(400);
-    expect(judgment.currentSky.limitations).toContain('Historical-gap enrichment is currently bounded to lunation/eclipse event-class lookbacks only.');
+    expect(judgment.currentSky.limitations).toContain('Historical-gap enrichment is currently bounded to lunation/eclipse lookbacks and supported slow-body ingress spacing estimates only.');
+  });
+
+  it('threads computed slow-body ingress spacing into receipt rarity when the live sky supports it', () => {
+    const ingressJudgment = buildAstrologyJudgment({
+      date: '2025-05-25',
+      chart,
+      todayTransits: { date: '2025-05-25', transits: [] },
+      majorArcs: [
+        {
+          ...majorArcs[0],
+          key: 'saturn-opposition-venus-ingress-window',
+          todayOrb: 0.4,
+          transit: { ...majorArcs[0].transit, orb: 0.4 },
+        },
+      ],
+      guidance: [],
+      memory,
+    });
+
+    expect(ingressJudgment.receipts.find((receipt) => receipt.transitPlanet === 'Saturn')?.currentSkyRarity).toMatchObject({
+      status: 'computed',
+      confidence: 'bounded',
+      recurrence: {
+        comparator: 'same_body_sign_ingress_spacing_estimate',
+      },
+    });
   });
 });

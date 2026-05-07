@@ -83,8 +83,43 @@ describe('scanCurrentSkyFromPositions', () => {
     ]);
 
     expect(currentSky.limitations).toContain('Rarity and consequence scores are heuristic and explicitly do not claim historical proof.');
-    expect(currentSky.limitations).toContain('Historical-gap enrichment is currently bounded to lunation/eclipse event-class lookbacks only.');
+    expect(currentSky.limitations).toContain('Historical-gap enrichment is currently bounded to lunation/eclipse lookbacks and supported slow-body ingress spacing estimates only.');
     expect(currentSky.limitations).toContain('No multi-body configuration detector is included in this slice.');
+  });
+
+  it('computes bounded ingress spacing for supported slow direct bodies when an as-of date is available', () => {
+    const currentSky = scanCurrentSkyFromPositions([
+      body('Saturn', 0.03, 0.075, false),
+      body('Jupiter', 92, 0.08),
+    ], { date: new Date('2025-05-25T12:00:00Z') });
+
+    const ingress = currentSky.events.find((event) => event.id === 'ingress:Saturn:post_ingress');
+
+    expect(ingress?.rarity).toMatchObject({
+      status: 'computed',
+      confidence: 'bounded',
+      recurrence: {
+        comparator: 'same_body_sign_ingress_spacing_estimate',
+        priorComparableEventDate: '2025-05-25',
+        nextComparableEventDate: '2026-06-29',
+      },
+    });
+    expect(ingress?.rarity.recurrence?.spacingDays).toBeCloseTo(400, 2);
+    expect(ingress?.rarity.limitations.join(' ')).toContain('sign-boundary estimate from current ephemeris/speed');
+  });
+
+  it('keeps ingress spacing fenced for unsupported or ambiguous bodies and motion states', () => {
+    const currentSky = scanCurrentSkyFromPositions([
+      body('North Node', 0.8, -0.12, true),
+      body('Saturn', 29.8, -0.02, true),
+    ], { date: new Date('2025-05-25T12:00:00Z') });
+
+    expect(currentSky.events.find((event) => event.id === 'ingress:North Node:post_ingress')?.rarity).toMatchObject({
+      status: 'not_computed',
+      confidence: 'none',
+    });
+    expect(currentSky.events.find((event) => event.id === 'ingress:North Node:post_ingress')?.rarity.limitations.join(' ')).toContain('North Node ingress spacing stays fenced');
+    expect(currentSky.events.find((event) => event.id === 'ingress:Saturn:pre_ingress')?.rarity.limitations.join(' ')).toContain('retrograde, reversing, or missing a stable direct speed');
   });
 
   it('detects 2025 lunations and eclipses from sweph-backed positions with bounded historical gap fields', () => {

@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { buildNatalProjection, classifyAngularity, getBasicDignity, getChartRuler, getHouseLifeArea } from '@/lib/astrology/natal-projection';
+import { buildDispositorChain, buildNatalProjection, classifyAngularity, getBasicDignity, getChartRuler, getHouseLifeArea, getSignRulers } from '@/lib/astrology/natal-projection';
 import type { NatalChart } from '@/lib/astrology/types';
 
 const chart: NatalChart = {
   placements: [
     { key: 'sun', label: 'Sun', sign: 'Aries', degree: 8, minute: 0, speed: 1, retrograde: false, warning: null, longitude: 8 },
+    { key: 'venus', label: 'Venus', sign: 'Libra', degree: 14, minute: 0, speed: 1.1, retrograde: false, warning: null, longitude: 194 },
     { key: 'saturn', label: 'Saturn', sign: 'Libra', degree: 8, minute: 0, speed: 0.1, retrograde: false, warning: null, longitude: 188 },
     { key: 'uranus', label: 'Uranus', sign: 'Scorpio', degree: 5, minute: 0, speed: 0.02, retrograde: false, warning: null, longitude: 215 },
   ],
@@ -26,10 +27,12 @@ const chart: NatalChart = {
 
 describe('natal projection helpers', () => {
   it('detects chart ruler using modern and traditional ascendant rulers', () => {
-    expect(getChartRuler(chart)).toEqual({
+    expect(getChartRuler(chart)).toMatchObject({
       ascSign: 'Aquarius',
       modernRuler: 'Uranus',
       traditionalRuler: 'Saturn',
+      modernPlacement: { ruler: 'Uranus', sign: 'Scorpio', house: 10 },
+      traditionalPlacement: { ruler: 'Saturn', sign: 'Libra', house: 9 },
     });
 
     const saturnProjection = buildNatalProjection({ chart, targetKey: 'saturn', targetLabel: 'Saturn' });
@@ -49,6 +52,7 @@ describe('natal projection helpers', () => {
       axisHouse: 3,
       label: 'beliefs, higher education, long travel, publishing, law, worldview',
     });
+    expect(getSignRulers('Libra')).toEqual({ modernRuler: 'Venus', traditionalRuler: 'Venus' });
     expect(classifyAngularity('saturn', 9)).toBe('cadent');
     expect(getBasicDignity('Saturn', 'Libra')).toMatchObject({ condition: 'exaltation' });
     expect(projection).toMatchObject({
@@ -56,9 +60,42 @@ describe('natal projection helpers', () => {
       angularity: 'cadent',
       repeatedLifeAreaSignalCount: 3,
       dignity: { condition: 'exaltation' },
+      signRuler: {
+        sign: 'Libra',
+        modernRuler: 'Venus',
+        traditionalRuler: 'Venus',
+        traditionalRulerPlacement: { ruler: 'Venus', sign: 'Libra', house: 9 },
+      },
+      dispositors: [
+        {
+          system: 'modern',
+          finalRuler: 'Venus',
+          termination: 'self_ruled',
+          steps: [{ sourceSign: 'Libra', ruler: 'Venus', rulerSign: 'Libra', rulerHouse: 9 }],
+        },
+        {
+          system: 'traditional',
+          finalRuler: 'Venus',
+          termination: 'self_ruled',
+          steps: [{ sourceSign: 'Libra', ruler: 'Venus', rulerSign: 'Libra', rulerHouse: 9 }],
+        },
+      ],
       natalAspects: [{ otherBody: 'Sun', aspect: 'opposition', orb: 0 }],
     });
     expect(projection.limitations).toContain('Natal projection in this slice is deterministic and limited to chart data already stored on the natal chart.');
+    expect(projection.limitations).toContain('Rulership/dispositorship depth v1 is intentionally bounded to chart ruler placement, sign rulers, and short modern/traditional sign-ruler chains only.');
+  });
+
+  it('builds bounded dispositor chains and fences limitations explicitly', () => {
+    const chain = buildDispositorChain({ chart, sign: 'Scorpio', chartRuler: getChartRuler(chart), system: 'modern' });
+
+    expect(chain).toMatchObject({
+      system: 'modern',
+      finalRuler: 'Pluto',
+      termination: 'missing_ruler_placement',
+      steps: [{ sourceSign: 'Scorpio', ruler: 'Pluto', rulerSign: null, rulerHouse: null }],
+    });
+    expect(chain.limitations).toContain('Dispositor depth v1 follows sign rulers from stored natal placements only; it does not add sect, house-strength, term, face, combustion, or reception weighting.');
   });
 
   it('treats ascendant as an angle target', () => {

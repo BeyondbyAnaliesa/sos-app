@@ -19,14 +19,54 @@ export interface NatalProjectionHouseContext {
   axisLabel: string | null;
 }
 
+export interface NatalProjectionRulerPlacement {
+  ruler: string;
+  sign: string | null;
+  degree: number | null;
+  house: number | null;
+  houseContext: NatalProjectionHouseContext;
+  angularity: NatalProjectionAngularity;
+  dignity: NatalProjectionDignity | null;
+  targetIsAngle: boolean;
+}
+
 export interface NatalProjectionChartRuler {
   ascSign: string;
   modernRuler: string;
   traditionalRuler: string | null;
+  modernPlacement: NatalProjectionRulerPlacement | null;
+  traditionalPlacement: NatalProjectionRulerPlacement | null;
 }
 
 export interface NatalProjectionDignity {
   condition: NatalProjectionDignityCondition;
+  limitations: string[];
+}
+
+export interface NatalProjectionSignRulerContext {
+  sign: string | null;
+  modernRuler: string | null;
+  traditionalRuler: string | null;
+  modernRulerPlacement: NatalProjectionRulerPlacement | null;
+  traditionalRulerPlacement: NatalProjectionRulerPlacement | null;
+}
+
+export interface NatalProjectionDispositorStep {
+  sourceSign: string;
+  ruler: string;
+  rulerSign: string | null;
+  rulerHouse: number | null;
+  dignity: NatalProjectionDignity | null;
+  angularity: NatalProjectionAngularity;
+  targetIsModernChartRuler: boolean;
+  targetIsTraditionalChartRuler: boolean;
+}
+
+export interface NatalProjectionDispositorChain {
+  system: 'modern' | 'traditional';
+  steps: NatalProjectionDispositorStep[];
+  finalRuler: string | null;
+  termination: 'self_ruled' | 'cycle' | 'missing_ruler_placement' | 'max_depth' | 'missing_sign';
   limitations: string[];
 }
 
@@ -40,6 +80,8 @@ export interface NatalProjection {
   house: NatalProjectionHouseContext;
   angularity: NatalProjectionAngularity;
   chartRuler: NatalProjectionChartRuler;
+  signRuler: NatalProjectionSignRulerContext;
+  dispositors: NatalProjectionDispositorChain[];
   targetIsModernChartRuler: boolean;
   targetIsTraditionalChartRuler: boolean;
   targetIsAngle: boolean;
@@ -123,6 +165,10 @@ function signFromLongitude(longitude: number) {
   return SIGNS[Math.floor((((longitude % 360) + 360) % 360) / 30)] ?? 'Aries';
 }
 
+function normalizeKey(label: string) {
+  return label.toLowerCase().replace(/\s+/g, '-');
+}
+
 function degreeFromLongitude(longitude: number) {
   const normalized = ((longitude % 360) + 360) % 360;
   return Number((normalized % 30).toFixed(2));
@@ -179,12 +225,50 @@ function lookupAngle(chart: NatalChart, key: string) {
   return null;
 }
 
+function lookupRulerPlacement(chart: NatalChart, ruler: string | null): NatalProjectionRulerPlacement | null {
+  if (!ruler) return null;
+  const natalSummary = buildNatalSummary(chart);
+  const placement = natalSummary.placementsByKey[normalizeKey(ruler)];
+  const angle = lookupAngle(chart, normalizeKey(ruler));
+  const source = placement ?? angle;
+  const targetHouse = placement?.house ?? angle?.house ?? null;
+
+  if (!source) return null;
+
+  return {
+    ruler,
+    sign: source.sign ?? null,
+    degree: source.degree ?? null,
+    house: targetHouse,
+    houseContext: getHouseLifeArea(targetHouse),
+    angularity: classifyAngularity(normalizeKey(ruler), targetHouse),
+    dignity: source.sign ? getBasicDignity(ruler, source.sign) : null,
+    targetIsAngle: !placement && Boolean(angle),
+  };
+}
+
+export function getSignRulers(sign: string | null) {
+  if (!sign) {
+    return { modernRuler: null, traditionalRuler: null };
+  }
+
+  return {
+    modernRuler: MODERN_RULERS[sign] ?? null,
+    traditionalRuler: TRADITIONAL_RULERS[sign] ?? null,
+  };
+}
+
 export function getChartRuler(chart: NatalChart): NatalProjectionChartRuler {
   const ascSign = chart.angles.ascendant.sign;
+  const modernRuler = MODERN_RULERS[ascSign];
+  const traditionalRuler = TRADITIONAL_RULERS[ascSign] === modernRuler ? null : TRADITIONAL_RULERS[ascSign];
+
   return {
     ascSign,
-    modernRuler: MODERN_RULERS[ascSign],
-    traditionalRuler: TRADITIONAL_RULERS[ascSign] === MODERN_RULERS[ascSign] ? null : TRADITIONAL_RULERS[ascSign],
+    modernRuler,
+    traditionalRuler,
+    modernPlacement: lookupRulerPlacement(chart, modernRuler),
+    traditionalPlacement: lookupRulerPlacement(chart, traditionalRuler),
   };
 }
 
@@ -208,6 +292,103 @@ export function getBasicDignity(label: string, sign: string): NatalProjectionDig
   return { condition, limitations };
 }
 
+export function buildDispositorChain(params: {
+  chart: NatalChart;
+  sign: string | null;
+  chartRuler: NatalProjectionChartRuler;
+  system: 'modern' | 'traditional';
+  maxDepth?: number;
+}): NatalProjectionDispositorChain {
+  const maxDepth = params.maxDepth ?? 4;
+  const limitations = [
+    'Dispositor depth v1 follows sign rulers from stored natal placements only; it does not add sect, house-strength, term, face, combustion, or reception weighting.',
+  ];
+
+  if (!params.sign) {
+    return {
+      system: params.system,
+      steps: [],
+      finalRuler: null,
+      termination: 'missing_sign',
+      limitations,
+    };
+  }
+
+  const steps: NatalProjectionDispositorStep[] = [];
+  const seen = new Set<string>();
+  let currentSign: string | null = params.sign;
+
+  while (currentSign && steps.length < maxDepth) {
+    const rulers = getSignRulers(currentSign);
+    const ruler = params.system === 'modern' ? rulers.modernRuler : rulers.traditionalRuler;
+    if (!ruler) {
+      return {
+        system: params.system,
+        steps,
+        finalRuler: null,
+        termination: 'missing_ruler_placement',
+        limitations,
+      };
+    }
+
+    const placement = lookupRulerPlacement(params.chart, ruler);
+    steps.push({
+      sourceSign: currentSign,
+      ruler,
+      rulerSign: placement?.sign ?? null,
+      rulerHouse: placement?.house ?? null,
+      dignity: placement?.dignity ?? null,
+      angularity: placement?.angularity ?? 'unknown',
+      targetIsModernChartRuler: ruler === params.chartRuler.modernRuler,
+      targetIsTraditionalChartRuler: ruler === params.chartRuler.traditionalRuler,
+    });
+
+    if (!placement?.sign) {
+      return {
+        system: params.system,
+        steps,
+        finalRuler: ruler,
+        termination: 'missing_ruler_placement',
+        limitations,
+      };
+    }
+
+    const stepKey = `${ruler}:${placement.sign}`;
+    if (seen.has(stepKey)) {
+      return {
+        system: params.system,
+        steps,
+        finalRuler: ruler,
+        termination: 'cycle',
+        limitations,
+      };
+    }
+    seen.add(stepKey);
+
+    const nextRulers = getSignRulers(placement.sign);
+    const nextRuler = params.system === 'modern' ? nextRulers.modernRuler : nextRulers.traditionalRuler;
+    if (nextRuler === ruler) {
+      return {
+        system: params.system,
+        steps,
+        finalRuler: ruler,
+        termination: 'self_ruled',
+        limitations,
+      };
+    }
+
+    currentSign = placement.sign;
+  }
+
+  return {
+    system: params.system,
+    steps,
+    finalRuler: steps.at(-1)?.ruler ?? null,
+    termination: steps.length >= maxDepth ? 'max_depth' : 'missing_ruler_placement',
+    limitations,
+  };
+}
+
 export function buildNatalProjection(params: {
   chart: NatalChart;
   targetKey: string;
@@ -222,6 +403,14 @@ export function buildNatalProjection(params: {
   const targetLabel = params.targetLabel ?? placement?.label ?? angle?.label ?? params.targetKey;
   const targetType: NatalProjectionTargetType = placement ? 'planet' : 'angle';
   const targetHouse = placement?.house ?? angle?.house ?? null;
+  const signRulers = getSignRulers(source?.sign ?? null);
+  const signRuler = {
+    sign: source?.sign ?? null,
+    modernRuler: signRulers.modernRuler,
+    traditionalRuler: signRulers.traditionalRuler,
+    modernRulerPlacement: lookupRulerPlacement(params.chart, signRulers.modernRuler),
+    traditionalRulerPlacement: lookupRulerPlacement(params.chart, signRulers.traditionalRuler),
+  };
 
   return {
     targetKey: params.targetKey,
@@ -233,6 +422,11 @@ export function buildNatalProjection(params: {
     house: getHouseLifeArea(targetHouse),
     angularity: classifyAngularity(params.targetKey, targetHouse),
     chartRuler,
+    signRuler,
+    dispositors: [
+      buildDispositorChain({ chart: params.chart, sign: source?.sign ?? null, chartRuler, system: 'modern' }),
+      buildDispositorChain({ chart: params.chart, sign: source?.sign ?? null, chartRuler, system: 'traditional' }),
+    ],
     targetIsModernChartRuler: targetLabel === chartRuler.modernRuler || params.targetKey === chartRuler.modernRuler.toLowerCase(),
     targetIsTraditionalChartRuler: targetLabel === chartRuler.traditionalRuler || params.targetKey === chartRuler.traditionalRuler?.toLowerCase(),
     targetIsAngle: !placement && Boolean(angle),
@@ -251,6 +445,7 @@ export function buildNatalProjection(params: {
     limitations: [
       'Natal projection in this slice is deterministic and limited to chart data already stored on the natal chart.',
       'Natal aspect context is limited to aspects already computed on the chart; no new aspect families are solved here.',
+      'Rulership/dispositorship depth v1 is intentionally bounded to chart ruler placement, sign rulers, and short modern/traditional sign-ruler chains only.',
     ],
   };
 }

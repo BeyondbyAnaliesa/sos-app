@@ -94,6 +94,23 @@ describe('buildAstrologyJudgment', () => {
           house: 4,
           label: 'home, family of origin, roots, private life, foundation',
         },
+        signRuler: {
+          sign: 'Libra',
+          modernRuler: 'Venus',
+          traditionalRuler: 'Venus',
+          traditionalRulerPlacement: {
+            ruler: 'Venus',
+            sign: 'Libra',
+            house: 4,
+          },
+        },
+        dispositors: expect.arrayContaining([
+          expect.objectContaining({
+            system: 'traditional',
+            finalRuler: 'Venus',
+            termination: 'self_ruled',
+          }),
+        ]),
         dignity: {
           condition: 'domicile',
         },
@@ -127,6 +144,7 @@ describe('buildAstrologyJudgment', () => {
       },
     });
     expect(judgment.foreground[0]?.receipts[0].memorySummary).toContain('family');
+    expect(judgment.foreground[0]?.supportNotes.some((note) => note.includes('Venus is in Libra, ruled traditionally by Venus'))).toBe(true);
     expect(judgment.currentSky.status).toBe('collective-scan-v1');
     expect(judgment.currentSky.events.length).toBeGreaterThan(0);
     expect(judgment.currentSky.events[0]?.scope).toBe('collective');

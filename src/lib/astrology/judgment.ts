@@ -11,7 +11,7 @@ import {
   pickMeaningDemand,
   resolveMeaningFactors,
 } from '@/lib/astrology/meaning-kernel';
-import { buildNatalProjection } from '@/lib/astrology/natal-projection';
+import { buildNatalProjection, type NatalProjection } from '@/lib/astrology/natal-projection';
 import { buildTransitArcJudgment } from '@/lib/astrology/transit-arc-judgment';
 import type { MajorTransitArc } from '@/lib/astrology/major-transits';
 import type { NatalChart } from '@/lib/astrology/types';
@@ -156,10 +156,31 @@ function natalProjectionScoreBonus(receipt: AstrologyJudgmentReceipt) {
   else if (projection.angularity === 'succedent') bonus += 0.1;
 
   if (projection.targetIsModernChartRuler || projection.targetIsTraditionalChartRuler) bonus += 0.55;
+  if (projection.signRuler.traditionalRulerPlacement?.angularity === 'angular' || projection.signRuler.modernRulerPlacement?.angularity === 'angular') bonus += 0.08;
+  if (projection.dispositors.some((chain) => chain.termination === 'self_ruled')) bonus += 0.06;
   if (projection.repeatedLifeAreaSignalCount >= 3) bonus += 0.25;
   else if (projection.repeatedLifeAreaSignalCount >= 2) bonus += 0.12;
 
   return Number(bonus.toFixed(2));
+}
+
+function natalRulershipSupportNote(projection: NatalProjection | null | undefined) {
+  if (!projection?.targetSign) return null;
+
+  const primaryChain = projection.dispositors.find((chain) => chain.system === 'traditional')
+    ?? projection.dispositors[0]
+    ?? null;
+  const firstStep = primaryChain?.steps[0] ?? null;
+  if (!firstStep) return null;
+
+  const houseText = firstStep.rulerHouse != null ? `house ${firstStep.rulerHouse}` : 'house unknown';
+  const ending = primaryChain?.termination === 'self_ruled'
+    ? 'self-ruled chain.'
+    : primaryChain?.finalRuler
+      ? `chain currently lands with ${primaryChain.finalRuler}.`
+      : 'chain remains bounded in this slice.';
+
+  return `${projection.targetLabel} is in ${projection.targetSign}, ruled ${primaryChain?.system ?? 'bounded'}ly by ${firstStep.ruler} in ${houseText}; ${ending}`;
 }
 
 function matchingLifeSignals(memory: MajorWaveMemoryInput, lifeArea: string, targetLabel: string) {
@@ -339,6 +360,7 @@ function buildSignalFromArc(
       receipt.memorySummary,
       receipt.natalProjection?.targetIsAngle ? 'This directly hits a natal angle.' : null,
       receipt.natalProjection?.targetIsModernChartRuler || receipt.natalProjection?.targetIsTraditionalChartRuler ? 'This hits the chart ruler.' : null,
+      natalRulershipSupportNote(receipt.natalProjection),
       lifecycle && lifecycle.memoryLinkage.matchedSignalCount > 0 ? `Saved signals linked: ${lifecycle.memoryLinkage.matchedSignalCount}.` : null,
       receipt.natalProjection && receipt.natalProjection.repeatedLifeAreaSignalCount >= 2 ? `Saved signals already repeat this life area (${receipt.natalProjection.repeatedLifeAreaSignalCount}).` : null,
     ].filter((value): value is string => Boolean(value)),
@@ -381,6 +403,7 @@ function buildSignalFromTransit(
       receipt.memorySummary,
       receipt.natalProjection?.targetIsAngle ? 'This directly hits a natal angle.' : null,
       receipt.natalProjection?.targetIsModernChartRuler || receipt.natalProjection?.targetIsTraditionalChartRuler ? 'This hits the chart ruler.' : null,
+      natalRulershipSupportNote(receipt.natalProjection),
       receipt.natalProjection && receipt.natalProjection.repeatedLifeAreaSignalCount >= 2 ? `Saved signals already repeat this life area (${receipt.natalProjection.repeatedLifeAreaSignalCount}).` : null,
     ].filter((value): value is string => Boolean(value)),
   };

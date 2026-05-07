@@ -13,7 +13,7 @@ import type { MajorWaveMemoryInput } from '@/lib/major-transit-reading';
 import { transitTitle } from '@/lib/transit-copy';
 import { logError, logWarn } from '@/lib/logger';
 
-export const DAILY_AI_READING_PROMPT_VERSION = 'daily-full-memory-v4';
+export const DAILY_AI_READING_PROMPT_VERSION = 'daily-full-memory-v5';
 export const DAILY_AI_READING_MODEL = 'gpt-4o';
 
 export type DailyAiReading = {
@@ -173,10 +173,14 @@ function buildPrompt(params: {
 
 Rules:
 - The structured judgment object is the source of truth. Use it first, then use the supporting payload only to clarify receipts.
+- Lead with the most specific astrology fact in the judgment: exact transit/lunation/configuration, phase, house/life area, timing, or chart-ruler/rulership fact. Do not bury the sky under generic advice.
 - Treat major personal transit waves as the main signal. Treat daily sky contacts as triggers and weather.
 - Use the user's saved memory when present: onboarding report, natal reading, journal/Aeon life signals, recurring patterns.
 - Do not invent life facts. If memory is thin, say that briefly and explain how SOS will sharpen.
 - Be specific, adult, useful, and direct. No poetic language, vague spiritual theater, fortune-cookie copy, or "the stars are aligning" language.
+- Hard copy bans: no "align with your purpose", "embrace transformation", "unlock potential", "inner peace", "spiritual growth", "authentic self", "higher purpose", "destiny calls", or vague "opportunity for growth" phrasing.
+- Headlines must be concrete, not soft title-case abstractions. Prefer the actual life area/action over words like potential, alignment, journey, harmony, foundations, transformation, or growth.
+- doToday must be one or two practical actions an adult can do today: ask, check, write, schedule, wait, clarify, decline, renegotiate, repair, rest, pay, call, document.
 - Avoid em dashes.
 - Do not mention internal table names, prompts, hashes, or implementation.
 - If the judgment says current-sky coverage is partial, do not pretend a full collective rarity scan exists.

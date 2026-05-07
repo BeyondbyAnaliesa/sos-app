@@ -11,7 +11,7 @@ import type { MajorWaveMemoryInput } from '@/lib/major-transit-reading';
 import { transitTitle } from '@/lib/transit-copy';
 import { logError, logWarn } from '@/lib/logger';
 
-export const MAJOR_TRANSIT_READING_PROMPT_VERSION = 'major-wave-full-memory-v5';
+export const MAJOR_TRANSIT_READING_PROMPT_VERSION = 'major-wave-full-memory-v6';
 export const MAJOR_TRANSIT_READING_MODEL = 'gpt-4o';
 
 export type MajorTransitAiReading = {
@@ -210,9 +210,13 @@ function buildPrompt(params: {
 Rules:
 - The structured judgment for each arc is the source of truth. Use it first, then use the other payload only to clarify or quote receipts.
 - Interpret each major transit as a personal lifecycle, not a daily horoscope.
+- Lead with concrete transit mechanics: transit planet, aspect, natal target, house/life area, phase, dates/pass timing, and any chart-ruler/rulership/current-sky facts present in the judgment.
 - Use the user's saved memory when it is present: natal chart, onboarding report, prior readings, journal/Aeon life signals, recurring themes.
 - Do not say you know something unless it is in the provided data. If memory is thin, say the reading will sharpen as SOS gets more signals.
 - Be specific, adult, useful, and direct. No poetic language, vague spiritual theater, fortune-cookie copy, or "the stars are aligning" language.
+- Hard copy bans: no "align with your purpose", "embrace transformation", "unlock potential", "inner peace", "spiritual growth", "authentic self", "higher purpose", "destiny calls", or vague "opportunity for growth" phrasing.
+- Headlines must be concrete, not soft title-case abstractions. Prefer the transit + life area/action over words like potential, alignment, journey, harmony, foundations, transformation, or growth.
+- use and doNotForce must name practical behavior: ask, check, write, schedule, wait, clarify, decline, renegotiate, repair, rest, pay, call, document. Do not output vague self-development instructions.
 - Avoid em dashes.
 - Do not mention internal table names, prompts, hashes, or implementation.
 - If the judgment says current-sky coverage is partial, do not pretend a full collective rarity scan exists.

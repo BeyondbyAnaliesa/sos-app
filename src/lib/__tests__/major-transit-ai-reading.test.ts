@@ -292,7 +292,7 @@ describe('getOrCreateMajorTransitAiReadings', () => {
     const readings = await getOrCreateMajorTransitAiReadings({ userId: 'user-1', arcs, chart, memory });
 
     expect(Object.keys(readings)).toEqual([majorTransitReadingKey(arcs[0])]);
-    expect(completionCreateMock).toHaveBeenCalledTimes(2);
+    expect(completionCreateMock).toHaveBeenCalledTimes(3);
     expect(upsertMock).toHaveBeenCalledTimes(1);
     expect(logWarnMock).toHaveBeenCalledWith(
       'major_transit_reading_partial_generation',
@@ -334,7 +334,7 @@ describe('getOrCreateMajorTransitAiReadings', () => {
       getOrCreateMajorTransitAiReadings({ userId: 'user-1', arcs, chart, memory, onPartial: 'throw' }),
     ).rejects.toThrow('partial output');
 
-    expect(completionCreateMock).toHaveBeenCalledTimes(2);
+    expect(completionCreateMock).toHaveBeenCalledTimes(3);
     expect(upsertMock).toHaveBeenCalledTimes(1);
     expect(logErrorMock).toHaveBeenCalledWith(
       expect.any(Error),

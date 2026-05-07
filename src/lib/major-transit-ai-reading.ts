@@ -382,17 +382,33 @@ async function generateReadings(arcs: MajorTransitArc[], chart: NatalChart, memo
   return byKey;
 }
 
+const MAJOR_TRANSIT_READING_GENERATION_BATCH_SIZE = 1;
+
+function chunkArcs(arcs: MajorTransitArc[], size = MAJOR_TRANSIT_READING_GENERATION_BATCH_SIZE) {
+  const chunks: MajorTransitArc[][] = [];
+  for (let index = 0; index < arcs.length; index += size) {
+    chunks.push(arcs.slice(index, index + size));
+  }
+  return chunks;
+}
+
 async function generateReadingsWithSingleMissingRetry(arcs: MajorTransitArc[], chart: NatalChart, memory: MajorWaveMemoryInput, judgments: Record<string, AstrologyJudgment>) {
-  const generated = await generateReadings(arcs, chart, memory, judgments);
-  let missing = arcs.filter((arc) => !generated[readingKey(arc)]);
+  const generated: ReadingMap = {};
   let retried = false;
 
-  if (missing.length > 0) {
-    retried = true;
-    const retryGenerated = await generateReadings(missing, chart, memory, judgments);
-    Object.assign(generated, retryGenerated);
-    missing = missing.filter((arc) => !generated[readingKey(arc)]);
+  for (const batch of chunkArcs(arcs)) {
+    const batchGenerated = await generateReadings(batch, chart, memory, judgments);
+    Object.assign(generated, batchGenerated);
+
+    const missing = batch.filter((arc) => !batchGenerated[readingKey(arc)]);
+    if (missing.length > 0) {
+      retried = true;
+      const retryGenerated = await generateReadings(missing, chart, memory, judgments);
+      Object.assign(generated, retryGenerated);
+    }
   }
+
+  const missing = arcs.filter((arc) => !generated[readingKey(arc)]);
 
   return {
     generated,

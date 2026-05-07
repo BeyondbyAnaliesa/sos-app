@@ -80,6 +80,12 @@ describe('GET /api/reading/channel-brief-preview', () => {
     expect(body.laneInputs).toMatchObject({
       status: 'astrology-lane-input-adapter-v1',
       privacy: 'internal-operator-only',
+      judgmentMetadata: {
+        status: 'astrology-judgment-metadata-v1',
+      },
+      objectInventory: {
+        status: 'expanded-object-inventory-v1',
+      },
       computedSkyFacts: {
         computed: [
           {

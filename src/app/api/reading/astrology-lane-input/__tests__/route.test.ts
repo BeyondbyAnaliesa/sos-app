@@ -63,6 +63,12 @@ describe('GET /api/reading/astrology-lane-input', () => {
     expect(body.export).toMatchObject({
       status: 'astrology-lane-input-export-v1',
       privacy: 'internal-operator-only',
+      judgmentMetadata: {
+        status: 'astrology-judgment-metadata-v1',
+      },
+      objectInventory: {
+        status: 'expanded-object-inventory-v1',
+      },
       requestedLane: null,
       computedSkyFacts: {
         computed: [

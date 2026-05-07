@@ -23,6 +23,19 @@ describe('buildAstrologyLaneInputBundle', () => {
     expect(bundle).toMatchObject({
       status: 'astrology-lane-input-adapter-v1',
       privacy: 'internal-operator-only',
+      mainSkyStory: {
+        title: expect.any(String),
+      },
+      topSignals: expect.any(Array),
+      watchNext: {
+        summary: expect.any(String),
+      },
+      judgmentMetadata: {
+        status: 'astrology-judgment-metadata-v1',
+      },
+      objectInventory: {
+        status: 'expanded-object-inventory-v1',
+      },
       computedSkyFacts: {
         computed: expect.any(Array),
         notComputed: expect.any(Array),
@@ -59,6 +72,7 @@ describe('buildAstrologyLaneInputBundle', () => {
         historicalGapYears: null,
       },
     });
+    expect(bundle.lanes.socials.laneWarnings.length).toBeGreaterThan(0);
     expect(bundle.lanes.substack.limitations.length).toBeGreaterThan(0);
     expect(bundle.lanes.aeonLore.limitations.length).toBeGreaterThan(0);
     expect(bundle.computedSkyFacts.computed.length).toBeGreaterThan(0);

@@ -4,6 +4,7 @@ import type {
   AstrologyChannelBriefFencedSkyFact,
   AstrologyChannelBriefReceipt,
   AstrologyChannelBriefRaritySummary,
+  AstrologyChannelBriefTopSignal,
 } from '@/lib/astrology/channel-brief';
 import type { AstrologyChannelBriefPreview } from '@/lib/astrology/channel-brief-preview';
 
@@ -17,14 +18,20 @@ export interface AstrologyLaneRarityRequirement {
 export interface AstrologyLaneReceiptRequirement {
   signalId: string;
   signalTitle: string;
+  transitObject: AstrologyChannelBriefReceipt['transitObject'];
   transitPlanet: string;
+  transitDignity: AstrologyChannelBriefReceipt['transitDignity'];
   aspect: string;
+  natalTargetObject: AstrologyChannelBriefReceipt['natalTargetObject'];
   targetLabel: string;
+  natalDignity: AstrologyChannelBriefReceipt['natalDignity'];
   lifeArea: string;
   exactDate: string | null;
   peakDate: string | null;
   startDate: string | null;
   endDate: string | null;
+  reception: AstrologyChannelBriefReceipt['reception'];
+  sect: AstrologyChannelBriefReceipt['sect'];
   limitations: string[];
   rarity: AstrologyLaneRarityRequirement | null;
 }
@@ -60,9 +67,47 @@ export interface AstrologyLaneSourceFact {
     | 'personal_relevance'
     | 'timing_window'
     | 'concrete_demand'
+    | 'watch_next'
     | 'limitations';
   fact: string;
   supportSignalIds: string[];
+}
+
+export interface AstrologyLaneTopSignal {
+  signalId: AstrologyChannelBriefTopSignal['signalId'];
+  title: string;
+  summary: string;
+  scope: AstrologyChannelBriefTopSignal['scope'];
+  source: AstrologyChannelBriefTopSignal['source'];
+  demand: AstrologyChannelBriefTopSignal['demand'];
+  score: number;
+  lifeAreas: string[];
+  supportNotes: string[];
+  receiptCount: number;
+  collectiveEventIds: string[];
+}
+
+export interface AstrologyLaneJudgmentMetadataSummary {
+  status: AstrologyChannelBrief['judgmentMetadata']['status'];
+  signalCounts: AstrologyChannelBrief['judgmentMetadata']['signalCounts'];
+  currentSky: AstrologyChannelBrief['judgmentMetadata']['currentSky'];
+  availability: AstrologyChannelBrief['judgmentMetadata']['availability'];
+  lead: AstrologyChannelBrief['judgmentMetadata']['lead'];
+  limitations: string[];
+}
+
+export interface AstrologyLaneObjectInventorySummary {
+  status: AstrologyChannelBrief['objectInventory']['status'];
+  transitLabels: string[];
+  targetLabels: string[];
+  categoryCounts: AstrologyChannelBrief['objectInventory']['categoryCounts'];
+  fencedLabels: string[];
+}
+
+export interface AstrologyLaneWatchNext {
+  date: string | null;
+  type: AstrologyChannelBrief['watchNext']['type'];
+  summary: string;
 }
 
 export interface AstrologySocialsHookCandidate {
@@ -84,6 +129,7 @@ interface AstrologyLaneInputBase {
   sourceFacts: AstrologyLaneSourceFact[];
   allowedAngles: string[];
   requiredReceipts: AstrologyLaneReceiptRequirement[];
+  laneWarnings: string[];
   limitations: string[];
   doNotClaim: string[];
   toneRules: string[];
@@ -107,6 +153,11 @@ export interface AstrologyLaneInputBundle {
   status: 'astrology-lane-input-adapter-v1';
   date: string;
   privacy: 'internal-operator-only';
+  mainSkyStory: AstrologyChannelBrief['dominantStory'];
+  topSignals: AstrologyLaneTopSignal[];
+  watchNext: AstrologyLaneWatchNext;
+  judgmentMetadata: AstrologyLaneJudgmentMetadataSummary;
+  objectInventory: AstrologyLaneObjectInventorySummary;
   computedSkyFacts: {
     computed: AstrologyLaneComputedSkyFact[];
     notComputed: AstrologyLaneFencedSkyFact[];
@@ -132,6 +183,11 @@ export interface AstrologyLaneInputExport {
   date: string;
   privacy: 'internal-operator-only';
   requestedLane: AstrologyLaneKey | null;
+  mainSkyStory: AstrologyLaneInputBundle['mainSkyStory'];
+  topSignals: AstrologyLaneInputBundle['topSignals'];
+  watchNext: AstrologyLaneInputBundle['watchNext'];
+  judgmentMetadata: AstrologyLaneInputBundle['judgmentMetadata'];
+  objectInventory: AstrologyLaneInputBundle['objectInventory'];
   computedSkyFacts: AstrologyLaneInputBundle['computedSkyFacts'];
   source: AstrologyLaneInputBundle['source'];
   lanes: Partial<AstrologyLaneInputBundle['lanes']>;
@@ -149,10 +205,12 @@ const BASE_DO_NOT_CLAIM = [
   'Do not claim historical rarity unless the engine computes it.',
   'Do not invent emotional certainty, outcomes, or guaranteed events.',
   'Do not turn a timing window into scheduling instructions.',
+  'Do not collapse this into generic sign-only astrology.',
+  'Do not imply fenced objects or unsupported asteroid logic were computed.',
 ];
 
-function dedupe(values: string[]) {
-  return values.filter((value, index, all) => Boolean(value) && all.indexOf(value) === index);
+function dedupe(values: Array<string | null | undefined>) {
+  return values.filter((value, index, all): value is string => Boolean(value) && all.indexOf(value) === index);
 }
 
 function compact(value: string | null | undefined, fallback: string) {
@@ -164,14 +222,20 @@ function buildReceiptRequirement(receipt: AstrologyChannelBriefReceipt): Astrolo
   return {
     signalId: receipt.signalId,
     signalTitle: receipt.signalTitle,
+    transitObject: receipt.transitObject,
     transitPlanet: receipt.transitPlanet,
+    transitDignity: receipt.transitDignity,
     aspect: receipt.aspect,
+    natalTargetObject: receipt.natalTargetObject,
     targetLabel: receipt.targetLabel,
+    natalDignity: receipt.natalDignity,
     lifeArea: receipt.lifeArea,
     exactDate: receipt.exactDate,
     peakDate: receipt.peakDate,
     startDate: receipt.startDate,
     endDate: receipt.endDate,
+    reception: receipt.reception,
+    sect: receipt.sect,
     limitations: dedupe([
       ...receipt.limitations,
       'Historical rarity remains unavailable here unless a computed value is supplied.',
@@ -214,7 +278,76 @@ function buildComputedSkyFacts(brief: AstrologyChannelBrief): AstrologyLaneInput
   };
 }
 
+function getWatchNext(brief: AstrologyChannelBrief): AstrologyLaneWatchNext {
+  return brief.watchNext ?? {
+    date: brief.timing.nextWatchDate ?? null,
+    type: brief.timing.nextWatchDate ? 'timing_only' : null,
+    summary: brief.timing.nextWatchDate
+      ? `Watch ${brief.timing.nextWatchDate} next.`
+      : 'Watch-next guidance is limited in this pass.',
+  };
+}
+
+function getTopSignals(brief: AstrologyChannelBrief): AstrologyChannelBriefTopSignal[] {
+  return brief.topSignals ?? [];
+}
+
+function getJudgmentMetadata(brief: AstrologyChannelBrief): AstrologyLaneJudgmentMetadataSummary {
+  return brief.judgmentMetadata ?? {
+    status: 'astrology-judgment-metadata-v1',
+    signalCounts: {
+      foreground: 0,
+      supporting: 0,
+      background: 0,
+      noise: 0,
+      total: 0,
+      bySource: {
+        major_arc: 0,
+        daily_transit: 0,
+        guidance: 0,
+        memory: 0,
+      },
+    },
+    currentSky: {
+      eventCount: brief.computedSkyFacts.computed.length + brief.computedSkyFacts.notComputed.length,
+      computedFactCount: brief.computedSkyFacts.computed.length,
+      fencedFactCount: brief.computedSkyFacts.notComputed.length,
+      rarityAssessments: {
+        computedRecurrence: brief.computedSkyFacts.computed.length,
+        boundedLimited: 0,
+        heuristicOnly: 0,
+        unsupported: 0,
+      },
+    },
+    availability: {
+      transitDignityReceipts: brief.receipts.filter((receipt) => Boolean(receipt.transitDignity)).length,
+      natalDignityReceipts: brief.receipts.filter((receipt) => Boolean(receipt.natalDignity)).length,
+      receptionReceipts: brief.receipts.filter((receipt) => receipt.reception.length > 0).length,
+      supportedReceptionReceipts: brief.receipts.filter((receipt) => receipt.reception.some((fact) => fact.status !== 'unavailable')).length,
+      sectReceipts: brief.receipts.filter((receipt) => Boolean(receipt.sect)).length,
+      arcLifecycleReceipts: brief.receipts.filter((receipt) => Boolean(receipt.exactDate || receipt.peakDate || receipt.endDate)).length,
+      collectiveBridgeReceipts: brief.receipts.filter((receipt) => Boolean(receipt.bridge)).length,
+    },
+    lead: {
+      signalIds: brief.receipts.slice(0, 3).map((receipt) => receipt.signalId),
+      currentSkyEventIds: brief.dominantStory.collectiveEventIds.slice(0, 3),
+    },
+    limitations: brief.limitations.slice(0, 8),
+  };
+}
+
+function getObjectInventory(brief: AstrologyChannelBrief): AstrologyLaneObjectInventorySummary {
+  return brief.objectInventory ?? {
+    status: 'expanded-object-inventory-v1',
+    transitLabels: brief.receipts.map((receipt) => receipt.transitObject?.label ?? receipt.transitPlanet).slice(0, 8),
+    targetLabels: brief.receipts.map((receipt) => receipt.natalTargetObject?.label ?? receipt.targetLabel).slice(0, 8),
+    categoryCounts: {},
+    fencedLabels: [],
+  };
+}
+
 function buildSourceFacts(brief: AstrologyChannelBrief): AstrologyLaneSourceFact[] {
+  const watchNext = getWatchNext(brief);
   return [
     {
       key: 'dominant_story',
@@ -242,6 +375,11 @@ function buildSourceFacts(brief: AstrologyChannelBrief): AstrologyLaneSourceFact
       supportSignalIds: brief.receipts.slice(0, 2).map((receipt) => receipt.signalId),
     },
     {
+      key: 'watch_next',
+      fact: compact(watchNext.summary, 'Watch-next guidance is limited in this pass.'),
+      supportSignalIds: brief.receipts.slice(0, 2).map((receipt) => receipt.signalId),
+    },
+    {
       key: 'limitations',
       fact: [
         brief.dominantStory.currentSkyRarity
@@ -252,6 +390,22 @@ function buildSourceFacts(brief: AstrologyChannelBrief): AstrologyLaneSourceFact
       supportSignalIds: [],
     },
   ];
+}
+
+function buildTopSignals(brief: AstrologyChannelBrief): AstrologyLaneTopSignal[] {
+  return getTopSignals(brief).map((signal) => ({
+    signalId: signal.signalId,
+    title: signal.title,
+    summary: signal.summary,
+    scope: signal.scope,
+    source: signal.source,
+    demand: signal.demand,
+    score: signal.score,
+    lifeAreas: signal.lifeAreas,
+    supportNotes: signal.supportNotes,
+    receiptCount: signal.receiptCount,
+    collectiveEventIds: signal.collectiveEventIds,
+  }));
 }
 
 function buildAllowedAngles(brief: AstrologyChannelBrief, lane: 'socials' | 'substack' | 'aeon_lore') {
@@ -274,7 +428,7 @@ function buildTimingRequirements(brief: AstrologyChannelBrief) {
   return dedupe([
     brief.timing.windowLabel,
     brief.timing.exactDate ? `Use the exact-date receipt if timing is foregrounded: ${brief.timing.exactDate}.` : 'If no exact date exists, say timing is active or developing rather than pretending to know the precise peak.',
-    brief.timing.nextWatchDate ? `Include what to watch next on ${brief.timing.nextWatchDate}.` : 'If no next watch date exists, keep watch-next language limited.',
+    getWatchNext(brief).date ? `Include what to watch next on ${getWatchNext(brief).date}.` : 'If no next watch date exists, keep watch-next language limited.',
   ]);
 }
 
@@ -305,8 +459,8 @@ function buildSocialsHookCandidates(brief: AstrologyChannelBrief): AstrologySoci
       premise: `Name the demand in plain language: ${brief.concreteDemand}`,
       utilityAngle: 'Frame the post as a useful interpretation someone can act on or compare against their own life.',
       receiptSignalIds: signalIds,
-      timingRequirement: brief.timing.nextWatchDate
-        ? `Include what to watch next on ${brief.timing.nextWatchDate}.`
+      timingRequirement: getWatchNext(brief).date
+        ? `Include what to watch next on ${getWatchNext(brief).date}.`
         : 'Use timing only as far as the current receipts support it.',
     },
   ];
@@ -320,19 +474,44 @@ function buildEditorialOutline(brief: AstrologyChannelBrief, lane: 'substack' | 
     },
     {
       key: 'personal_landing',
-      prompt: `Land it personally using the explicit life areas and receipts: ${brief.personalRelevance.summary}`,
+      prompt: `Land it personally using the explicit life areas, dignity/reception/sect availability, and receipts: ${brief.personalRelevance.summary}`,
     },
     {
       key: 'limitations',
-      prompt: `State the limitations cleanly, including unavailable rarity/history data: ${brief.limitations.join(' ')}`,
+      prompt: `State the limitations cleanly, including unavailable rarity/history data and fenced objects: ${brief.limitations.join(' ')}`,
     },
     {
       key: 'watch_next',
       prompt: lane === 'substack'
-        ? `Close with what to watch next and why it matters: ${brief.timing.nextWatchDate ?? brief.timing.windowLabel}`
-        : `Close with a plain-language watch-next section, not a script beat: ${brief.timing.nextWatchDate ?? brief.timing.windowLabel}`,
+        ? `Close with what to watch next and why it matters: ${getWatchNext(brief).summary}`
+        : `Close with a plain-language watch-next section, not a script beat: ${getWatchNext(brief).summary}`,
     },
   ];
+}
+
+function buildLaneWarnings(brief: AstrologyChannelBrief, lane: 'socials' | 'substack' | 'aeon_lore') {
+  const laneSpecific = lane === 'socials'
+    ? [
+      'Use hook candidates as briefing inputs only. Do not draft final captions here.',
+      'Do not flatten this into sign-by-sign generic astrology without the engine receipts.',
+    ]
+    : lane === 'substack'
+      ? [
+        'This is an internal essay brief, not a drafted article.',
+        'Any rarity claim must trace to computedSkyFacts.computed or an explicit receipt rarity status of computed.',
+      ]
+      : [
+        'This is an internal Aeon Lore analysis brief, not a script or performance narration.',
+        'Keep the analysis tied to current-sky evidence, personal activation, and explicit limits.',
+      ];
+
+  const availabilityWarnings = [
+    getJudgmentMetadata(brief).availability.receptionReceipts === 0 ? 'No supported reception receipts are available in this export; do not imply reception analysis.' : null,
+    getJudgmentMetadata(brief).availability.sectReceipts === 0 ? 'No sect receipts are available in this export; do not imply sect analysis.' : null,
+    getObjectInventory(brief).fencedLabels.length > 0 ? `Fenced objects remain out of scope here: ${getObjectInventory(brief).fencedLabels.join(', ')}.` : null,
+  ];
+
+  return dedupe([...laneSpecific, ...availabilityWarnings]);
 }
 
 function buildCommonLimitations(brief: AstrologyChannelBrief, lane: 'socials' | 'substack' | 'aeon_lore') {
@@ -353,6 +532,9 @@ function buildCommonLimitations(brief: AstrologyChannelBrief, lane: 'socials' | 
 export function buildAstrologyLaneInputBundle(brief: AstrologyChannelBrief): AstrologyLaneInputBundle {
   const requiredReceipts = brief.receipts.slice(0, 6).map(buildReceiptRequirement);
   const sourceFacts = buildSourceFacts(brief);
+  const watchNext = getWatchNext(brief);
+  const judgmentMetadata = getJudgmentMetadata(brief);
+  const objectInventory = getObjectInventory(brief);
   const socialsLimitations = buildCommonLimitations(brief, 'socials');
   const substackLimitations = buildCommonLimitations(brief, 'substack');
   const aeonLoreLimitations = buildCommonLimitations(brief, 'aeon_lore');
@@ -361,6 +543,11 @@ export function buildAstrologyLaneInputBundle(brief: AstrologyChannelBrief): Ast
     status: 'astrology-lane-input-adapter-v1',
     date: brief.date,
     privacy: 'internal-operator-only',
+    mainSkyStory: brief.dominantStory,
+    topSignals: buildTopSignals(brief),
+    watchNext,
+    judgmentMetadata,
+    objectInventory,
     computedSkyFacts: buildComputedSkyFacts(brief),
     source: {
       briefStatus: brief.status,
@@ -372,16 +559,17 @@ export function buildAstrologyLaneInputBundle(brief: AstrologyChannelBrief): Ast
     lanes: {
       socials: {
         lane: 'socials',
-        channelFit: 'Short-form internal input for save/send utility. Use hook candidates, receipts, and timing requirements only. Not a final caption.',
+        channelFit: 'Short-form internal input for save/send utility. Use hook candidates, receipts, warnings, and timing requirements only. Not a final caption.',
         sourceFacts,
         allowedAngles: buildAllowedAngles(brief, 'socials'),
         requiredReceipts,
+        laneWarnings: buildLaneWarnings(brief, 'socials'),
         limitations: socialsLimitations,
         doNotClaim: BASE_DO_NOT_CLAIM,
         toneRules: BASE_TONE_RULES,
         hookCandidates: buildSocialsHookCandidates(brief),
         timingRequirements: buildTimingRequirements(brief),
-        utilityAngle: 'Prioritize the angle that explains why the current sky matters now and why someone would save or send it for practical use.',
+        utilityAngle: 'Prioritize the angle that explains why the current sky matters now, where it lands personally, and why someone would save or send it for practical use.',
       },
       substack: {
         lane: 'substack',
@@ -389,13 +577,14 @@ export function buildAstrologyLaneInputBundle(brief: AstrologyChannelBrief): Ast
         sourceFacts,
         allowedAngles: buildAllowedAngles(brief, 'substack'),
         requiredReceipts,
+        laneWarnings: buildLaneWarnings(brief, 'substack'),
         limitations: substackLimitations,
         doNotClaim: BASE_DO_NOT_CLAIM,
         toneRules: BASE_TONE_RULES,
         bigSkyOutline: buildEditorialOutline(brief, 'substack'),
         personalLanding: compact(brief.personalRelevance.summary, 'Personal landing is limited in this pass.'),
-        watchNext: brief.timing.nextWatchDate
-          ? `Watch ${brief.timing.nextWatchDate} next and keep the interpretation tied to explicit receipts.`
+        watchNext: watchNext.date
+          ? `Watch ${watchNext.date} next and keep the interpretation tied to explicit receipts.`
           : `Use the active timing window only as far as the receipts support it: ${brief.timing.windowLabel}`,
       },
       aeonLore: {
@@ -404,13 +593,14 @@ export function buildAstrologyLaneInputBundle(brief: AstrologyChannelBrief): Ast
         sourceFacts,
         allowedAngles: buildAllowedAngles(brief, 'aeon_lore'),
         requiredReceipts,
+        laneWarnings: buildLaneWarnings(brief, 'aeon_lore'),
         limitations: aeonLoreLimitations,
         doNotClaim: BASE_DO_NOT_CLAIM,
         toneRules: BASE_TONE_RULES,
         bigSkyOutline: buildEditorialOutline(brief, 'aeon_lore'),
-        personalLanding: `${compact(brief.personalRelevance.summary, 'Personal landing is limited in this pass.')} Keep it in plain language and stay with the strongest life-area activation.` ,
-        watchNext: brief.timing.nextWatchDate
-          ? `Extend the analysis by naming what to watch next on ${brief.timing.nextWatchDate}, without pretending to know the outcome.`
+        personalLanding: `${compact(brief.personalRelevance.summary, 'Personal landing is limited in this pass.')} Keep it in plain language and stay with the strongest life-area activation.`,
+        watchNext: watchNext.date
+          ? `Extend the analysis by naming what to watch next on ${watchNext.date}, without pretending to know the outcome.`
           : `Extend the analysis with the existing timing window only: ${brief.timing.windowLabel}`,
       },
     },
@@ -447,6 +637,11 @@ export function buildAstrologyLaneInputExport(
     date: bundle.date,
     privacy: bundle.privacy,
     requestedLane,
+    mainSkyStory: bundle.mainSkyStory,
+    topSignals: bundle.topSignals,
+    watchNext: bundle.watchNext,
+    judgmentMetadata: bundle.judgmentMetadata,
+    objectInventory: bundle.objectInventory,
     computedSkyFacts: bundle.computedSkyFacts,
     source: bundle.source,
     lanes,

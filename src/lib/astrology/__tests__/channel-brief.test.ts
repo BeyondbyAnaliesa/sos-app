@@ -25,6 +25,13 @@ describe('buildAstrologyChannelBrief', () => {
       },
     });
     expect(brief.timing.windowLabel).toContain('2026-05-14');
+    expect(brief.topSignals[0]).toMatchObject({
+      signalId: 'saturn-opposition-venus',
+      demand: expect.any(String),
+    });
+    expect(brief.watchNext.summary).toContain('2026-05-14');
+    expect(brief.objectInventory.status).toBe('expanded-object-inventory-v1');
+    expect(brief.judgmentMetadata.status).toBe('astrology-judgment-metadata-v1');
     expect(brief.limitations).toContain('Historical rarity claims remain unavailable unless the engine computes them explicitly.');
     expect(brief.personalRelevance.bridge).toMatchObject({
       eventId: expect.any(String),

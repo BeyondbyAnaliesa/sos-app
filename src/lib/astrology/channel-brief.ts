@@ -1,3 +1,7 @@
+import {
+  buildAstrologyJudgmentMetadata,
+  type AstrologyJudgmentMetadata,
+} from '@/lib/astrology/judgment-metadata';
 import type {
   AstrologyCollectiveBridge,
   AstrologyCollectiveSkyEvent,
@@ -18,9 +22,31 @@ export interface AstrologyChannelBriefRaritySummary {
 export interface AstrologyChannelBriefReceipt {
   signalId: string;
   signalTitle: string;
+  transitObject: {
+    label: string;
+    category: NonNullable<AstrologyJudgmentReceipt['transitObject']>['category'];
+    supportLevel: NonNullable<AstrologyJudgmentReceipt['transitObject']>['supportLevel'];
+  } | null;
   transitPlanet: string;
+  transitDignity: AstrologyJudgmentReceipt['transitDignity'] extends infer T
+    ? T extends { condition: infer Condition }
+      ? Condition | null
+      : null
+    : null;
   aspect: string;
+  natalTargetObject: {
+    label: string;
+    category: NonNullable<AstrologyJudgmentReceipt['natalTargetObject']>['category'];
+    supportLevel: NonNullable<AstrologyJudgmentReceipt['natalTargetObject']>['supportLevel'];
+  } | null;
   targetLabel: string;
+  natalDignity: AstrologyJudgmentReceipt['natalProjection'] extends infer T
+    ? T extends { dignity: infer Dignity }
+      ? Dignity extends { condition: infer Condition }
+        ? Condition | null
+        : null
+      : null
+    : null;
   lifeArea: string;
   phase: AstrologyJudgmentReceipt['phase'];
   orb: number;
@@ -29,6 +55,16 @@ export interface AstrologyChannelBriefReceipt {
   startDate: string | null;
   endDate: string | null;
   memorySummary: string | null;
+  reception: Array<{
+    system: NonNullable<AstrologyJudgmentReceipt['reception']>[number]['system'];
+    status: NonNullable<AstrologyJudgmentReceipt['reception']>[number]['status'];
+    direction: NonNullable<AstrologyJudgmentReceipt['reception']>[number]['direction'];
+  }>;
+  sect: {
+    chartSect: NonNullable<AstrologyJudgmentReceipt['sect']>['chartSect'];
+    transitPlanetCondition: NonNullable<AstrologyJudgmentReceipt['sect']>['transitPlanetCondition'];
+    natalTargetCondition: NonNullable<AstrologyJudgmentReceipt['sect']>['natalTargetCondition'];
+  } | null;
   bridge: {
     eventId: string;
     matchReasons: string[];
@@ -71,6 +107,20 @@ export interface AstrologyChannelHookAngle {
   limitations: string[];
 }
 
+export interface AstrologyChannelBriefTopSignal {
+  signalId: string;
+  title: string;
+  summary: string;
+  scope: AstrologyJudgmentSignal['scope'];
+  source: AstrologyJudgmentSignal['source'];
+  demand: AstrologyJudgmentSignal['demand'];
+  score: number;
+  lifeAreas: string[];
+  supportNotes: string[];
+  receiptCount: number;
+  collectiveEventIds: string[];
+}
+
 export interface AstrologyChannelBrief {
   status: 'astrology-channel-brief-v1';
   date: string;
@@ -89,6 +139,7 @@ export interface AstrologyChannelBrief {
     scope: AstrologyJudgmentSignal['scope'] | 'collective';
     bridge: AstrologyChannelBriefReceipt['bridge'];
   };
+  topSignals: AstrologyChannelBriefTopSignal[];
   channelRelevance: {
     social: string;
     substack: string;
@@ -99,7 +150,14 @@ export interface AstrologyChannelBrief {
     urgency: 'immediate' | 'active' | 'developing' | 'background';
   };
   concreteDemand: string;
+  watchNext: {
+    date: string | null;
+    type: 'exact_hit' | 'station' | 'arc_close' | 'timing_only' | null;
+    summary: string;
+  };
   receipts: AstrologyChannelBriefReceipt[];
+  objectInventory: AstrologyJudgment['objectInventory'];
+  judgmentMetadata: AstrologyJudgmentMetadata;
   computedSkyFacts: {
     computed: AstrologyChannelBriefComputedSkyFact[];
     notComputed: AstrologyChannelBriefFencedSkyFact[];
@@ -139,10 +197,10 @@ function buildWindowLabel(judgment: AstrologyJudgment) {
   return 'Timing window is not fully computed in this layer.';
 }
 
-function buildUrgency(judgment: AstrologyJudgment): AstrologyChannelBrief['timing']['urgency'] {
-  if (judgment.timing.currentPhase === 'exact') return 'immediate';
-  if (judgment.foreground.length > 0) return 'active';
-  if (judgment.supporting.length > 0) return 'developing';
+function buildUrgency(timing: AstrologyJudgment['timing']): AstrologyChannelBrief['timing']['urgency'] {
+  if (timing.currentPhase === 'exact') return 'immediate';
+  if (timing.activeTransitCount > 0) return 'active';
+  if (timing.nextWatchDate) return 'developing';
   return 'background';
 }
 
@@ -157,13 +215,33 @@ function compactRarity(rarity: CollectiveSkyHistoricalRarityFact | null | undefi
   };
 }
 
+function dedupe(values: Array<string | null | undefined>) {
+  return values.filter((value, index, all): value is string => Boolean(value) && all.indexOf(value) === index);
+}
+
 function buildReceipt(signal: AstrologyJudgmentSignal): AstrologyChannelBriefReceipt[] {
   return signal.receipts.map((receipt) => ({
     signalId: signal.id,
     signalTitle: signal.title,
+    transitObject: receipt.transitObject
+      ? {
+        label: receipt.transitObject.label,
+        category: receipt.transitObject.category,
+        supportLevel: receipt.transitObject.supportLevel,
+      }
+      : null,
     transitPlanet: receipt.transitPlanet,
+    transitDignity: receipt.transitDignity?.condition ?? null,
     aspect: receipt.aspect,
+    natalTargetObject: receipt.natalTargetObject
+      ? {
+        label: receipt.natalTargetObject.label,
+        category: receipt.natalTargetObject.category,
+        supportLevel: receipt.natalTargetObject.supportLevel,
+      }
+      : null,
     targetLabel: receipt.targetLabel,
+    natalDignity: receipt.natalProjection?.dignity?.condition ?? null,
     lifeArea: receipt.lifeArea,
     phase: receipt.phase,
     orb: receipt.orb,
@@ -172,15 +250,49 @@ function buildReceipt(signal: AstrologyJudgmentSignal): AstrologyChannelBriefRec
     startDate: receipt.startDate,
     endDate: receipt.endDate,
     memorySummary: receipt.memorySummary,
+    reception: receipt.reception?.map((fact) => ({
+      system: fact.system,
+      status: fact.status,
+      direction: fact.direction,
+    })) ?? [],
+    sect: receipt.sect
+      ? {
+        chartSect: receipt.sect.chartSect,
+        transitPlanetCondition: receipt.sect.transitPlanetCondition,
+        natalTargetCondition: receipt.sect.natalTargetCondition,
+      }
+      : null,
     bridge: bridgeSummary(receipt.collectiveBridge ?? signal.collectiveBridge),
-    limitations: [
+    limitations: dedupe([
       ...(receipt.arcLifecycle?.limitations ?? []),
       ...(receipt.collectiveBridge?.limitations ?? []),
       ...(receipt.meaningFactors?.limitations ?? []),
       ...(receipt.currentSkyRarity?.limitations ?? []),
-    ].filter((value, index, all) => Boolean(value) && all.indexOf(value) === index),
+    ]),
     rarity: compactRarity(receipt.currentSkyRarity),
   }));
+}
+
+function buildTopSignals(judgment: AstrologyJudgment): AstrologyChannelBriefTopSignal[] {
+  return [...judgment.foreground, ...judgment.supporting, ...judgment.background]
+    .slice(0, 4)
+    .map((signal) => ({
+      signalId: signal.id,
+      title: signal.title,
+      summary: signal.summary,
+      scope: signal.scope,
+      source: signal.source,
+      demand: signal.demand,
+      score: signal.score,
+      lifeAreas: signal.lifeAreas,
+      supportNotes: signal.supportNotes.slice(0, 4),
+      receiptCount: signal.receipts.length,
+      collectiveEventIds: dedupe(signal.receipts.map((receipt) => (
+        receipt.collectiveBridge?.collectiveEvent.id
+          ?? signal.collectiveBridge?.collectiveEvent.id
+          ?? null
+      ))),
+    }));
 }
 
 function buildComputedSkyFacts(currentSkyEvents: AstrologyCollectiveSkyEvent[]): AstrologyChannelBrief['computedSkyFacts'] {
@@ -215,10 +327,6 @@ function buildComputedSkyFacts(currentSkyEvents: AstrologyCollectiveSkyEvent[]):
   };
 }
 
-function dedupe(values: string[]) {
-  return values.filter((value, index, all): value is string => Boolean(value) && all.indexOf(value) === index);
-}
-
 export function buildAstrologyChannelBrief(judgment: AstrologyJudgment): AstrologyChannelBrief {
   const lead = selectLeadSignal(judgment);
   const leadBridge = bridgeSummary(lead?.collectiveBridge);
@@ -230,9 +338,19 @@ export function buildAstrologyChannelBrief(judgment: AstrologyJudgment): Astrolo
   );
   const supportingSignals = [...judgment.foreground, ...judgment.supporting, ...judgment.background].slice(0, 4);
   const receipts = supportingSignals.flatMap(buildReceipt).slice(0, 6);
+  const topSignals = buildTopSignals(judgment);
   const currentSkySummary = compact(judgment.currentSky.summary, 'Current-sky summary is limited in this layer.');
   const leadLifeArea = lead?.lifeAreas[0] ?? judgment.activatedLifeAreas[0] ?? 'the active life area';
   const computedSkyFacts = buildComputedSkyFacts(judgment.currentSky.events);
+  const watchNextReceipt = supportingSignals
+    .flatMap((signal) => signal.receipts)
+    .find((receipt) => Boolean(receipt.arcLifecycle?.watchNextDate));
+  const timing = {
+    ...judgment.timing,
+    windowLabel: buildWindowLabel(judgment),
+    urgency: buildUrgency(judgment.timing),
+  };
+  const judgmentMetadata = buildAstrologyJudgmentMetadata(judgment);
 
   return {
     status: 'astrology-channel-brief-v1',
@@ -256,20 +374,28 @@ export function buildAstrologyChannelBrief(judgment: AstrologyJudgment): Astrolo
       scope: lead?.scope ?? 'collective',
       bridge: leadBridge,
     },
+    topSignals,
     channelRelevance: {
       social: leadCurrentSkyEvent
-        ? `Lead with the strongest current-sky event, then tie it to one concrete life-area demand or timing fact. Keep it short and receipt-backed.`
+        ? 'Lead with the strongest current-sky event, then tie it to one concrete life-area demand or timing fact. Keep it short and receipt-backed.'
         : 'Lead with the clearest active demand and the next timing trigger. Do not turn a thin signal stack into a major claim.',
       substack: 'Use the dominant current-sky story, then move into personal/chart relevance, timing, and limitations. Keep unsupported rarity or history claims explicit as unavailable.',
       aeonLore: 'Use this brief as internal source material for a longer plain-language analysis: current sky, personal activation, concrete demand, and what to watch next.',
     },
-    timing: {
-      ...judgment.timing,
-      windowLabel: buildWindowLabel(judgment),
-      urgency: buildUrgency(judgment),
-    },
+    timing,
     concreteDemand: judgment.practicalDemand,
+    watchNext: {
+      date: watchNextReceipt?.arcLifecycle?.watchNextDate ?? judgment.timing.nextWatchDate ?? null,
+      type: watchNextReceipt?.arcLifecycle?.watchNextType ?? (judgment.timing.nextWatchDate ? 'timing_only' : null),
+      summary: watchNextReceipt?.arcLifecycle?.watchNextDate
+        ? `Watch ${watchNextReceipt.arcLifecycle.watchNextType?.replace('_', ' ') ?? 'next timing trigger'} on ${watchNextReceipt.arcLifecycle.watchNextDate}.`
+        : judgment.timing.nextWatchDate
+          ? `Watch ${judgment.timing.nextWatchDate} next.`
+          : 'No separate watch-next date is available beyond the active timing window.',
+    },
     receipts,
+    objectInventory: judgment.objectInventory,
+    judgmentMetadata,
     computedSkyFacts,
     hookAngles: [
       {
@@ -303,11 +429,16 @@ export function buildAstrologyChannelBrief(judgment: AstrologyJudgment): Astrolo
         limitations: ['This is an internal demand summary, not final audience-facing copy.'],
       },
     ],
-    limitations: [
+    limitations: dedupe([
       ...judgment.currentSky.limitations,
       'This brief is an internal adapter. It is not final public copy.',
       'Historical rarity claims remain unavailable unless the engine computes them explicitly.',
-      leadCurrentSkyRarity?.status === 'not_computed' ? 'Current-sky rarity stays fenced as not_computed when no bounded recurrence result exists.' : null,
-    ].filter((value, index, all): value is string => Boolean(value) && all.indexOf(value) === index),
+      judgment.objectInventory.fencedLabels.length > 0
+        ? `Unsupported/fenced objects stay fenced here: ${judgment.objectInventory.fencedLabels.join(', ')}.`
+        : null,
+      leadCurrentSkyRarity?.status === 'not_computed'
+        ? 'Current-sky rarity stays fenced as not_computed when no bounded recurrence result exists.'
+        : null,
+    ]),
   };
 }

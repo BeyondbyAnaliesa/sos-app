@@ -83,8 +83,28 @@ describe('scanCurrentSkyFromPositions', () => {
     ]);
 
     expect(currentSky.limitations).toContain('Rarity and consequence scores are heuristic and explicitly do not claim historical proof.');
-    expect(currentSky.limitations).toContain('Historical-gap enrichment is currently bounded to lunation/eclipse lookbacks and supported slow-body ingress spacing estimates only.');
+    expect(currentSky.limitations).toContain('Historical-gap enrichment is currently bounded to lunation/eclipse lookbacks, supported slow-body ingress spacing estimates, and supported slow-body station timing/spacing estimates only.');
     expect(currentSky.limitations).toContain('No multi-body configuration detector is included in this slice.');
+  });
+
+  it('computes bounded station timing/spacing for supported slow-body near-station events when the local scan can bracket the station window', () => {
+    const asOf = new Date('2025-05-04T12:00:00Z');
+    const currentSky = scanCurrentSkyFromPositions([
+      body('Pluto', 303.82, 0.00007, false),
+    ], { date: asOf });
+    const station = currentSky.events.find((event) => event.id === 'station:Pluto');
+
+    expect(station?.rarity).toMatchObject({
+      status: 'computed',
+      confidence: 'bounded',
+      recurrence: {
+        comparator: 'same_body_station_window_spacing_estimate',
+      },
+    });
+    expect(station?.rarity.recurrence?.priorComparableEventDate).toBeTruthy();
+    expect(station?.rarity.recurrence?.nextComparableEventDate).toBeTruthy();
+    expect(station?.rarity.recurrence?.spacingDays).toBeGreaterThan(100);
+    expect(station?.rarity.limitations.join(' ')).toContain('bounded local station-window estimate');
   });
 
   it('computes bounded ingress spacing for supported slow direct bodies when an as-of date is available', () => {
@@ -120,6 +140,18 @@ describe('scanCurrentSkyFromPositions', () => {
     });
     expect(currentSky.events.find((event) => event.id === 'ingress:North Node:post_ingress')?.rarity.limitations.join(' ')).toContain('North Node ingress spacing stays fenced');
     expect(currentSky.events.find((event) => event.id === 'ingress:Saturn:pre_ingress')?.rarity.limitations.join(' ')).toContain('retrograde, reversing, or missing a stable direct speed');
+  });
+
+  it('keeps station spacing fenced for unsupported station bodies even when they are near-station', () => {
+    const currentSky = scanCurrentSkyFromPositions([
+      body('Mars', 119, 0.01, false),
+    ], { date: new Date('2025-01-15T12:00:00Z') });
+
+    expect(currentSky.events.find((event) => event.id === 'station:Mars')?.rarity).toMatchObject({
+      status: 'not_computed',
+      confidence: 'none',
+    });
+    expect(currentSky.events.find((event) => event.id === 'station:Mars')?.rarity.limitations.join(' ')).toContain('supported slow bodies with bounded local station windows');
   });
 
   it('detects 2025 lunations and eclipses from sweph-backed positions with bounded historical gap fields', () => {

@@ -165,7 +165,7 @@ export interface CollectiveSkyBodyState {
 }
 
 export interface CollectiveSkyHistoricalRecurrence {
-  comparator: 'same_lunation_type' | 'same_eclipse_type' | 'same_body_sign_ingress_spacing_estimate';
+  comparator: 'same_lunation_type' | 'same_eclipse_type' | 'same_body_sign_ingress_spacing_estimate' | 'same_body_station_window_spacing_estimate';
   scanWindowDays: number;
   priorComparableEventDate: string;
   nextComparableEventDate?: string | null;

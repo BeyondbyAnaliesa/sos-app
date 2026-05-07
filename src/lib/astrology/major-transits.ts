@@ -132,15 +132,15 @@ function isoDate(date: Date) {
   return date.toISOString().split('T')[0];
 }
 
-function dateAtUtcNoon(iso: string) {
+export function dateAtUtcNoon(iso: string) {
   return new Date(`${iso}T12:00:00Z`);
 }
 
-function diffDays(a: string, b: string) {
+export function diffDays(a: string, b: string) {
   return Math.round((dateAtUtcNoon(a).getTime() - dateAtUtcNoon(b).getTime()) / 86_400_000);
 }
 
-function addDays(date: Date, days: number) {
+export function addDays(date: Date, days: number) {
   const d = new Date(date);
   d.setUTCDate(d.getUTCDate() + days);
   return d;
@@ -174,7 +174,7 @@ function splitActiveRuns(entries: TransitEntry[]) {
   return runs;
 }
 
-function buildStations(startDate: string, endDate: string, transitPlanet: string): MajorTransitStation[] {
+export function findStationsInRange(startDate: string, endDate: string, transitPlanet: string): MajorTransitStation[] {
   const start = dateAtUtcNoon(startDate);
   const total = diffDays(endDate, startDate) + 1;
   const daily = Array.from({ length: total }, (_, i) => {
@@ -199,7 +199,11 @@ function buildStations(startDate: string, endDate: string, transitPlanet: string
     }
   }
 
-  return stations.filter((station, index, arr) => index === 0 || diffDays(station.date, arr[index - 1].date) > 5).slice(0, 6);
+  return stations.filter((station, index, arr) => index === 0 || diffDays(station.date, arr[index - 1].date) > 5);
+}
+
+function buildStations(startDate: string, endDate: string, transitPlanet: string): MajorTransitStation[] {
+  return findStationsInRange(startDate, endDate, transitPlanet).slice(0, 6);
 }
 
 function buildHits(entries: TransitEntry[]): MajorTransitHit[] {

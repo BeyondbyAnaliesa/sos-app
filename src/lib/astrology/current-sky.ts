@@ -10,6 +10,7 @@ import { detectLunationEvents } from '@/lib/astrology/lunation-events';
 import {
   buildNotComputedHistoricalRarityFact,
   buildSlowBodyIngressHistoricalRarityFact,
+  buildSlowBodyStationHistoricalRarityFact,
 } from '@/lib/astrology/rarity-facts';
 
 const SIGNS = [
@@ -212,7 +213,7 @@ function buildAspectEvent(bodyA: CollectiveSkyBodyState, bodyB: CollectiveSkyBod
   };
 }
 
-function buildStationEvent(body: CollectiveSkyBodyState, threshold: number): AstrologyCollectiveSkyEvent {
+function buildStationEvent(body: CollectiveSkyBodyState, threshold: number, date: Date | null): AstrologyCollectiveSkyEvent {
   const score = Number((relativeClassWeight(body.body) + 3.2 + (OUTER_OR_SOCIAL.has(body.body) ? 1.6 : 0)).toFixed(2));
   const stationType = body.retrograde ? 'station_proximity_before_direct' : 'station_proximity_before_retrograde';
   return {
@@ -228,10 +229,13 @@ function buildStationEvent(body: CollectiveSkyBodyState, threshold: number): Ast
     applyingStateKnown: false,
     sign: body.sign,
     exactnessBand: null,
-    rarity: buildNotComputedHistoricalRarityFact({
+    rarity: buildSlowBodyStationHistoricalRarityFact({
       score: Math.min(10, Number((4 + relativeClassWeight(body.body) + (OUTER_OR_SOCIAL.has(body.body) ? 2 : 0.5)).toFixed(2))),
+      body: body.body,
+      retrograde: body.retrograde,
+      date,
       limitations: [
-        'Station rarity is heuristic in this slice and does not include historical recurrence analysis.',
+        'Station rarity uses fixed body-class weighting plus bounded local station timing/spacing only when the current scanner can support it conservatively.',
       ],
     }),
     consequence: {
@@ -333,7 +337,7 @@ export function scanCurrentSkyFromPositions(positions: CollectiveSkyBodyState[],
     const body = positions[index];
     const threshold = STATION_THRESHOLDS[body.body];
     if (threshold != null && Math.abs(body.speed) <= threshold) {
-      events.push(buildStationEvent(body, threshold));
+      events.push(buildStationEvent(body, threshold, options?.date ?? null));
     }
 
     if (body.degree >= 28) {
@@ -374,7 +378,7 @@ export function scanCurrentSkyFromPositions(positions: CollectiveSkyBodyState[],
     limitations: [
       'Current sky scan covers Tier 1 transit-to-transit major aspects, near-stations, sign-boundary proximity, and lunation/eclipse detection only.',
       'Rarity and consequence scores are heuristic and explicitly do not claim historical proof.',
-      'Historical-gap enrichment is currently bounded to lunation/eclipse lookbacks and supported slow-body ingress spacing estimates only.',
+      'Historical-gap enrichment is currently bounded to lunation/eclipse lookbacks, supported slow-body ingress spacing estimates, and supported slow-body station timing/spacing estimates only.',
       'No multi-body configuration detector is included in this slice.',
     ],
   };

@@ -424,6 +424,7 @@ export async function getOrCreateMajorTransitAiReadings(params: {
   memory: MajorWaveMemoryInput;
   judgments?: Record<string, AstrologyJudgment>;
   onPartial?: PartialHandlingMode;
+  maxGenerate?: number;
 }) {
   const arcs = params.arcs.slice(0, 14);
   if (arcs.length === 0) return {} as ReadingMap;
@@ -437,30 +438,39 @@ export async function getOrCreateMajorTransitAiReadings(params: {
     const missing = arcs.filter((arc) => !cached[readingKey(arc)]);
     if (missing.length === 0) return cached;
 
+    const generateLimit = params.maxGenerate == null ? missing.length : Math.max(0, params.maxGenerate);
+    const generationBatch = missing.slice(0, generateLimit);
+    if (generationBatch.length === 0) return cached;
+
     const { generated, missingKeys, retried } = await generateReadingsWithSingleMissingRetry(
-      missing,
+      generationBatch,
       params.chart,
       params.memory,
       judgments,
     );
     await saveGeneratedRows({
       userId: params.userId,
-      arcs: missing,
+      arcs: generationBatch,
       memory: params.memory,
       readings: generated,
       judgments,
     });
 
-    if (missingKeys.length > 0) {
-      if (params.onPartial === 'throw') {
-        throw new PartialMajorTransitReadingsError(missingKeys);
+    const deferredKeys = missing.slice(generateLimit).map((arc) => readingKey(arc));
+    const unresolvedKeys = [...missingKeys, ...deferredKeys];
+
+    if (unresolvedKeys.length > 0) {
+      if (params.onPartial === 'throw' && params.maxGenerate == null) {
+        throw new PartialMajorTransitReadingsError(unresolvedKeys);
       }
 
       logWarn('major_transit_reading_partial_generation', {
         requestedCount: missing.length,
+        attemptedCount: generationBatch.length,
         generatedCount: Object.keys(generated).length,
         retried,
-        missingKeys,
+        missingKeys: unresolvedKeys,
+        deferredCount: deferredKeys.length,
       });
     }
 

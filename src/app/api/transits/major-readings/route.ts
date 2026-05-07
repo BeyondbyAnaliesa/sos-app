@@ -69,6 +69,7 @@ export async function POST() {
       chart,
       memory,
       onPartial: 'throw',
+      maxGenerate: 1,
     });
 
     return NextResponse.json({ count: Object.keys(readings).length, readings });

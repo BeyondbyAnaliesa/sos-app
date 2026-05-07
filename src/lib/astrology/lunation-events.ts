@@ -136,6 +136,7 @@ function scanHistoricalGapYears(params: {
   if (!params.date) {
     return {
       historicalGapYears: null,
+      recurrence: null,
       limitations: ['Historical-gap scan was skipped because no as-of date was provided to the current-sky scanner.'],
     };
   }
@@ -150,6 +151,13 @@ function scanHistoricalGapYears(params: {
 
     return {
       historicalGapYears: Number((day / 365.25).toFixed(2)),
+      recurrence: {
+        comparator: params.mode === 'eclipse' ? 'same_eclipse_type' as const : 'same_lunation_type' as const,
+        scanWindowDays: limitDays,
+        priorComparableEventDate: priorDate.toISOString().split('T')[0],
+        spacingDays: day,
+        spacingYears: Number((day / 365.25).toFixed(2)),
+      },
       limitations: [
         `Historical gap only measures the prior detected ${params.mode} inside a bounded ${limitDays}-day backward scan.`,
         params.mode === 'eclipse'
@@ -161,6 +169,7 @@ function scanHistoricalGapYears(params: {
 
   return {
     historicalGapYears: null,
+    recurrence: null,
     limitations: [`No prior comparable ${params.mode} was found inside the bounded ${limitDays}-day backward scan.`],
   };
 }
@@ -195,6 +204,9 @@ export function detectLunationEvents(params: {
     rarity: {
       score: Number((4.8 + (context.exactnessBand === 'exact' ? 0.5 : 0)).toFixed(2)),
       basis: 'heuristic',
+      status: lunationHistory.historicalGapYears == null ? 'not_computed' : 'computed',
+      confidence: lunationHistory.historicalGapYears == null ? 'none' : 'bounded',
+      recurrence: lunationHistory.recurrence,
       limitations: [
         'Lunation rarity is event-class weighting plus bounded prior-event spacing, not a full historical frequency engine.',
         ...lunationHistory.limitations,
@@ -248,6 +260,9 @@ export function detectLunationEvents(params: {
     rarity: {
       score: Number((7.2 + Math.max(0, (ECLIPSE_NODE_AXIS_ORB_DEGREES - context.nodeAxisOrb) * 0.07)).toFixed(2)),
       basis: 'heuristic',
+      status: eclipseHistory.historicalGapYears == null ? 'not_computed' : 'computed',
+      confidence: eclipseHistory.historicalGapYears == null ? 'none' : 'bounded',
+      recurrence: eclipseHistory.recurrence,
       limitations: [
         'Eclipse rarity uses node-axis proximity plus bounded prior-event spacing only.',
         ...eclipseHistory.limitations,

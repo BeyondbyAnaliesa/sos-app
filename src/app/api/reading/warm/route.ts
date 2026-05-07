@@ -79,6 +79,7 @@ export async function POST(request: Request) {
             chart: context.chart,
             memory: context.memory,
             onPartial: 'throw',
+            maxGenerate: 1,
           });
           majorCount = Object.keys(readings).length;
         }

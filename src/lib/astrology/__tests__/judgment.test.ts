@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildAstrologyJudgment } from '@/lib/astrology/judgment';
+import { CURRENT_SKY_LUNATION_FIXTURES } from '@/lib/astrology/__tests__/fixtures/current-sky-lunation-fixtures';
 import type { MajorTransitArc } from '@/lib/astrology/major-transits';
 import type { NatalChart } from '@/lib/astrology/types';
 import type { MajorWaveMemoryInput } from '@/lib/major-transit-reading';
@@ -153,5 +154,33 @@ describe('buildAstrologyJudgment', () => {
         label: 'Sun',
       },
     });
+  });
+
+  it('carries eclipse and lunation collective events through the judgment pipeline on known 2025 fixtures', () => {
+    const judgment = buildAstrologyJudgment({
+      date: CURRENT_SKY_LUNATION_FIXTURES.solarEclipse2025.date,
+      chart,
+      todayTransits: {
+        date: CURRENT_SKY_LUNATION_FIXTURES.solarEclipse2025.date,
+        transits: [{ transitPlanet: 'Sun', aspect: 'conjunction', natalPlanet: 'sun', orb: 1.1 }],
+      },
+      majorArcs: [],
+      guidance: [],
+      memory,
+    });
+
+    const eclipse = judgment.currentSky.events.find((event) => event.kind === 'eclipse');
+    const lunation = judgment.currentSky.events.find((event) => event.kind === 'lunation');
+    expect(eclipse).toMatchObject({
+      sign: 'Aries',
+      bodies: ['Sun', 'Moon', 'North Node'],
+    });
+    expect(lunation).toMatchObject({
+      sign: 'Aries',
+      bodies: ['Sun', 'Moon'],
+    });
+    expect(judgment.currentSky.events.some((event) => event.kind === 'eclipse')).toBe(true);
+    expect(judgment.currentSky.events.some((event) => event.kind === 'lunation')).toBe(true);
+    expect(judgment.currentSky.limitations).toContain('Historical-gap enrichment is currently bounded to lunation/eclipse event-class lookbacks only.');
   });
 });

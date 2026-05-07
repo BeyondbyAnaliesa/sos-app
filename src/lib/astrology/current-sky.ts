@@ -6,6 +6,7 @@ import type {
   JudgmentPhase,
   JudgmentTier,
 } from '@/lib/astrology/judgment-types';
+import { detectLunationEvents } from '@/lib/astrology/lunation-events';
 
 const SIGNS = [
   'Aries',
@@ -315,8 +316,10 @@ export function buildCollectiveSkyBodyState(input: {
   };
 }
 
-export function scanCurrentSkyFromPositions(positions: CollectiveSkyBodyState[]): AstrologyJudgmentCurrentSky {
+export function scanCurrentSkyFromPositions(positions: CollectiveSkyBodyState[], options?: { date?: Date | null }): AstrologyJudgmentCurrentSky {
   const events: AstrologyCollectiveSkyEvent[] = [];
+
+  events.push(...detectLunationEvents({ positions, date: options?.date ?? null }));
 
   for (let index = 0; index < positions.length; index += 1) {
     const body = positions[index];
@@ -361,9 +364,10 @@ export function scanCurrentSkyFromPositions(positions: CollectiveSkyBodyState[])
     scannedBodies: positions.map((position) => position.body),
     events: sortedEvents,
     limitations: [
-      'Current sky scan covers Tier 1 transit-to-transit major aspects, near-stations, and sign-boundary proximity only.',
+      'Current sky scan covers Tier 1 transit-to-transit major aspects, near-stations, sign-boundary proximity, and lunation/eclipse detection only.',
       'Rarity and consequence scores are heuristic and explicitly do not claim historical proof.',
-      'No historical-gap engine, lunation/eclipses, or multi-body configuration detector is included in this slice.',
+      'Historical-gap enrichment is currently bounded to lunation/eclipse event-class lookbacks only.',
+      'No multi-body configuration detector is included in this slice.',
     ],
   };
 }

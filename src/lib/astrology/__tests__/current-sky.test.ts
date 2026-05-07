@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { scanCurrentSkyFromPositions } from '@/lib/astrology/current-sky';
+import { getPlanetaryPositions } from '@/lib/astrology/calculate-transits';
+import { buildCollectiveSkyBodyState, scanCurrentSkyFromPositions } from '@/lib/astrology/current-sky';
+import { CURRENT_SKY_LUNATION_FIXTURES } from '@/lib/astrology/__tests__/fixtures/current-sky-lunation-fixtures';
 import type { CollectiveSkyBodyState } from '@/lib/astrology/judgment-types';
 
 function body(body: string, longitude: number, speed: number, retrograde = false): CollectiveSkyBodyState {
@@ -78,6 +80,51 @@ describe('scanCurrentSkyFromPositions', () => {
     ]);
 
     expect(currentSky.limitations).toContain('Rarity and consequence scores are heuristic and explicitly do not claim historical proof.');
-    expect(currentSky.limitations).toContain('No historical-gap engine, lunation/eclipses, or multi-body configuration detector is included in this slice.');
+    expect(currentSky.limitations).toContain('Historical-gap enrichment is currently bounded to lunation/eclipse event-class lookbacks only.');
+    expect(currentSky.limitations).toContain('No multi-body configuration detector is included in this slice.');
+  });
+
+  it('detects 2025 lunations and eclipses from sweph-backed positions with bounded historical gap fields', () => {
+    const solarEclipseDate = new Date(`${CURRENT_SKY_LUNATION_FIXTURES.solarEclipse2025.date}T12:00:00Z`);
+    const solarEclipseSky = scanCurrentSkyFromPositions(
+      getPlanetaryPositions(solarEclipseDate).map((position) => buildCollectiveSkyBodyState({
+        body: position.label,
+        longitude: position.longitude,
+        speed: position.speed,
+        retrograde: position.retrograde,
+      })),
+      { date: solarEclipseDate },
+    );
+
+    const eclipse = solarEclipseSky.events.find((event) => event.kind === 'eclipse');
+    const lunation = solarEclipseSky.events.find((event) => event.kind === 'lunation');
+
+    expect(eclipse).toMatchObject({
+      sign: CURRENT_SKY_LUNATION_FIXTURES.solarEclipse2025.expectSign,
+      bodies: ['Sun', 'Moon', 'North Node'],
+      aspect: 'conjunction',
+      tier: 'foreground',
+    });
+    expect(eclipse?.rarity.historicalGapYears).not.toBeNull();
+    expect(eclipse?.limitations.join(' ')).toContain('bounded 400-day backward scan');
+    expect(lunation).toMatchObject({
+      sign: CURRENT_SKY_LUNATION_FIXTURES.solarEclipse2025.expectSign,
+      bodies: ['Sun', 'Moon'],
+      aspect: 'conjunction',
+    });
+
+    const nonEclipseDate = new Date(`${CURRENT_SKY_LUNATION_FIXTURES.nonEclipseNewMoon2025.date}T12:00:00Z`);
+    const nonEclipseSky = scanCurrentSkyFromPositions(
+      getPlanetaryPositions(nonEclipseDate).map((position) => buildCollectiveSkyBodyState({
+        body: position.label,
+        longitude: position.longitude,
+        speed: position.speed,
+        retrograde: position.retrograde,
+      })),
+      { date: nonEclipseDate },
+    );
+
+    expect(nonEclipseSky.events.some((event) => event.kind === 'lunation')).toBe(true);
+    expect(nonEclipseSky.events.some((event) => event.kind === 'eclipse')).toBe(false);
   });
 });

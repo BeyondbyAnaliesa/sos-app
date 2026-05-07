@@ -415,6 +415,7 @@ export function buildAstrologyJudgment(params: {
       speed: position.speed,
       retrograde: position.retrograde,
     })),
+    { date: now },
   );
 
   const arcSignals = params.majorArcs.map((arc) => buildSignalFromArc(arc, params.chart, positions, params.memory, params.date, currentSky.events));

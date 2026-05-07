@@ -127,6 +127,7 @@ export interface AstrologyJudgmentReceipt {
   natalProjection: NatalProjection | null;
   meaningFactors?: AstrologyMeaningFactors | null;
   collectiveBridge?: AstrologyCollectiveBridge | null;
+  currentSkyRarity?: CollectiveSkyHistoricalRarityFact | null;
   arcLifecycle?: ArcLifecycleJudgment | null;
 }
 
@@ -163,7 +164,25 @@ export interface CollectiveSkyBodyState {
   retrograde: boolean;
 }
 
-export interface CollectiveSkyScoringNote {
+export interface CollectiveSkyHistoricalRecurrence {
+  comparator: 'same_lunation_type' | 'same_eclipse_type';
+  scanWindowDays: number;
+  priorComparableEventDate: string;
+  spacingDays: number;
+  spacingYears: number;
+}
+
+export interface CollectiveSkyHistoricalRarityFact {
+  score: number;
+  basis: 'heuristic';
+  status: 'computed' | 'not_computed';
+  confidence: 'bounded' | 'none';
+  recurrence: CollectiveSkyHistoricalRecurrence | null;
+  limitations: string[];
+  historicalGapYears: number | null;
+}
+
+export interface CollectiveSkyConsequenceFact {
   score: number;
   basis: 'heuristic';
   limitations: string[];
@@ -183,8 +202,8 @@ export interface AstrologyCollectiveSkyEvent {
   applyingStateKnown: boolean;
   sign: string | null;
   exactnessBand: 'exact' | 'near_exact' | 'wide' | null;
-  rarity: CollectiveSkyScoringNote;
-  consequence: CollectiveSkyScoringNote;
+  rarity: CollectiveSkyHistoricalRarityFact;
+  consequence: CollectiveSkyConsequenceFact;
   summary: string;
   receipts: string[];
   limitations: string[];

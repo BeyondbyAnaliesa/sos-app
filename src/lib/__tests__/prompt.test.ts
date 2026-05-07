@@ -103,7 +103,15 @@ const judgment: AstrologyJudgment = {
         applyingStateKnown: true,
         sign: 'Aries',
         exactnessBand: 'exact',
-        rarity: { score: 8.5, basis: 'heuristic', limitations: ['historical proof not computed'], historicalGapYears: null },
+        rarity: {
+          score: 8.5,
+          basis: 'heuristic',
+          status: 'not_computed',
+          confidence: 'none',
+          recurrence: null,
+          limitations: ['historical proof not computed'],
+          historicalGapYears: null,
+        },
         consequence: { score: 8.8, basis: 'heuristic', limitations: ['historical proof not computed'], historicalGapYears: null },
         summary: 'Saturn conjunct Neptune is restructuring collective reality-testing.',
         receipts: ['tight orb', 'outer planet involvement'],
@@ -156,7 +164,7 @@ describe('buildAstrologyPromptJudgmentSnapshot', () => {
     expect(snapshot.currentSky.events[0]).toMatchObject({
       id: 'aspect:Saturn:conjunction:Neptune',
       summary: 'Saturn conjunct Neptune is restructuring collective reality-testing.',
-      rarity: { score: 8.5, historicalGapYears: null },
+      rarity: { score: 8.5, status: 'not_computed', historicalGapYears: null },
     });
     expect(snapshot.currentSky.events[0]).not.toHaveProperty('applyingStateKnown');
     expect(snapshot.currentSky.events[0]).not.toHaveProperty('rarity.limitations');

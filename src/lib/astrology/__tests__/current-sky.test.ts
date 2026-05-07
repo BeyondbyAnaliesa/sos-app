@@ -33,7 +33,7 @@ function body(body: string, longitude: number, speed: number, retrograde = false
 }
 
 describe('scanCurrentSkyFromPositions', () => {
-  it('builds a collective transit-to-transit event with structured heuristic fields', () => {
+  it('builds a collective transit-to-transit event with explicit not_computed rarity facts when no recurrence scan exists', () => {
     const currentSky = scanCurrentSkyFromPositions([
       body('Saturn', 10, 0.03),
       body('Neptune', 10.2, 0.01),
@@ -51,6 +51,9 @@ describe('scanCurrentSkyFromPositions', () => {
     });
     expect(currentSky.events[0]?.rarity).toMatchObject({
       basis: 'heuristic',
+      status: 'not_computed',
+      confidence: 'none',
+      recurrence: null,
       historicalGapYears: null,
     });
     expect(currentSky.events[0]?.limitations).toContain('Exact peak timestamp is not solved in this slice; phase is inferred from one-day speed deltas.');
@@ -105,7 +108,15 @@ describe('scanCurrentSkyFromPositions', () => {
       aspect: 'conjunction',
       tier: 'foreground',
     });
+    expect(eclipse?.rarity).toMatchObject({
+      status: 'computed',
+      confidence: 'bounded',
+    });
     expect(eclipse?.rarity.historicalGapYears).not.toBeNull();
+    expect(eclipse?.rarity.recurrence).toMatchObject({
+      comparator: 'same_eclipse_type',
+      scanWindowDays: 400,
+    });
     expect(eclipse?.limitations.join(' ')).toContain('bounded 400-day backward scan');
     expect(lunation).toMatchObject({
       sign: CURRENT_SKY_LUNATION_FIXTURES.solarEclipse2025.expectSign,

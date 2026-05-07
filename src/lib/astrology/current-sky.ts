@@ -7,6 +7,7 @@ import type {
   JudgmentTier,
 } from '@/lib/astrology/judgment-types';
 import { detectLunationEvents } from '@/lib/astrology/lunation-events';
+import { buildNotComputedHistoricalRarityFact } from '@/lib/astrology/rarity-facts';
 
 const SIGNS = [
   'Aries',
@@ -186,12 +187,10 @@ function buildAspectEvent(bodyA: CollectiveSkyBodyState, bodyB: CollectiveSkyBod
     applyingStateKnown,
     sign: bodyA.sign === bodyB.sign ? bodyA.sign : null,
     exactnessBand: exactnessBand(orb),
-    rarity: {
+    rarity: buildNotComputedHistoricalRarityFact({
       score: rarityScoreForAspect(bodyA.body, bodyB.body, aspect, orb),
-      basis: 'heuristic',
       limitations: rarityLimitations,
-      historicalGapYears: null,
-    },
+    }),
     consequence: {
       score: consequenceScoreForAspect(bodyA.body, bodyB.body, aspect, orb, phase),
       basis: 'heuristic',
@@ -226,14 +225,12 @@ function buildStationEvent(body: CollectiveSkyBodyState, threshold: number): Ast
     applyingStateKnown: false,
     sign: body.sign,
     exactnessBand: null,
-    rarity: {
+    rarity: buildNotComputedHistoricalRarityFact({
       score: Math.min(10, Number((4 + relativeClassWeight(body.body) + (OUTER_OR_SOCIAL.has(body.body) ? 2 : 0.5)).toFixed(2))),
-      basis: 'heuristic',
       limitations: [
         'Station rarity is heuristic in this slice and does not include historical recurrence analysis.',
       ],
-      historicalGapYears: null,
-    },
+    }),
     consequence: {
       score: Math.min(10, Number((4.2 + relativeClassWeight(body.body) + (OUTER_OR_SOCIAL.has(body.body) ? 1.8 : 0.4)).toFixed(2))),
       basis: 'heuristic',
@@ -270,14 +267,12 @@ function buildIngressEvent(body: CollectiveSkyBodyState, direction: 'pre_ingress
     applyingStateKnown: false,
     sign: body.sign,
     exactnessBand: exactnessBand(degreesFromBoundary),
-    rarity: {
+    rarity: buildNotComputedHistoricalRarityFact({
       score: Math.min(10, Number((ingressBase + (direction === 'post_ingress' ? 0.3 : 0)).toFixed(2))),
-      basis: 'heuristic',
       limitations: [
         'Ingress rarity uses fixed body-class weights and does not compute prior-ingress history yet.',
       ],
-      historicalGapYears: null,
-    },
+    }),
     consequence: {
       score: Math.min(10, Number((2.8 + relativeClassWeight(body.body) + ingressBase * 0.4).toFixed(2))),
       basis: 'heuristic',

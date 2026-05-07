@@ -1,5 +1,16 @@
-import type { AstrologyChannelBrief, AstrologyChannelBriefReceipt } from '@/lib/astrology/channel-brief';
+import type {
+  AstrologyChannelBrief,
+  AstrologyChannelBriefReceipt,
+  AstrologyChannelBriefRaritySummary,
+} from '@/lib/astrology/channel-brief';
 import type { AstrologyChannelBriefPreview } from '@/lib/astrology/channel-brief-preview';
+
+export interface AstrologyLaneRarityRequirement {
+  status: AstrologyChannelBriefRaritySummary['status'];
+  confidence: AstrologyChannelBriefRaritySummary['confidence'];
+  historicalGapYears: number | null;
+  limitations: string[];
+}
 
 export interface AstrologyLaneReceiptRequirement {
   signalId: string;
@@ -13,7 +24,7 @@ export interface AstrologyLaneReceiptRequirement {
   startDate: string | null;
   endDate: string | null;
   limitations: string[];
-  rarityHistoricalGapYears: null;
+  rarity: AstrologyLaneRarityRequirement | null;
 }
 
 export interface AstrologyLaneSourceFact {
@@ -123,7 +134,14 @@ function buildReceiptRequirement(receipt: AstrologyChannelBriefReceipt): Astrolo
       ...receipt.limitations,
       'Historical rarity remains unavailable here unless a computed value is supplied.',
     ]),
-    rarityHistoricalGapYears: null,
+    rarity: receipt.rarity
+      ? {
+        status: receipt.rarity.status,
+        confidence: receipt.rarity.confidence,
+        historicalGapYears: receipt.rarity.historicalGapYears,
+        limitations: receipt.rarity.limitations,
+      }
+      : null,
   };
 }
 
@@ -156,7 +174,12 @@ function buildSourceFacts(brief: AstrologyChannelBrief): AstrologyLaneSourceFact
     },
     {
       key: 'limitations',
-      fact: brief.limitations.join(' '),
+      fact: [
+        brief.dominantStory.currentSkyRarity
+          ? `Current-sky rarity status: ${brief.dominantStory.currentSkyRarity.status}${brief.dominantStory.currentSkyRarity.historicalGapYears != null ? ` (${brief.dominantStory.currentSkyRarity.historicalGapYears}y spacing).` : '.'}`
+          : null,
+        brief.limitations.join(' '),
+      ].filter(Boolean).join(' '),
       supportSignalIds: [],
     },
   ];

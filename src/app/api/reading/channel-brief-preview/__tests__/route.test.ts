@@ -106,6 +106,7 @@ describe('GET /api/reading/channel-brief-preview', () => {
           summary: 'Internal summary only.',
           currentSkySummary: 'Current sky summary.',
           collectiveEventIds: ['collective_1'],
+          currentSkyRarity: null,
           scope: 'personal',
         },
         personalRelevance: {

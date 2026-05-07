@@ -122,6 +122,7 @@ function applyCollectiveBridge(receipt: AstrologyJudgmentReceipt, currentSkyEven
   return {
     ...receipt,
     collectiveBridge,
+    currentSkyRarity: currentSkyEvent?.rarity ?? null,
     meaningFactors: resolveMeaningFactors({
       transitBody: receipt.transitPlanet,
       aspect: receipt.aspect,

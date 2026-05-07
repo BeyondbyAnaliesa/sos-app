@@ -18,7 +18,10 @@ describe('buildAstrologyChannelBrief', () => {
         eventId: expect.any(String),
         matchReasons: expect.arrayContaining([expect.any(String)]),
       },
-      rarityHistoricalGapYears: null,
+      rarity: {
+        status: 'not_computed',
+        historicalGapYears: null,
+      },
     });
     expect(brief.timing.windowLabel).toContain('2026-05-14');
     expect(brief.limitations).toContain('Historical rarity claims remain unavailable unless the engine computes them explicitly.');
@@ -26,6 +29,7 @@ describe('buildAstrologyChannelBrief', () => {
       eventId: expect.any(String),
       matchReasons: expect.arrayContaining([expect.any(String)]),
     });
+    expect(brief.dominantStory.currentSkyRarity?.status).toBeDefined();
   });
 
   it('does not insert poetic filler or fake rarity claims into channel guidance', () => {
@@ -37,7 +41,7 @@ describe('buildAstrologyChannelBrief', () => {
     expect(serialized).not.toContain('big shifts');
     expect(serialized).not.toContain('the stars are aligning');
     expect(brief.limitations).toContain('Historical rarity claims remain unavailable unless the engine computes them explicitly.');
-    expect(brief.receipts.every((receipt) => receipt.rarityHistoricalGapYears === null)).toBe(true);
+    expect(brief.receipts.every((receipt) => receipt.rarity?.status === 'not_computed')).toBe(true);
   });
 
   it('serializes a preview wrapper that keeps v1 shape and internal-only privacy status', () => {

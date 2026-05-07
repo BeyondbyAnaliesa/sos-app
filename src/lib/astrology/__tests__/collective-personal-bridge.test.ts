@@ -18,6 +18,9 @@ const saturnCollectiveEvent: AstrologyCollectiveSkyEvent = {
   rarity: {
     score: 8.4,
     basis: 'heuristic',
+    status: 'not_computed',
+    confidence: 'none',
+    recurrence: null,
     limitations: ['Historical gap not solved.'],
     historicalGapYears: null,
   },

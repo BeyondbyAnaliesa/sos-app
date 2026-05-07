@@ -131,6 +131,7 @@ describe('buildAstrologyJudgment', () => {
     expect(judgment.currentSky.events.length).toBeGreaterThan(0);
     expect(judgment.currentSky.events[0]?.scope).toBe('collective');
     expect(judgment.currentSky.limitations).toContain('Rarity and consequence scores are heuristic and explicitly do not claim historical proof.');
+    expect(judgment.foreground[0]?.receipts[0]?.currentSkyRarity?.status).toBe('not_computed');
     expect(judgment.activatedLifeAreas).toContain('home, family of origin, roots, private life, foundation');
     expect(judgment.foreground[0]?.scope).toMatch(/personal|both/);
     expect(judgment.foreground[0]?.collectiveBridge).toMatchObject({
@@ -181,6 +182,8 @@ describe('buildAstrologyJudgment', () => {
     });
     expect(judgment.currentSky.events.some((event) => event.kind === 'eclipse')).toBe(true);
     expect(judgment.currentSky.events.some((event) => event.kind === 'lunation')).toBe(true);
+    expect(eclipse?.rarity.status).toBe('computed');
+    expect(eclipse?.rarity.recurrence?.scanWindowDays).toBe(400);
     expect(judgment.currentSky.limitations).toContain('Historical-gap enrichment is currently bounded to lunation/eclipse event-class lookbacks only.');
   });
 });

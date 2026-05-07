@@ -3,7 +3,15 @@ import type {
   AstrologyJudgment,
   AstrologyJudgmentReceipt,
   AstrologyJudgmentSignal,
+  CollectiveSkyHistoricalRarityFact,
 } from '@/lib/astrology/judgment-types';
+
+export interface AstrologyChannelBriefRaritySummary {
+  status: CollectiveSkyHistoricalRarityFact['status'];
+  confidence: CollectiveSkyHistoricalRarityFact['confidence'];
+  historicalGapYears: number | null;
+  limitations: string[];
+}
 
 export interface AstrologyChannelBriefReceipt {
   signalId: string;
@@ -25,7 +33,7 @@ export interface AstrologyChannelBriefReceipt {
     bridgeStrengthTier: AstrologyCollectiveBridge['bridgeStrengthTier'];
   } | null;
   limitations: string[];
-  rarityHistoricalGapYears: null;
+  rarity: AstrologyChannelBriefRaritySummary | null;
 }
 
 export interface AstrologyChannelHookAngle {
@@ -45,6 +53,7 @@ export interface AstrologyChannelBrief {
     summary: string;
     currentSkySummary: string;
     collectiveEventIds: string[];
+    currentSkyRarity: AstrologyChannelBriefRaritySummary | null;
     scope: AstrologyJudgmentSignal['scope'] | 'collective';
   };
   personalRelevance: {
@@ -106,6 +115,17 @@ function buildUrgency(judgment: AstrologyJudgment): AstrologyChannelBrief['timin
   return 'background';
 }
 
+function compactRarity(rarity: CollectiveSkyHistoricalRarityFact | null | undefined): AstrologyChannelBriefRaritySummary | null {
+  if (!rarity) return null;
+
+  return {
+    status: rarity.status,
+    confidence: rarity.confidence,
+    historicalGapYears: rarity.historicalGapYears,
+    limitations: rarity.limitations,
+  };
+}
+
 function buildReceipt(signal: AstrologyJudgmentSignal): AstrologyChannelBriefReceipt[] {
   return signal.receipts.map((receipt) => ({
     signalId: signal.id,
@@ -126,8 +146,9 @@ function buildReceipt(signal: AstrologyJudgmentSignal): AstrologyChannelBriefRec
       ...(receipt.arcLifecycle?.limitations ?? []),
       ...(receipt.collectiveBridge?.limitations ?? []),
       ...(receipt.meaningFactors?.limitations ?? []),
+      ...(receipt.currentSkyRarity?.limitations ?? []),
     ].filter((value, index, all) => Boolean(value) && all.indexOf(value) === index),
-    rarityHistoricalGapYears: null,
+    rarity: compactRarity(receipt.currentSkyRarity),
   }));
 }
 
@@ -135,6 +156,11 @@ export function buildAstrologyChannelBrief(judgment: AstrologyJudgment): Astrolo
   const lead = selectLeadSignal(judgment);
   const leadBridge = bridgeSummary(lead?.collectiveBridge);
   const leadCurrentSkyEvent = lead?.collectiveBridge?.collectiveEvent ?? judgment.currentSky.events[0] ?? null;
+  const leadCurrentSkyRarity = compactRarity(
+    judgment.currentSky.events.find((event) => event.id === leadCurrentSkyEvent?.id)?.rarity
+      ?? lead?.receipts[0]?.currentSkyRarity
+      ?? null,
+  );
   const supportingSignals = [...judgment.foreground, ...judgment.supporting, ...judgment.background].slice(0, 4);
   const receipts = supportingSignals.flatMap(buildReceipt).slice(0, 6);
   const currentSkySummary = compact(judgment.currentSky.summary, 'Current-sky summary is limited in this layer.');
@@ -151,6 +177,7 @@ export function buildAstrologyChannelBrief(judgment: AstrologyJudgment): Astrolo
         : `${currentSkySummary} No personal transit signal outranked the background stack in this pass.`,
       currentSkySummary,
       collectiveEventIds: leadCurrentSkyEvent ? [leadCurrentSkyEvent.id] : [],
+      currentSkyRarity: leadCurrentSkyRarity,
       scope: lead?.scope ?? 'collective',
     },
     personalRelevance: {
@@ -211,6 +238,7 @@ export function buildAstrologyChannelBrief(judgment: AstrologyJudgment): Astrolo
       ...judgment.currentSky.limitations,
       'This brief is an internal adapter. It is not final public copy.',
       'Historical rarity claims remain unavailable unless the engine computes them explicitly.',
-    ].filter((value, index, all) => Boolean(value) && all.indexOf(value) === index),
+      leadCurrentSkyRarity?.status === 'not_computed' ? 'Current-sky rarity stays fenced as not_computed when no bounded recurrence result exists.' : null,
+    ].filter((value, index, all): value is string => Boolean(value) && all.indexOf(value) === index),
   };
 }

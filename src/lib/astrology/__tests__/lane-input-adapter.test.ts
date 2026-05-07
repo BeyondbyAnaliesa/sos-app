@@ -50,7 +50,10 @@ describe('buildAstrologyLaneInputBundle', () => {
     expect(bundle.lanes.socials.requiredReceipts[0]).toMatchObject({
       signalId: 'saturn-opposition-venus',
       exactDate: '2026-05-14',
-      rarityHistoricalGapYears: null,
+      rarity: {
+        status: 'not_computed',
+        historicalGapYears: null,
+      },
     });
     expect(bundle.lanes.substack.limitations.length).toBeGreaterThan(0);
     expect(bundle.lanes.aeonLore.limitations.length).toBeGreaterThan(0);
@@ -60,7 +63,7 @@ describe('buildAstrologyLaneInputBundle', () => {
     const fixture = buildAstrologyChannelBriefFixture();
     const bundle = buildAstrologyLaneInputBundle(fixture.channelBrief);
 
-    expect(bundle.lanes.socials.requiredReceipts.every((receipt) => receipt.rarityHistoricalGapYears === null)).toBe(true);
+    expect(bundle.lanes.socials.requiredReceipts.every((receipt) => receipt.rarity?.status === 'not_computed')).toBe(true);
     expect(bundle.lanes.socials.limitations).toContain('Historical rarity remains unavailable here unless a computed value is supplied.');
     expect(bundle.lanes.substack.doNotClaim).toContain('Do not claim historical rarity unless the engine computes it.');
     expect('finalPublicCopy' in bundle.lanes.socials).toBe(false);

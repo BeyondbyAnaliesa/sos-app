@@ -2,9 +2,14 @@ import { getPlanetaryPositions } from '@/lib/astrology/calculate-transits';
 import type {
   AstrologyCollectiveSkyEvent,
   CollectiveSkyBodyState,
+  CollectiveSkyHistoricalRecurrence,
   JudgmentPhase,
   JudgmentTier,
 } from '@/lib/astrology/judgment-types';
+import {
+  buildBoundedHistoricalRarityFact,
+  buildNotComputedHistoricalRarityFact,
+} from '@/lib/astrology/rarity-facts';
 
 const LUNATION_ORB_DEGREES = 5;
 const ECLIPSE_NODE_AXIS_ORB_DEGREES = 13;
@@ -128,20 +133,20 @@ function classifyLunationContextFromDate(date: Date) {
   return classifyLunationContext(positions);
 }
 
-function scanHistoricalGapYears(params: {
+function scanHistoricalRecurrence(params: {
   date: Date | null;
   mode: 'lunation' | 'eclipse';
+  comparator: CollectiveSkyHistoricalRecurrence['comparator'];
   matcher: (candidate: NonNullable<ReturnType<typeof classifyLunationContext>>) => boolean;
 }) {
+  const limitDays = params.mode === 'eclipse' ? ECLIPSE_HISTORY_SCAN_DAYS : LUNATION_HISTORY_SCAN_DAYS;
+
   if (!params.date) {
     return {
-      historicalGapYears: null,
       recurrence: null,
-      limitations: ['Historical-gap scan was skipped because no as-of date was provided to the current-sky scanner.'],
+      limitations: ['Historical recurrence was not computed because no as-of date was provided to the current-sky scanner.'],
     };
   }
-
-  const limitDays = params.mode === 'eclipse' ? ECLIPSE_HISTORY_SCAN_DAYS : LUNATION_HISTORY_SCAN_DAYS;
 
   for (let day = 1; day <= limitDays; day += 1) {
     const priorDate = new Date(params.date);
@@ -150,25 +155,23 @@ function scanHistoricalGapYears(params: {
     if (!candidate || !params.matcher(candidate)) continue;
 
     return {
-      historicalGapYears: Number((day / 365.25).toFixed(2)),
       recurrence: {
-        comparator: params.mode === 'eclipse' ? 'same_eclipse_type' as const : 'same_lunation_type' as const,
+        comparator: params.comparator,
         scanWindowDays: limitDays,
-        priorComparableEventDate: priorDate.toISOString().split('T')[0],
+        priorComparableEventDate: priorDate.toISOString().slice(0, 10),
         spacingDays: day,
         spacingYears: Number((day / 365.25).toFixed(2)),
       },
       limitations: [
-        `Historical gap only measures the prior detected ${params.mode} inside a bounded ${limitDays}-day backward scan.`,
+        `Historical recurrence only measures the prior detected ${params.mode} inside a bounded ${limitDays}-day backward scan.`,
         params.mode === 'eclipse'
-          ? 'This does not claim Saros-family continuity or exact eclipse-series history.'
-          : 'This does not claim annual sign-family recurrence beyond the bounded backward scan.',
+          ? 'This does not claim Saros-family continuity, visibility path, or exact eclipse-series history.'
+          : 'This does not claim full lunation-family recurrence beyond the bounded backward scan.',
       ],
     };
   }
 
   return {
-    historicalGapYears: null,
     recurrence: null,
     limitations: [`No prior comparable ${params.mode} was found inside the bounded ${limitDays}-day backward scan.`],
   };
@@ -181,13 +184,15 @@ export function detectLunationEvents(params: {
   const context = classifyLunationContext(params.positions);
   if (!context) return [];
 
-  const lunationHistory = scanHistoricalGapYears({
+  const lunationHistory = scanHistoricalRecurrence({
     date: params.date ?? null,
     mode: 'lunation',
+    comparator: 'same_lunation_type',
     matcher: (candidate) => candidate.lunationType === context.lunationType,
   });
 
   const lunationScore = Number((9.2 + (context.lunationType === 'full_moon' ? 0.2 : 0) + (context.exactnessBand === 'exact' ? 1 : context.exactnessBand === 'near_exact' ? 0.5 : 0.15)).toFixed(2));
+  const lunationRarityScore = Number((4.8 + (context.exactnessBand === 'exact' ? 0.5 : 0)).toFixed(2));
   const lunationEvent: AstrologyCollectiveSkyEvent = {
     id: `lunation:${context.lunationType}:${context.sign}`,
     kind: 'lunation',
@@ -201,18 +206,22 @@ export function detectLunationEvents(params: {
     applyingStateKnown: context.applyingStateKnown,
     sign: context.sign,
     exactnessBand: context.exactnessBand,
-    rarity: {
-      score: Number((4.8 + (context.exactnessBand === 'exact' ? 0.5 : 0)).toFixed(2)),
-      basis: 'heuristic',
-      status: lunationHistory.historicalGapYears == null ? 'not_computed' : 'computed',
-      confidence: lunationHistory.historicalGapYears == null ? 'none' : 'bounded',
-      recurrence: lunationHistory.recurrence,
-      limitations: [
-        'Lunation rarity is event-class weighting plus bounded prior-event spacing, not a full historical frequency engine.',
-        ...lunationHistory.limitations,
-      ],
-      historicalGapYears: lunationHistory.historicalGapYears,
-    },
+    rarity: lunationHistory.recurrence
+      ? buildBoundedHistoricalRarityFact({
+        score: lunationRarityScore,
+        recurrence: lunationHistory.recurrence,
+        limitations: [
+          'Lunation rarity is event-class weighting plus bounded prior-event spacing, not a full historical frequency engine.',
+          ...lunationHistory.limitations,
+        ],
+      })
+      : buildNotComputedHistoricalRarityFact({
+        score: lunationRarityScore,
+        limitations: [
+          'Lunation rarity is event-class weighting only in this slice when no prior comparable event is found.',
+          ...lunationHistory.limitations,
+        ],
+      }),
     consequence: {
       score: Number((5.4 + (context.lunationType === 'full_moon' ? 0.2 : 0) + (context.exactnessBand === 'exact' ? 0.7 : 0)).toFixed(2)),
       basis: 'heuristic',
@@ -220,7 +229,7 @@ export function detectLunationEvents(params: {
         'Lunation consequence is deterministic event weighting and does not claim outcome prediction.',
         ...lunationHistory.limitations,
       ],
-      historicalGapYears: lunationHistory.historicalGapYears,
+      historicalGapYears: lunationHistory.recurrence?.spacingYears ?? null,
     },
     summary: `${context.lunationType === 'new_moon' ? 'New Moon' : 'Full Moon'} pressure is active in ${context.sign}.`,
     receipts: [
@@ -237,13 +246,15 @@ export function detectLunationEvents(params: {
 
   if (!context.isEclipse) return [lunationEvent];
 
-  const eclipseHistory = scanHistoricalGapYears({
+  const eclipseHistory = scanHistoricalRecurrence({
     date: params.date ?? null,
     mode: 'eclipse',
+    comparator: 'same_eclipse_type',
     matcher: (candidate) => candidate.isEclipse && candidate.eclipseType === context.eclipseType,
   });
 
   const eclipseScore = Number((11 + (context.exactnessBand === 'exact' ? 1 : 0.55) + Math.max(0, (ECLIPSE_NODE_AXIS_ORB_DEGREES - context.nodeAxisOrb) * 0.07)).toFixed(2));
+  const eclipseRarityScore = Number((7.2 + Math.max(0, (ECLIPSE_NODE_AXIS_ORB_DEGREES - context.nodeAxisOrb) * 0.07)).toFixed(2));
   const eclipseEvent: AstrologyCollectiveSkyEvent = {
     id: `eclipse:${context.eclipseType}:${context.sign}`,
     kind: 'eclipse',
@@ -257,18 +268,22 @@ export function detectLunationEvents(params: {
     applyingStateKnown: context.applyingStateKnown,
     sign: context.sign,
     exactnessBand: context.exactnessBand,
-    rarity: {
-      score: Number((7.2 + Math.max(0, (ECLIPSE_NODE_AXIS_ORB_DEGREES - context.nodeAxisOrb) * 0.07)).toFixed(2)),
-      basis: 'heuristic',
-      status: eclipseHistory.historicalGapYears == null ? 'not_computed' : 'computed',
-      confidence: eclipseHistory.historicalGapYears == null ? 'none' : 'bounded',
-      recurrence: eclipseHistory.recurrence,
-      limitations: [
-        'Eclipse rarity uses node-axis proximity plus bounded prior-event spacing only.',
-        ...eclipseHistory.limitations,
-      ],
-      historicalGapYears: eclipseHistory.historicalGapYears,
-    },
+    rarity: eclipseHistory.recurrence
+      ? buildBoundedHistoricalRarityFact({
+        score: eclipseRarityScore,
+        recurrence: eclipseHistory.recurrence,
+        limitations: [
+          'Eclipse rarity uses node-axis proximity plus bounded prior-event spacing only.',
+          ...eclipseHistory.limitations,
+        ],
+      })
+      : buildNotComputedHistoricalRarityFact({
+        score: eclipseRarityScore,
+        limitations: [
+          'Eclipse rarity uses node-axis proximity only in this slice when no prior comparable event is found.',
+          ...eclipseHistory.limitations,
+        ],
+      }),
     consequence: {
       score: Number((7.4 + (context.exactnessBand === 'exact' ? 0.6 : 0.25)).toFixed(2)),
       basis: 'heuristic',
@@ -276,7 +291,7 @@ export function detectLunationEvents(params: {
         'Eclipse consequence is deterministic weighting from lunation tightness and node-axis proximity, not a historical outcome model.',
         ...eclipseHistory.limitations,
       ],
-      historicalGapYears: eclipseHistory.historicalGapYears,
+      historicalGapYears: eclipseHistory.recurrence?.spacingYears ?? null,
     },
     summary: `${context.eclipseType === 'solar_eclipse' ? 'Solar eclipse' : 'Lunar eclipse'} conditions are active in ${context.sign}.`,
     receipts: [

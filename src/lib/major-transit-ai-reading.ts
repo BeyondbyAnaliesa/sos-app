@@ -157,7 +157,11 @@ export function buildMajorTransitAiReadingMemoryHash(arc: MajorTransitArc, memor
 }
 
 function isMissingJudgmentMetadataColumnError(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error ?? '');
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === 'object' && error !== null
+      ? JSON.stringify(error)
+      : String(error ?? '');
   return message.includes('judgment_metadata_json') || message.includes('schema cache');
 }
 

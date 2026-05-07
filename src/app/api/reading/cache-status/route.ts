@@ -123,7 +123,11 @@ export async function GET(request: Request) {
         users.push({
           userId,
           ok: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: error instanceof Error
+            ? error.message
+            : typeof error === 'object' && error !== null
+              ? JSON.stringify(error)
+              : String(error),
         });
       }
     }

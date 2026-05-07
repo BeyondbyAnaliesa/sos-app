@@ -113,4 +113,43 @@ describe('getDailyAiReadingCacheStatus', () => {
     expect(status.latest?.judgmentMetadata).toBeNull();
     expect(status.priorReadingCount).toBe(0);
   });
+
+  it('retries cache-status reads when Supabase returns a plain object missing-column error', async () => {
+    const { getDailyAiReadingCacheStatus } = await loadModule();
+    limitMock
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({
+        data: null,
+        error: {
+          code: '42703',
+          message: 'column daily_ai_readings.judgment_metadata_json does not exist',
+        },
+      })
+      .mockResolvedValueOnce({
+        data: [
+          {
+            reading_date: '2026-05-06',
+            memory_hash: 'old-hash',
+            prompt_version: 'daily-full-memory-v4',
+            generated_at: '2026-05-06T12:00:00.000Z',
+          },
+        ],
+        error: null,
+      });
+
+    const status = await getDailyAiReadingCacheStatus({
+      userId: 'user-1',
+      date: '2026-05-06',
+      chart,
+      todayTransits: { date: '2026-05-06', transits: [] },
+      majorArcs: [],
+      guidance: [],
+      memory: { report: null, natalReading: null, lifeSignals: [] },
+      judgment,
+    });
+
+    expect(status.latest?.judgmentMetadata).toBeNull();
+    expect(selectMock).toHaveBeenCalledWith('reading_date,memory_hash,prompt_version,generated_at,judgment_metadata_json');
+    expect(selectMock).toHaveBeenCalledWith('reading_date,memory_hash,prompt_version,generated_at');
+  });
 });

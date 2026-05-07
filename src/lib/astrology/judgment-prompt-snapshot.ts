@@ -23,6 +23,8 @@ function compactCollectiveSkyEvent(event: AstrologyCollectiveSkyEvent) {
     rarity: {
       score: event.rarity.score,
       status: event.rarity.status,
+      assessment: event.rarity.assessment,
+      method: event.rarity.method,
       historicalGapYears: event.rarity.historicalGapYears,
     },
     consequence: {

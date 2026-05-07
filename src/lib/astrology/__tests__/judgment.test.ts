@@ -222,8 +222,9 @@ describe('buildAstrologyJudgment', () => {
     expect(judgment.currentSky.events.some((event) => event.kind === 'eclipse')).toBe(true);
     expect(judgment.currentSky.events.some((event) => event.kind === 'lunation')).toBe(true);
     expect(eclipse?.rarity.status).toBe('computed');
+    expect(eclipse?.rarity.method).toBe('historical_scan');
     expect(eclipse?.rarity.recurrence?.scanWindowDays).toBe(400);
-    expect(judgment.currentSky.limitations).toContain('Historical-gap enrichment is currently bounded to lunation/eclipse lookbacks, supported slow-body ingress spacing estimates, and supported slow-body station timing/spacing estimates only.');
+    expect(judgment.currentSky.limitations).toContain('Historical-gap enrichment is currently bounded to lunation/eclipse lookbacks, supported slow-body ingress spacing estimates, supported slow-body station timing/spacing estimates, and near-exact outer-planet aspect window scans only.');
     expect(judgment.currentSky.limitations).toContain('Configuration detector v1 only covers sign concentration plus tight T-square/grand-trine major-aspect clusters.');
   });
 
@@ -247,9 +248,31 @@ describe('buildAstrologyJudgment', () => {
     expect(ingressJudgment.receipts.find((receipt) => receipt.transitPlanet === 'Saturn')?.currentSkyRarity).toMatchObject({
       status: 'computed',
       confidence: 'bounded',
+      assessment: 'computed_recurrence',
+      method: 'spacing_estimate',
       recurrence: {
         comparator: 'same_body_sign_ingress_spacing_estimate',
       },
     });
+  });
+
+  it('threads bounded outer-planet aspect recurrence metadata into receipts when the live sky supports it', () => {
+    const aspectJudgment = buildAstrologyJudgment({
+      date: '2026-02-20',
+      chart,
+      todayTransits: { date: '2026-02-20', transits: [] },
+      majorArcs: [majorArcs[0]],
+      guidance: [],
+      memory,
+    });
+
+    expect(aspectJudgment.currentSky.events.find((event) => event.id === 'aspect:Saturn:conjunction:Neptune')?.rarity).toMatchObject({
+      status: 'computed',
+      method: 'bidirectional_scan',
+      recurrence: {
+        comparator: 'same_outer_planet_aspect_window',
+      },
+    });
+    expect(aspectJudgment.receipts.find((receipt) => receipt.transitPlanet === 'Saturn')?.currentSkyRarity?.comparisonCriteria.join(' ')).toContain('bounded ±900-day daily ephemeris scan');
   });
 });

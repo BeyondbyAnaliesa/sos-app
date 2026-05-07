@@ -130,6 +130,9 @@ function buildSignClusterEvents(positions: CollectiveSkyBodyState[]): AstrologyC
       exactnessBand: exactnessBand(spread),
       rarity: buildNotComputedHistoricalRarityFact({
         score: rarityScore,
+        assessment: 'heuristic_only',
+        method: 'none',
+        comparisonCriteria: ['No bounded historical sign-concentration scan is configured in this slice.'],
         limitations: [
           'Sign-cluster rarity is heuristic in this slice and does not claim historical frequency.',
           'No historical sign-concentration scan is computed yet.',
@@ -243,6 +246,9 @@ function buildMajorAspectPatternEvents(positions: CollectiveSkyBodyState[]): Ast
           exactnessBand: exactnessBand(avgOrb),
           rarity: buildNotComputedHistoricalRarityFact({
             score: Number((6.2 + slowCount * 0.35 + Math.max(0, 3 - maxOrb) * 0.2).toFixed(2)),
+            assessment: 'heuristic_only',
+            method: 'none',
+            comparisonCriteria: ['No bounded historical multi-body configuration scan is configured in this slice.'],
             limitations: [
               'Major-aspect-pattern rarity is heuristic in this slice and does not claim historical frequency.',
               'No historical multi-body configuration scan is computed yet.',
@@ -309,6 +315,9 @@ function buildMajorAspectPatternEvents(positions: CollectiveSkyBodyState[]): Ast
           exactnessBand: exactnessBand(avgOrb),
           rarity: buildNotComputedHistoricalRarityFact({
             score: Number((5.7 + slowCount * 0.3 + Math.max(0, 3 - maxOrb) * 0.18).toFixed(2)),
+            assessment: 'heuristic_only',
+            method: 'none',
+            comparisonCriteria: ['No bounded historical multi-body configuration scan is configured in this slice.'],
             limitations: [
               'Major-aspect-pattern rarity is heuristic in this slice and does not claim historical frequency.',
               'No historical multi-body configuration scan is computed yet.',

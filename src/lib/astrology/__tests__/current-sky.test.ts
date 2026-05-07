@@ -83,7 +83,7 @@ describe('scanCurrentSkyFromPositions', () => {
     ]);
 
     expect(currentSky.limitations).toContain('Rarity and consequence scores are heuristic and explicitly do not claim historical proof.');
-    expect(currentSky.limitations).toContain('Historical-gap enrichment is currently bounded to lunation/eclipse lookbacks, supported slow-body ingress spacing estimates, and supported slow-body station timing/spacing estimates only.');
+    expect(currentSky.limitations).toContain('Historical-gap enrichment is currently bounded to lunation/eclipse lookbacks, supported slow-body ingress spacing estimates, supported slow-body station timing/spacing estimates, and near-exact outer-planet aspect window scans only.');
     expect(currentSky.limitations).toContain('Configuration detector v1 only covers sign concentration plus tight T-square/grand-trine major-aspect clusters.');
   });
 
@@ -150,8 +150,53 @@ describe('scanCurrentSkyFromPositions', () => {
     expect(currentSky.events.find((event) => event.id === 'station:Mars')?.rarity).toMatchObject({
       status: 'not_computed',
       confidence: 'none',
+      assessment: 'unsupported',
+      method: 'local_station_window',
     });
     expect(currentSky.events.find((event) => event.id === 'station:Mars')?.rarity.limitations.join(' ')).toContain('supported slow bodies with bounded local station windows');
+  });
+
+  it('computes bounded recurrence for a near-exact supported outer-planet aspect with explicit scan receipts', () => {
+    const asOf = new Date('2026-02-20T12:00:00Z');
+    const currentSky = scanCurrentSkyFromPositions(
+      getPlanetaryPositions(asOf).map((position) => buildCollectiveSkyBodyState({
+        body: position.label,
+        longitude: position.longitude,
+        speed: position.speed,
+        retrograde: position.retrograde,
+      })),
+      { date: asOf },
+    );
+
+    const aspect = currentSky.events.find((event) => event.id === 'aspect:Saturn:conjunction:Neptune');
+
+    expect(aspect?.rarity).toMatchObject({
+      status: 'computed',
+      confidence: 'bounded',
+      assessment: 'computed_recurrence',
+      method: 'bidirectional_scan',
+      searchWindowDays: 900,
+      recurrence: {
+        comparator: 'same_outer_planet_aspect_window',
+      },
+    });
+    expect(aspect?.rarity.recurrence?.priorComparableEventDate).toBeTruthy();
+    expect(aspect?.rarity.comparisonCriteria.join(' ')).toContain('bounded ±900-day daily ephemeris scan');
+  });
+
+  it('keeps outer-planet aspect recurrence fenced when the live aspect is not yet inside the bounded exact-window comparator', () => {
+    const currentSky = scanCurrentSkyFromPositions([
+      body('Saturn', 10, 0.03),
+      body('Neptune', 13.4, 0.01),
+    ], { date: new Date('2026-02-20T12:00:00Z') });
+
+    expect(currentSky.events.find((event) => event.id === 'aspect:Saturn:conjunction:Neptune')?.rarity).toMatchObject({
+      status: 'not_computed',
+      assessment: 'bounded_limited',
+      method: 'bidirectional_scan',
+      searchWindowDays: 900,
+    });
+    expect(currentSky.events.find((event) => event.id === 'aspect:Saturn:conjunction:Neptune')?.rarity.limitations.join(' ')).toContain('within 2.0° orb');
   });
 
   it('detects compact sign concentration as a bounded collective configuration', () => {
@@ -226,6 +271,8 @@ describe('scanCurrentSkyFromPositions', () => {
     expect(eclipse?.rarity).toMatchObject({
       status: 'computed',
       confidence: 'bounded',
+      assessment: 'computed_recurrence',
+      method: 'historical_scan',
     });
     expect(eclipse?.rarity.historicalGapYears).not.toBeNull();
     expect(eclipse?.rarity.recurrence).toMatchObject({

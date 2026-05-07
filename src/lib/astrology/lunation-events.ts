@@ -209,6 +209,8 @@ export function detectLunationEvents(params: {
     rarity: lunationHistory.recurrence
       ? buildBoundedHistoricalRarityFact({
         score: lunationRarityScore,
+        method: 'historical_scan',
+        comparisonCriteria: ['Same lunation type inside a bounded backward daily ephemeris scan.'],
         recurrence: lunationHistory.recurrence,
         limitations: [
           'Lunation rarity is event-class weighting plus bounded prior-event spacing, not a full historical frequency engine.',
@@ -217,6 +219,10 @@ export function detectLunationEvents(params: {
       })
       : buildNotComputedHistoricalRarityFact({
         score: lunationRarityScore,
+        assessment: 'bounded_limited',
+        method: 'historical_scan',
+        searchWindowDays: LUNATION_HISTORY_SCAN_DAYS,
+        comparisonCriteria: ['Same lunation type inside a bounded backward daily ephemeris scan.'],
         limitations: [
           'Lunation rarity is event-class weighting only in this slice when no prior comparable event is found.',
           ...lunationHistory.limitations,
@@ -271,6 +277,8 @@ export function detectLunationEvents(params: {
     rarity: eclipseHistory.recurrence
       ? buildBoundedHistoricalRarityFact({
         score: eclipseRarityScore,
+        method: 'historical_scan',
+        comparisonCriteria: ['Same eclipse type inside a bounded backward daily ephemeris scan.'],
         recurrence: eclipseHistory.recurrence,
         limitations: [
           'Eclipse rarity uses node-axis proximity plus bounded prior-event spacing only.',
@@ -279,6 +287,10 @@ export function detectLunationEvents(params: {
       })
       : buildNotComputedHistoricalRarityFact({
         score: eclipseRarityScore,
+        assessment: 'bounded_limited',
+        method: 'historical_scan',
+        searchWindowDays: ECLIPSE_HISTORY_SCAN_DAYS,
+        comparisonCriteria: ['Same eclipse type inside a bounded backward daily ephemeris scan.'],
         limitations: [
           'Eclipse rarity uses node-axis proximity only in this slice when no prior comparable event is found.',
           ...eclipseHistory.limitations,

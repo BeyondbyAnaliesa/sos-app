@@ -196,7 +196,12 @@ export interface CollectiveSkyBodyState {
 }
 
 export interface CollectiveSkyHistoricalRecurrence {
-  comparator: 'same_lunation_type' | 'same_eclipse_type' | 'same_body_sign_ingress_spacing_estimate' | 'same_body_station_window_spacing_estimate';
+  comparator:
+    | 'same_lunation_type'
+    | 'same_eclipse_type'
+    | 'same_body_sign_ingress_spacing_estimate'
+    | 'same_body_station_window_spacing_estimate'
+    | 'same_outer_planet_aspect_window';
   scanWindowDays: number;
   priorComparableEventDate: string;
   nextComparableEventDate?: string | null;
@@ -209,6 +214,10 @@ export interface CollectiveSkyHistoricalRarityFact {
   basis: 'heuristic';
   status: 'computed' | 'not_computed';
   confidence: 'bounded' | 'none';
+  assessment: 'computed_recurrence' | 'bounded_limited' | 'heuristic_only' | 'unsupported';
+  method: 'historical_scan' | 'bidirectional_scan' | 'spacing_estimate' | 'local_station_window' | 'none';
+  searchWindowDays: number | null;
+  comparisonCriteria: string[];
   recurrence: CollectiveSkyHistoricalRecurrence | null;
   limitations: string[];
   historicalGapYears: number | null;

@@ -9,7 +9,7 @@ import type {
 import { detectCurrentSkyConfigurations } from '@/lib/astrology/current-sky-configurations';
 import { detectLunationEvents } from '@/lib/astrology/lunation-events';
 import {
-  buildNotComputedHistoricalRarityFact,
+  buildOuterPlanetAspectHistoricalRarityFact,
   buildSlowBodyIngressHistoricalRarityFact,
   buildSlowBodyStationHistoricalRarityFact,
 } from '@/lib/astrology/rarity-facts';
@@ -168,12 +168,12 @@ function consequenceScoreForAspect(bodyA: string, bodyB: string, aspect: Aspect,
   return Math.min(10, Number((2.1 + relativeClassWeight(bodyA) + relativeClassWeight(bodyB) + hardAspectBonus + orbCloseness(orb) * 0.55 + (phase === 'exact' ? 0.9 : 0)).toFixed(2)));
 }
 
-function buildAspectEvent(bodyA: CollectiveSkyBodyState, bodyB: CollectiveSkyBodyState, aspect: Aspect, angle: number, orb: number): AstrologyCollectiveSkyEvent {
+function buildAspectEvent(bodyA: CollectiveSkyBodyState, bodyB: CollectiveSkyBodyState, aspect: Aspect, angle: number, orb: number, date: Date | null): AstrologyCollectiveSkyEvent {
   const { phase, applyingStateKnown } = computeAspectPhase(bodyA, bodyB, angle, orb);
   const score = eventScore(bodyA, bodyB, aspect, orb, phase);
   const rarityLimitations = [
     'Rarity score is heuristic in this slice and does not claim historical frequency.',
-    'Historical gap data is not computed yet.',
+    'Historical recurrence is only computed here for supported outer-planet pairs when the live aspect is already inside a tight bounded comparison window.',
   ];
   const consequenceLimitations = [
     'Consequence score is a deterministic weight, not a backtested outcome model.',
@@ -192,8 +192,13 @@ function buildAspectEvent(bodyA: CollectiveSkyBodyState, bodyB: CollectiveSkyBod
     applyingStateKnown,
     sign: bodyA.sign === bodyB.sign ? bodyA.sign : null,
     exactnessBand: exactnessBand(orb),
-    rarity: buildNotComputedHistoricalRarityFact({
+    rarity: buildOuterPlanetAspectHistoricalRarityFact({
       score: rarityScoreForAspect(bodyA.body, bodyB.body, aspect, orb),
+      bodyA: bodyA.body,
+      bodyB: bodyB.body,
+      aspect,
+      orb,
+      date,
       limitations: rarityLimitations,
     }),
     consequence: {
@@ -354,7 +359,7 @@ export function scanCurrentSkyFromPositions(positions: CollectiveSkyBodyState[],
       const match = MAJOR_ASPECTS.find((candidate) => Math.abs(difference - candidate.angle) <= candidate.orb);
       if (!match) continue;
       const orb = Math.abs(difference - match.angle);
-      events.push(buildAspectEvent(body, other, match.aspect, match.angle, orb));
+      events.push(buildAspectEvent(body, other, match.aspect, match.angle, orb, options?.date ?? null));
     }
   }
 
@@ -380,7 +385,7 @@ export function scanCurrentSkyFromPositions(positions: CollectiveSkyBodyState[],
     limitations: [
       'Current sky scan covers Tier 1 transit-to-transit major aspects, near-stations, sign-boundary proximity, lunation/eclipse detection, and configuration detector v1 only.',
       'Rarity and consequence scores are heuristic and explicitly do not claim historical proof.',
-      'Historical-gap enrichment is currently bounded to lunation/eclipse lookbacks, supported slow-body ingress spacing estimates, and supported slow-body station timing/spacing estimates only.',
+      'Historical-gap enrichment is currently bounded to lunation/eclipse lookbacks, supported slow-body ingress spacing estimates, supported slow-body station timing/spacing estimates, and near-exact outer-planet aspect window scans only.',
       'Configuration detector v1 only covers sign concentration plus tight T-square/grand-trine major-aspect clusters.',
     ],
   };

@@ -128,6 +128,11 @@ const judgment: AstrologyJudgment = {
   receipts: [],
 };
 
+const judgmentsByKey = {
+  'saturn-square-sun|2026-05-01|2026-08-01|building': judgment,
+  'jupiter-trine-moon|2026-05-10|2026-09-02|building': judgment,
+};
+
 async function loadModule() {
   vi.resetModules();
   return import('@/lib/major-transit-ai-reading');
@@ -205,6 +210,35 @@ describe('getOrCreateMajorTransitAiReadings', () => {
     );
   });
 
+  it('includes compact expected metadata and tolerates rows missing persisted metadata in cache status', async () => {
+    const { getMajorTransitAiReadingsCacheStatus } = await loadModule();
+    tableMock.in.mockResolvedValueOnce({
+      data: [
+        {
+          arc_key: arcs[0].key,
+          lifecycle_start_date: arcs[0].startDate,
+          lifecycle_end_date: arcs[0].endDate,
+          phase: arcs[0].phase,
+          memory_hash: 'old-hash',
+          prompt_version: 'major-wave-full-memory-v5',
+          generated_at: '2026-05-07T12:00:00.000Z',
+        },
+      ],
+      error: null,
+    });
+
+    const [entry] = await getMajorTransitAiReadingsCacheStatus({
+      userId: 'user-1',
+      arcs: [arcs[0]],
+      memory,
+      chart,
+      judgments: { 'saturn-square-sun|2026-05-01|2026-08-01|building': judgment },
+    });
+
+    expect(entry?.expectedJudgmentMetadata.status).toBe('astrology-judgment-metadata-v1');
+    expect(entry?.latest?.judgmentMetadata).toBeNull();
+  });
+
   it('retries once for only the missing arcs before returning partial output', async () => {
     const { getOrCreateMajorTransitAiReadings, majorTransitReadingKey } = await loadModule();
     completionCreateMock
@@ -253,8 +287,9 @@ describe('getOrCreateMajorTransitAiReadings', () => {
         ],
       });
 
-    const readings = await getOrCreateMajorTransitAiReadings({ userId: 'user-1', arcs, chart, memory });
+    const readings = await getOrCreateMajorTransitAiReadings({ userId: 'user-1', arcs, chart, memory, judgments: judgmentsByKey });
 
+    expect(upsertMock.mock.calls[0]?.[0]?.[0]?.judgment_metadata_json?.status).toBe('astrology-judgment-metadata-v1');
     expect(Object.keys(readings).sort()).toEqual([
       majorTransitReadingKey(arcs[0]),
       majorTransitReadingKey(arcs[1]),
@@ -289,7 +324,7 @@ describe('getOrCreateMajorTransitAiReadings', () => {
       ],
     });
 
-    const readings = await getOrCreateMajorTransitAiReadings({ userId: 'user-1', arcs, chart, memory });
+    const readings = await getOrCreateMajorTransitAiReadings({ userId: 'user-1', arcs, chart, memory, judgments: judgmentsByKey });
 
     expect(Object.keys(readings)).toEqual([majorTransitReadingKey(arcs[0])]);
     expect(completionCreateMock).toHaveBeenCalledTimes(3);
@@ -331,7 +366,7 @@ describe('getOrCreateMajorTransitAiReadings', () => {
     });
 
     await expect(
-      getOrCreateMajorTransitAiReadings({ userId: 'user-1', arcs, chart, memory, onPartial: 'throw' }),
+      getOrCreateMajorTransitAiReadings({ userId: 'user-1', arcs, chart, memory, onPartial: 'throw', judgments: judgmentsByKey }),
     ).rejects.toThrow('partial output');
 
     expect(completionCreateMock).toHaveBeenCalledTimes(3);

@@ -102,6 +102,7 @@ export async function GET(request: Request) {
             rowExists: Boolean(daily.latest),
             status: daily.exactMatch ? 'hit' : 'miss',
             expectedHash: daily.expectedHash,
+            expectedJudgmentMetadata: daily.expectedJudgmentMetadata,
             priorReadingCount: daily.priorReadingCount,
             latest: daily.latest,
           },
@@ -114,6 +115,7 @@ export async function GET(request: Request) {
               .filter((value): value is string => Boolean(value))
               .sort()
               .at(-1) ?? null,
+            metadataPresentCount: major.filter((entry) => Boolean(entry.latest?.judgmentMetadata)).length,
             entries: major,
           },
         });

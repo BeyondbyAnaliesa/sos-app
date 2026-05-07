@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/server';
 import type { MajorTransitArc } from '@/lib/astrology/major-transits';
 import type { NatalChart } from '@/lib/astrology/types';
 import { buildArcFocusedJudgment } from '@/lib/astrology/judgment';
+import { buildAstrologyJudgmentMetadata, type AstrologyJudgmentMetadata } from '@/lib/astrology/judgment-metadata';
 import type { AstrologyJudgment } from '@/lib/astrology/judgment-types';
 import { buildAstrologyJudgmentPromptSnapshot } from '@/lib/astrology/judgment-prompt-snapshot';
 import { buildTransitArcJudgment } from '@/lib/astrology/transit-arc-judgment';
@@ -42,6 +43,7 @@ type CacheStatusRow = {
   memory_hash: string;
   prompt_version: string;
   generated_at: string;
+  judgment_metadata_json?: AstrologyJudgmentMetadata | null;
 };
 
 export type MajorTransitAiReadingCacheStatusEntry = {
@@ -51,10 +53,12 @@ export type MajorTransitAiReadingCacheStatusEntry = {
   expectedHash: string;
   exactMatch: boolean;
   rowCount: number;
+  expectedJudgmentMetadata: AstrologyJudgmentMetadata;
   latest: {
     memoryHash: string;
     promptVersion: string;
     generatedAt: string;
+    judgmentMetadata: AstrologyJudgmentMetadata | null;
   } | null;
 };
 
@@ -150,6 +154,11 @@ export function buildMajorTransitAiReadingMemoryHash(arc: MajorTransitArc, memor
     priorReadings: (memory.priorReadings ?? []).slice(0, 5).map((reading) => compactText(reading, 500)),
     lifeSignals,
   });
+}
+
+function isMissingJudgmentMetadataColumnError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  return message.includes('judgment_metadata_json') || message.includes('schema cache');
 }
 
 function sanitizeReading(reading: Partial<MajorTransitAiReading>, arc: MajorTransitArc): MajorTransitAiReading {
@@ -279,11 +288,22 @@ export async function getMajorTransitAiReadingsCacheStatus(params: {
   if (arcs.length === 0) return [];
 
   const admin = createAdminClient();
-  const { data, error } = await admin
+  let data;
+  let error;
+
+  ({ data, error } = await admin
     .from('major_transit_readings')
-    .select('arc_key,lifecycle_start_date,lifecycle_end_date,phase,memory_hash,prompt_version,generated_at')
+    .select('arc_key,lifecycle_start_date,lifecycle_end_date,phase,memory_hash,prompt_version,generated_at,judgment_metadata_json')
     .eq('user_id', params.userId)
-    .in('arc_key', arcs.map((arc) => arc.key));
+    .in('arc_key', arcs.map((arc) => arc.key)));
+
+  if (error && isMissingJudgmentMetadataColumnError(error)) {
+    ({ data, error } = await admin
+      .from('major_transit_readings')
+      .select('arc_key,lifecycle_start_date,lifecycle_end_date,phase,memory_hash,prompt_version,generated_at')
+      .eq('user_id', params.userId)
+      .in('arc_key', arcs.map((arc) => arc.key)));
+  }
 
   if (error) throw error;
 
@@ -308,11 +328,13 @@ export async function getMajorTransitAiReadingsCacheStatus(params: {
       expectedHash,
       exactMatch: matchingRows.some((row) => row.memory_hash === expectedHash),
       rowCount: matchingRows.length,
+      expectedJudgmentMetadata: buildAstrologyJudgmentMetadata(judgments[key] as AstrologyJudgment),
       latest: latestRow
         ? {
             memoryHash: latestRow.memory_hash,
             promptVersion: latestRow.prompt_version,
             generatedAt: latestRow.generated_at,
+            judgmentMetadata: latestRow.judgment_metadata_json ?? null,
           }
         : null,
     };
@@ -343,6 +365,7 @@ async function saveGeneratedRows(params: {
         phase: arc.phase,
         memory_hash: buildMajorTransitAiReadingMemoryHash(arc, params.memory, params.judgments[key]),
         reading_json: reading,
+        judgment_metadata_json: buildAstrologyJudgmentMetadata(params.judgments[key] as AstrologyJudgment),
         prompt_version: MAJOR_TRANSIT_READING_PROMPT_VERSION,
         model: MAJOR_TRANSIT_READING_MODEL,
         generated_at: new Date().toISOString(),
@@ -353,11 +376,23 @@ async function saveGeneratedRows(params: {
 
   if (rows.length === 0) return;
 
-  const { error } = await admin
+  let { error } = await admin
     .from('major_transit_readings')
     .upsert(rows, {
       onConflict: 'user_id,arc_key,lifecycle_start_date,lifecycle_end_date,phase,memory_hash',
     });
+
+  if (error && isMissingJudgmentMetadataColumnError(error)) {
+    ({ error } = await admin
+      .from('major_transit_readings')
+      .upsert(rows.map((row) => {
+        const fallbackRow = { ...row };
+        delete fallbackRow.judgment_metadata_json;
+        return fallbackRow;
+      }), {
+        onConflict: 'user_id,arc_key,lifecycle_start_date,lifecycle_end_date,phase,memory_hash',
+      }));
+  }
 
   if (error) throw error;
 }

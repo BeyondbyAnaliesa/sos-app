@@ -6,6 +6,7 @@ import type { MajorTransitArc } from '@/lib/astrology/major-transits';
 import type { DailyTransits } from '@/lib/astrology/domain-types';
 import type { NatalChart } from '@/lib/astrology/types';
 import { buildAstrologyJudgment } from '@/lib/astrology/judgment';
+import { buildAstrologyJudgmentMetadata, type AstrologyJudgmentMetadata } from '@/lib/astrology/judgment-metadata';
 import type { AstrologyJudgment } from '@/lib/astrology/judgment-types';
 import { buildAstrologyJudgmentPromptSnapshot } from '@/lib/astrology/judgment-prompt-snapshot';
 import type { GuidanceResult } from '@/lib/interpret';
@@ -36,11 +37,13 @@ type CacheStatusRow = {
   memory_hash: string;
   prompt_version: string;
   generated_at: string;
+  judgment_metadata_json?: AstrologyJudgmentMetadata | null;
 };
 
 export type DailyAiReadingCacheStatus = {
   date: string;
   expectedHash: string;
+  expectedJudgmentMetadata: AstrologyJudgmentMetadata;
   priorReadingCount: number;
   exactMatch: boolean;
   latest: {
@@ -48,6 +51,7 @@ export type DailyAiReadingCacheStatus = {
     memoryHash: string;
     promptVersion: string;
     generatedAt: string;
+    judgmentMetadata: AstrologyJudgmentMetadata | null;
   } | null;
 };
 
@@ -80,6 +84,11 @@ function sanitizeReading(reading: Partial<DailyAiReading>, fallbackDate: string)
 
 function buildHashJudgmentSnapshot(judgment: AstrologyJudgment) {
   return buildAstrologyJudgmentPromptSnapshot(judgment);
+}
+
+function isMissingJudgmentMetadataColumnError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  return message.includes('judgment_metadata_json') || message.includes('schema cache');
 }
 
 function resolveJudgment(params: {
@@ -244,14 +253,28 @@ export async function getDailyAiReadingCacheStatus(params: {
   const priorReadings = await fetchPriorReadings(params.userId, params.date).catch(() => []);
   const memory = { ...params.memory, priorReadings };
   const expectedHash = buildDailyAiReadingMemoryHash({ ...params, memory });
+  const expectedJudgmentMetadata = buildAstrologyJudgmentMetadata(resolveJudgment({ ...params, memory }));
   const admin = createAdminClient();
-  const { data, error } = await admin
+  let data;
+  let error;
+
+  ({ data, error } = await admin
     .from('daily_ai_readings')
-    .select('reading_date,memory_hash,prompt_version,generated_at')
+    .select('reading_date,memory_hash,prompt_version,generated_at,judgment_metadata_json')
     .eq('user_id', params.userId)
     .eq('reading_date', params.date)
     .order('generated_at', { ascending: false })
-    .limit(5);
+    .limit(5));
+
+  if (error && isMissingJudgmentMetadataColumnError(error)) {
+    ({ data, error } = await admin
+      .from('daily_ai_readings')
+      .select('reading_date,memory_hash,prompt_version,generated_at')
+      .eq('user_id', params.userId)
+      .eq('reading_date', params.date)
+      .order('generated_at', { ascending: false })
+      .limit(5));
+  }
 
   if (error) throw error;
 
@@ -262,21 +285,23 @@ export async function getDailyAiReadingCacheStatus(params: {
         memoryHash: rows[0].memory_hash,
         promptVersion: rows[0].prompt_version,
         generatedAt: rows[0].generated_at,
+        judgmentMetadata: rows[0].judgment_metadata_json ?? null,
       }
     : null;
 
   return {
     date: params.date,
     expectedHash,
+    expectedJudgmentMetadata,
     priorReadingCount: priorReadings.length,
     exactMatch: rows.some((row) => row.memory_hash === expectedHash),
     latest,
   };
 }
 
-async function saveReading(userId: string, date: string, hash: string, reading: DailyAiReading) {
+async function saveReading(userId: string, date: string, hash: string, reading: DailyAiReading, judgmentMetadata: AstrologyJudgmentMetadata) {
   const admin = createAdminClient();
-  const { error } = await admin.from('daily_ai_readings').upsert({
+  const baseRow = {
     user_id: userId,
     reading_date: date,
     memory_hash: hash,
@@ -285,7 +310,16 @@ async function saveReading(userId: string, date: string, hash: string, reading: 
     model: DAILY_AI_READING_MODEL,
     generated_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
+  };
+
+  let { error } = await admin.from('daily_ai_readings').upsert({
+    ...baseRow,
+    judgment_metadata_json: judgmentMetadata,
   }, { onConflict: 'user_id,reading_date,memory_hash' });
+
+  if (error && isMissingJudgmentMetadataColumnError(error)) {
+    ({ error } = await admin.from('daily_ai_readings').upsert(baseRow, { onConflict: 'user_id,reading_date,memory_hash' }));
+  }
 
   if (error) throw error;
 }
@@ -337,7 +371,7 @@ export async function getOrCreateDailyAiReading(params: {
     if (cached) return cached;
 
     const generated = await generateReading({ ...params, memory, judgment });
-    await saveReading(params.userId, params.date, hash, generated);
+    await saveReading(params.userId, params.date, hash, generated, buildAstrologyJudgmentMetadata(judgment));
     return generated;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

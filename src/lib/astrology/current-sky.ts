@@ -6,6 +6,7 @@ import type {
   JudgmentPhase,
   JudgmentTier,
 } from '@/lib/astrology/judgment-types';
+import { detectCurrentSkyConfigurations } from '@/lib/astrology/current-sky-configurations';
 import { detectLunationEvents } from '@/lib/astrology/lunation-events';
 import {
   buildNotComputedHistoricalRarityFact,
@@ -332,6 +333,7 @@ export function scanCurrentSkyFromPositions(positions: CollectiveSkyBodyState[],
   const events: AstrologyCollectiveSkyEvent[] = [];
 
   events.push(...detectLunationEvents({ positions, date: options?.date ?? null }));
+  events.push(...detectCurrentSkyConfigurations(positions));
 
   for (let index = 0; index < positions.length; index += 1) {
     const body = positions[index];
@@ -376,10 +378,10 @@ export function scanCurrentSkyFromPositions(positions: CollectiveSkyBodyState[],
     scannedBodies: positions.map((position) => position.body),
     events: sortedEvents,
     limitations: [
-      'Current sky scan covers Tier 1 transit-to-transit major aspects, near-stations, sign-boundary proximity, and lunation/eclipse detection only.',
+      'Current sky scan covers Tier 1 transit-to-transit major aspects, near-stations, sign-boundary proximity, lunation/eclipse detection, and configuration detector v1 only.',
       'Rarity and consequence scores are heuristic and explicitly do not claim historical proof.',
       'Historical-gap enrichment is currently bounded to lunation/eclipse lookbacks, supported slow-body ingress spacing estimates, and supported slow-body station timing/spacing estimates only.',
-      'No multi-body configuration detector is included in this slice.',
+      'Configuration detector v1 only covers sign concentration plus tight T-square/grand-trine major-aspect clusters.',
     ],
   };
 }

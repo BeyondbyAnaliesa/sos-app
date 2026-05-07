@@ -80,6 +80,17 @@ describe('GET /api/reading/channel-brief-preview', () => {
     expect(body.laneInputs).toMatchObject({
       status: 'astrology-lane-input-adapter-v1',
       privacy: 'internal-operator-only',
+      computedSkyFacts: {
+        computed: [
+          {
+            eventId: expect.any(String),
+            recurrence: {
+              comparator: expect.any(String),
+            },
+          },
+        ],
+        notComputed: expect.any(Array),
+      },
       lanes: {
         socials: {
           lane: 'socials',
@@ -131,6 +142,10 @@ describe('GET /api/reading/channel-brief-preview', () => {
         },
         concreteDemand: 'Stay concrete.',
         receipts: [],
+        computedSkyFacts: {
+          computed: [],
+          notComputed: [],
+        },
         hookAngles: [],
         limitations: ['This brief is an internal adapter. It is not final public copy.'],
       },
@@ -157,6 +172,10 @@ describe('GET /api/reading/channel-brief-preview', () => {
     });
     expect(body.laneInputs).toMatchObject({
       status: 'astrology-lane-input-adapter-v1',
+      computedSkyFacts: {
+        computed: [],
+        notComputed: [],
+      },
       source: {
         previewStatus: 'astrology-channel-brief-preview-v1',
         mode: 'live_user',

@@ -1,9 +1,11 @@
 import type {
   AstrologyCollectiveBridge,
+  AstrologyCollectiveSkyEvent,
   AstrologyJudgment,
   AstrologyJudgmentReceipt,
   AstrologyJudgmentSignal,
   CollectiveSkyHistoricalRarityFact,
+  CollectiveSkyHistoricalRecurrence,
 } from '@/lib/astrology/judgment-types';
 
 export interface AstrologyChannelBriefRaritySummary {
@@ -34,6 +36,31 @@ export interface AstrologyChannelBriefReceipt {
   } | null;
   limitations: string[];
   rarity: AstrologyChannelBriefRaritySummary | null;
+}
+
+export interface AstrologyChannelBriefComputedSkyFact {
+  eventId: string;
+  kind: AstrologyCollectiveSkyEvent['kind'];
+  bodies: string[];
+  aspect: string | null;
+  sign: string | null;
+  exactnessBand: AstrologyCollectiveSkyEvent['exactnessBand'];
+  summary: string;
+  recurrence: CollectiveSkyHistoricalRecurrence;
+  historicalGapYears: number | null;
+  limitations: string[];
+  receipts: string[];
+}
+
+export interface AstrologyChannelBriefFencedSkyFact {
+  eventId: string;
+  kind: AstrologyCollectiveSkyEvent['kind'];
+  bodies: string[];
+  aspect: string | null;
+  sign: string | null;
+  summary: string;
+  status: 'not_computed';
+  limitations: string[];
 }
 
 export interface AstrologyChannelHookAngle {
@@ -73,6 +100,10 @@ export interface AstrologyChannelBrief {
   };
   concreteDemand: string;
   receipts: AstrologyChannelBriefReceipt[];
+  computedSkyFacts: {
+    computed: AstrologyChannelBriefComputedSkyFact[];
+    notComputed: AstrologyChannelBriefFencedSkyFact[];
+  };
   hookAngles: AstrologyChannelHookAngle[];
   limitations: string[];
 }
@@ -152,6 +183,42 @@ function buildReceipt(signal: AstrologyJudgmentSignal): AstrologyChannelBriefRec
   }));
 }
 
+function buildComputedSkyFacts(currentSkyEvents: AstrologyCollectiveSkyEvent[]): AstrologyChannelBrief['computedSkyFacts'] {
+  return {
+    computed: currentSkyEvents
+      .filter((event) => event.rarity.status === 'computed' && event.rarity.recurrence)
+      .map((event) => ({
+        eventId: event.id,
+        kind: event.kind,
+        bodies: event.bodies,
+        aspect: event.aspect,
+        sign: event.sign,
+        exactnessBand: event.exactnessBand,
+        summary: event.summary,
+        recurrence: event.rarity.recurrence as CollectiveSkyHistoricalRecurrence,
+        historicalGapYears: event.rarity.historicalGapYears,
+        limitations: dedupe([...event.limitations, ...event.rarity.limitations]),
+        receipts: event.receipts.slice(0, 4),
+      })),
+    notComputed: currentSkyEvents
+      .filter((event) => event.rarity.status === 'not_computed')
+      .map((event) => ({
+        eventId: event.id,
+        kind: event.kind,
+        bodies: event.bodies,
+        aspect: event.aspect,
+        sign: event.sign,
+        summary: event.summary,
+        status: 'not_computed' as const,
+        limitations: dedupe([...event.limitations, ...event.rarity.limitations]).slice(0, 4),
+      })),
+  };
+}
+
+function dedupe(values: string[]) {
+  return values.filter((value, index, all): value is string => Boolean(value) && all.indexOf(value) === index);
+}
+
 export function buildAstrologyChannelBrief(judgment: AstrologyJudgment): AstrologyChannelBrief {
   const lead = selectLeadSignal(judgment);
   const leadBridge = bridgeSummary(lead?.collectiveBridge);
@@ -165,6 +232,7 @@ export function buildAstrologyChannelBrief(judgment: AstrologyJudgment): Astrolo
   const receipts = supportingSignals.flatMap(buildReceipt).slice(0, 6);
   const currentSkySummary = compact(judgment.currentSky.summary, 'Current-sky summary is limited in this layer.');
   const leadLifeArea = lead?.lifeAreas[0] ?? judgment.activatedLifeAreas[0] ?? 'the active life area';
+  const computedSkyFacts = buildComputedSkyFacts(judgment.currentSky.events);
 
   return {
     status: 'astrology-channel-brief-v1',
@@ -202,6 +270,7 @@ export function buildAstrologyChannelBrief(judgment: AstrologyJudgment): Astrolo
     },
     concreteDemand: judgment.practicalDemand,
     receipts,
+    computedSkyFacts,
     hookAngles: [
       {
         key: 'current_sky_story',

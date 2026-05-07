@@ -23,6 +23,10 @@ describe('buildAstrologyLaneInputBundle', () => {
     expect(bundle).toMatchObject({
       status: 'astrology-lane-input-adapter-v1',
       privacy: 'internal-operator-only',
+      computedSkyFacts: {
+        computed: expect.any(Array),
+        notComputed: expect.any(Array),
+      },
       lanes: {
         socials: {
           lane: 'socials',
@@ -57,6 +61,7 @@ describe('buildAstrologyLaneInputBundle', () => {
     });
     expect(bundle.lanes.substack.limitations.length).toBeGreaterThan(0);
     expect(bundle.lanes.aeonLore.limitations.length).toBeGreaterThan(0);
+    expect(bundle.computedSkyFacts.computed.length).toBeGreaterThan(0);
   });
 
   it('keeps rarity fenced as unavailable and excludes final-public-copy fields', () => {
@@ -71,6 +76,67 @@ describe('buildAstrologyLaneInputBundle', () => {
     expect('finalPublicCopy' in bundle.lanes.aeonLore).toBe(false);
   });
 
+
+  it('preserves computed sky facts even when dominant-story rarity is fenced', () => {
+    const fixture = buildAstrologyChannelBriefFixture();
+    fixture.channelBrief.dominantStory.currentSkyRarity = {
+      status: 'not_computed',
+      confidence: 'none',
+      historicalGapYears: null,
+      limitations: ['Transit aspect recurrence remains fenced in this slice.'],
+    };
+    fixture.channelBrief.computedSkyFacts = {
+      computed: [
+        {
+          eventId: 'ingress:Jupiter:post_ingress',
+          kind: 'sign_ingress_proximity',
+          bodies: ['Jupiter'],
+          aspect: null,
+          sign: 'Cancer',
+          exactnessBand: 'exact',
+          summary: 'Jupiter has just crossed into Cancer.',
+          recurrence: {
+            comparator: 'same_body_sign_ingress_spacing_estimate',
+            scanWindowDays: 400,
+            priorComparableEventDate: '2024-06-09',
+            nextComparableEventDate: '2026-06-30',
+            spacingDays: 386,
+            spacingYears: 1.1,
+          },
+          historicalGapYears: 1.1,
+          limitations: ['bounded estimate only'],
+          receipts: ['Jupiter: Cancer 0.05°'],
+        },
+      ],
+      notComputed: [
+        {
+          eventId: 'aspect:Saturn:opposition:Venus',
+          kind: 'transit_aspect',
+          bodies: ['Saturn', 'Venus'],
+          aspect: 'opposition',
+          sign: null,
+          summary: 'Saturn opposes Venus in the current sky.',
+          status: 'not_computed',
+          limitations: ['Transit aspect recurrence remains fenced in this slice.'],
+        },
+      ],
+    };
+
+    const bundle = buildAstrologyLaneInputBundle(fixture.channelBrief);
+
+    expect(bundle.computedSkyFacts.computed[0]).toMatchObject({
+      eventId: 'ingress:Jupiter:post_ingress',
+      historicalGapYears: 1.1,
+      recurrence: {
+        comparator: 'same_body_sign_ingress_spacing_estimate',
+      },
+    });
+    expect(bundle.computedSkyFacts.notComputed[0]).toMatchObject({
+      eventId: 'aspect:Saturn:opposition:Venus',
+      status: 'not_computed',
+    });
+    expect(bundle.lanes.substack.doNotClaim).toContain('Do not claim historical rarity unless the engine computes it.');
+  });
 
   it('preserves computed ingress spacing facts through the lane adapter while keeping claim guardrails', () => {
     const fixture = buildAstrologyChannelBriefFixture();
@@ -90,6 +156,12 @@ describe('buildAstrologyLaneInputBundle', () => {
       historicalGapYears: 1.1,
     });
     expect(bundle.lanes.substack.doNotClaim).toContain('Do not claim historical rarity unless the engine computes it.');
+    expect(bundle.computedSkyFacts.computed[0]).toMatchObject({
+      historicalGapYears: expect.any(Number),
+      recurrence: {
+        comparator: 'same_body_sign_ingress_spacing_estimate',
+      },
+    });
     expect(JSON.stringify(bundle).toLowerCase()).not.toContain('rare celestial moment');
   });
 

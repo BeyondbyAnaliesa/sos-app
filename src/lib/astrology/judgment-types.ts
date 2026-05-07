@@ -5,7 +5,7 @@ export type JudgmentTier = 'foreground' | 'supporting' | 'background' | 'noise';
 export type JudgmentSource = 'major_arc' | 'daily_transit' | 'guidance' | 'memory';
 export type JudgmentScope = 'personal' | 'collective' | 'both';
 export type JudgmentPhase = 'applying' | 'exact' | 'separating';
-export type CollectiveSkyEventKind = 'transit_aspect' | 'station_proximity' | 'sign_ingress_proximity' | 'lunation' | 'eclipse';
+export type CollectiveSkyEventKind = 'transit_aspect' | 'station_proximity' | 'sign_ingress_proximity' | 'lunation' | 'eclipse' | 'sign_cluster' | 'major_aspect_pattern';
 export type JudgmentDemandType =
   | 'pressure'
   | 'expansion'

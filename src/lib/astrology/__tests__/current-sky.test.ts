@@ -76,7 +76,7 @@ describe('scanCurrentSkyFromPositions', () => {
     expect(exactEvent!.rarity.score).toBeGreaterThanOrEqual(widerEvent!.rarity.score);
   });
 
-  it('keeps limitations honest about historical proof and missing sky systems', () => {
+  it('keeps limitations honest about historical proof and bounded sky systems', () => {
     const currentSky = scanCurrentSkyFromPositions([
       body('Pluto', 300.4, 0.002),
       body('Saturn', 359.3, 0.015),
@@ -84,7 +84,7 @@ describe('scanCurrentSkyFromPositions', () => {
 
     expect(currentSky.limitations).toContain('Rarity and consequence scores are heuristic and explicitly do not claim historical proof.');
     expect(currentSky.limitations).toContain('Historical-gap enrichment is currently bounded to lunation/eclipse lookbacks, supported slow-body ingress spacing estimates, and supported slow-body station timing/spacing estimates only.');
-    expect(currentSky.limitations).toContain('No multi-body configuration detector is included in this slice.');
+    expect(currentSky.limitations).toContain('Configuration detector v1 only covers sign concentration plus tight T-square/grand-trine major-aspect clusters.');
   });
 
   it('computes bounded station timing/spacing for supported slow-body near-station events when the local scan can bracket the station window', () => {
@@ -152,6 +152,54 @@ describe('scanCurrentSkyFromPositions', () => {
       confidence: 'none',
     });
     expect(currentSky.events.find((event) => event.id === 'station:Mars')?.rarity.limitations.join(' ')).toContain('supported slow bodies with bounded local station windows');
+  });
+
+  it('detects compact sign concentration as a bounded collective configuration', () => {
+    const currentSky = scanCurrentSkyFromPositions([
+      body('Sun', 12, 0.98),
+      body('Mercury', 14.4, 1.1),
+      body('Saturn', 18.1, 0.05),
+      body('Neptune', 19.2, 0.02),
+      body('Mars', 92, 0.7),
+    ]);
+
+    const cluster = currentSky.events.find((event) => event.kind === 'sign_cluster');
+
+    expect(cluster).toMatchObject({
+      kind: 'sign_cluster',
+      sign: 'Aries',
+      bodies: ['Sun', 'Mercury', 'Saturn', 'Neptune'],
+      tier: 'foreground',
+      rarity: {
+        status: 'not_computed',
+        confidence: 'none',
+      },
+    });
+    expect(cluster?.receipts.join(' ')).toContain('Aries count: 4 supported bodies');
+    expect(cluster?.limitations.join(' ')).toContain('same-sign concentration');
+  });
+
+  it('detects a tight T-square as a major aspect pattern and ranks it above looser single aspects', () => {
+    const currentSky = scanCurrentSkyFromPositions([
+      body('Jupiter', 10.2, 0.08),
+      body('Saturn', 190.8, 0.03),
+      body('Mars', 100.6, 0.5),
+      body('Venus', 224.5, 1.1),
+    ]);
+
+    const pattern = currentSky.events.find((event) => event.id === 't-square:Jupiter:Mars:Saturn');
+    const componentSquare = currentSky.events.find((event) => event.id === 'aspect:Jupiter:square:Mars');
+
+    expect(pattern).toMatchObject({
+      kind: 'major_aspect_pattern',
+      tier: 'foreground',
+      bodies: ['Mars', 'Jupiter', 'Saturn'],
+      rarity: {
+        status: 'not_computed',
+      },
+    });
+    expect(pattern?.summary).toContain('tight T-square');
+    expect(pattern?.score ?? 0).toBeGreaterThan(componentSquare?.score ?? 0);
   });
 
   it('detects 2025 lunations and eclipses from sweph-backed positions with bounded historical gap fields', () => {

@@ -135,4 +135,28 @@ describe('buildCollectivePersonalBridge', () => {
       'This collective event has no phase field, so phase alignment could not be tested.',
     ]));
   });
+
+  it('can bridge a same-sign configuration when the transit body is inside the detected cluster', () => {
+    const bridge = buildCollectivePersonalBridge(buildReceipt({ transitPlanet: 'Saturn', aspect: 'square', phase: 'applying' }), [{
+      ...saturnCollectiveEvent,
+      id: 'sign-cluster:Aries:Sun-Mercury-Saturn-Neptune',
+      kind: 'sign_cluster',
+      bodies: ['Sun', 'Mercury', 'Saturn', 'Neptune'],
+      aspect: null,
+      phase: null,
+      applyingStateKnown: false,
+      orb: 7.2,
+      summary: 'Aries sign concentration is active with Sun, Mercury, Saturn, Neptune stacked in the same sign.',
+    }]);
+
+    expect(bridge).toMatchObject({
+      collectiveEvent: {
+        kind: 'sign_cluster',
+        bodies: ['Sun', 'Mercury', 'Saturn', 'Neptune'],
+      },
+      bridgeStrengthTier: 'supporting',
+    });
+    expect(bridge?.matchReasons).toContain('Collective event includes transit body Saturn.');
+    expect(bridge?.limitations).toContain('This collective event has no phase field, so phase alignment could not be tested.');
+  });
 });

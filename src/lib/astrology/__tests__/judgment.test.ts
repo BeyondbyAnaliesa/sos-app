@@ -185,6 +185,7 @@ describe('buildAstrologyJudgment', () => {
     expect(eclipse?.rarity.status).toBe('computed');
     expect(eclipse?.rarity.recurrence?.scanWindowDays).toBe(400);
     expect(judgment.currentSky.limitations).toContain('Historical-gap enrichment is currently bounded to lunation/eclipse lookbacks, supported slow-body ingress spacing estimates, and supported slow-body station timing/spacing estimates only.');
+    expect(judgment.currentSky.limitations).toContain('Configuration detector v1 only covers sign concentration plus tight T-square/grand-trine major-aspect clusters.');
   });
 
   it('threads computed slow-body ingress spacing into receipt rarity when the live sky supports it', () => {

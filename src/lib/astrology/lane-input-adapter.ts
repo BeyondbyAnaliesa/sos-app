@@ -1,5 +1,7 @@
 import type {
   AstrologyChannelBrief,
+  AstrologyChannelBriefComputedSkyFact,
+  AstrologyChannelBriefFencedSkyFact,
   AstrologyChannelBriefReceipt,
   AstrologyChannelBriefRaritySummary,
 } from '@/lib/astrology/channel-brief';
@@ -25,6 +27,30 @@ export interface AstrologyLaneReceiptRequirement {
   endDate: string | null;
   limitations: string[];
   rarity: AstrologyLaneRarityRequirement | null;
+}
+
+export interface AstrologyLaneComputedSkyFact {
+  eventId: AstrologyChannelBriefComputedSkyFact['eventId'];
+  kind: AstrologyChannelBriefComputedSkyFact['kind'];
+  bodies: string[];
+  aspect: string | null;
+  sign: string | null;
+  summary: string;
+  recurrence: AstrologyChannelBriefComputedSkyFact['recurrence'];
+  historicalGapYears: number | null;
+  limitations: string[];
+  receipts: string[];
+}
+
+export interface AstrologyLaneFencedSkyFact {
+  eventId: AstrologyChannelBriefFencedSkyFact['eventId'];
+  kind: AstrologyChannelBriefFencedSkyFact['kind'];
+  bodies: string[];
+  aspect: string | null;
+  sign: string | null;
+  summary: string;
+  status: 'not_computed';
+  limitations: string[];
 }
 
 export interface AstrologyLaneSourceFact {
@@ -81,6 +107,10 @@ export interface AstrologyLaneInputBundle {
   status: 'astrology-lane-input-adapter-v1';
   date: string;
   privacy: 'internal-operator-only';
+  computedSkyFacts: {
+    computed: AstrologyLaneComputedSkyFact[];
+    notComputed: AstrologyLaneFencedSkyFact[];
+  };
   source: {
     briefStatus: AstrologyChannelBrief['status'];
     previewStatus: AstrologyChannelBriefPreview['status'] | null;
@@ -142,6 +172,33 @@ function buildReceiptRequirement(receipt: AstrologyChannelBriefReceipt): Astrolo
         limitations: receipt.rarity.limitations,
       }
       : null,
+  };
+}
+
+function buildComputedSkyFacts(brief: AstrologyChannelBrief): AstrologyLaneInputBundle['computedSkyFacts'] {
+  return {
+    computed: brief.computedSkyFacts.computed.map((fact) => ({
+      eventId: fact.eventId,
+      kind: fact.kind,
+      bodies: fact.bodies,
+      aspect: fact.aspect,
+      sign: fact.sign,
+      summary: fact.summary,
+      recurrence: fact.recurrence,
+      historicalGapYears: fact.historicalGapYears,
+      limitations: fact.limitations,
+      receipts: fact.receipts,
+    })),
+    notComputed: brief.computedSkyFacts.notComputed.map((fact) => ({
+      eventId: fact.eventId,
+      kind: fact.kind,
+      bodies: fact.bodies,
+      aspect: fact.aspect,
+      sign: fact.sign,
+      summary: fact.summary,
+      status: fact.status,
+      limitations: fact.limitations,
+    })),
   };
 }
 
@@ -292,6 +349,7 @@ export function buildAstrologyLaneInputBundle(brief: AstrologyChannelBrief): Ast
     status: 'astrology-lane-input-adapter-v1',
     date: brief.date,
     privacy: 'internal-operator-only',
+    computedSkyFacts: buildComputedSkyFacts(brief),
     source: {
       briefStatus: brief.status,
       previewStatus: null,

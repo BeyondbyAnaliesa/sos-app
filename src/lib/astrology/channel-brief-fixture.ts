@@ -75,10 +75,34 @@ export function buildAstrologyChannelBriefFixture(date = '2026-05-06') {
     guidance: [],
     memory,
   });
+  const channelBrief = buildAstrologyChannelBrief(judgment);
+
+  if (channelBrief.computedSkyFacts.computed.length === 0) {
+    channelBrief.computedSkyFacts.computed.push({
+      eventId: 'fixture:station:Saturn',
+      kind: 'station_proximity',
+      bodies: ['Saturn'],
+      aspect: null,
+      sign: 'Aries',
+      exactnessBand: 'near_exact',
+      summary: 'Fixture-only preserved computed station spacing fact for downstream export coverage.',
+      recurrence: {
+        comparator: 'same_body_station_window_spacing_estimate',
+        scanWindowDays: 400,
+        priorComparableEventDate: '2025-09-01',
+        nextComparableEventDate: '2026-06-20',
+        spacingDays: 292,
+        spacingYears: 0.8,
+      },
+      historicalGapYears: 0.8,
+      limitations: ['Fixture-only bounded station spacing sample for internal export coverage.'],
+      receipts: ['Saturn station sample'],
+    });
+  }
 
   return {
     fixtureId: DEFAULT_CHANNEL_BRIEF_FIXTURE_ID,
     date,
-    channelBrief: buildAstrologyChannelBrief(judgment),
+    channelBrief,
   };
 }

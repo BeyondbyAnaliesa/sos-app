@@ -71,12 +71,27 @@ describe('GET /api/reading/channel-brief-preview', () => {
         status: 'astrology-channel-brief-v1',
       },
     });
-    const serialized = JSON.stringify(body.preview).toLowerCase();
+    const serialized = JSON.stringify(body).toLowerCase();
     expect(serialized).not.toContain('the stars are aligning');
     expect(serialized).not.toContain('big shifts');
     expect(body.preview.channelBrief.limitations).toContain(
       'Historical rarity claims remain unavailable unless the engine computes them explicitly.',
     );
+    expect(body.laneInputs).toMatchObject({
+      status: 'astrology-lane-input-adapter-v1',
+      privacy: 'internal-operator-only',
+      lanes: {
+        socials: {
+          lane: 'socials',
+        },
+        substack: {
+          lane: 'substack',
+        },
+        aeonLore: {
+          lane: 'aeon_lore',
+        },
+      },
+    });
   });
 
   it('returns a live-user preview through buildReadingContext without altering public flows', async () => {
@@ -137,6 +152,26 @@ describe('GET /api/reading/channel-brief-preview', () => {
       channelBrief: {
         status: 'astrology-channel-brief-v1',
         limitations: ['This brief is an internal adapter. It is not final public copy.'],
+      },
+    });
+    expect(body.laneInputs).toMatchObject({
+      status: 'astrology-lane-input-adapter-v1',
+      source: {
+        previewStatus: 'astrology-channel-brief-preview-v1',
+        mode: 'live_user',
+        userId: 'user_123',
+      },
+      lanes: {
+        socials: {
+          lane: 'socials',
+          requiredReceipts: [],
+        },
+        substack: {
+          lane: 'substack',
+        },
+        aeonLore: {
+          lane: 'aeon_lore',
+        },
       },
     });
   });

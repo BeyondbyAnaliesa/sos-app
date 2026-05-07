@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 import { buildAstrologyChannelBriefFixture, DEFAULT_CHANNEL_BRIEF_FIXTURE_ID } from '@/lib/astrology/channel-brief-fixture';
 import { buildAstrologyChannelBriefPreview } from '@/lib/astrology/channel-brief-preview';
+import { buildAstrologyLaneInputBundleFromPreview } from '@/lib/astrology/lane-input-adapter';
 import { warnIfCronSecretMissing } from '@/lib/env-check';
 import { logError } from '@/lib/logger';
 import { buildReadingContext } from '@/lib/transit-reading-context';
@@ -51,28 +52,34 @@ export async function GET(request: Request) {
 
     if (fixtureId) {
       const fixture = buildAstrologyChannelBriefFixture(date.toISOString().slice(0, 10));
+      const preview = buildAstrologyChannelBriefPreview({
+        mode: 'fixture',
+        date: fixture.date,
+        fixtureId: fixture.fixtureId,
+        channelBrief: fixture.channelBrief,
+      });
+
       return NextResponse.json({
         ok: true,
-        preview: buildAstrologyChannelBriefPreview({
-          mode: 'fixture',
-          date: fixture.date,
-          fixtureId: fixture.fixtureId,
-          channelBrief: fixture.channelBrief,
-        }),
+        preview,
+        laneInputs: buildAstrologyLaneInputBundleFromPreview(preview),
       });
     }
 
     const admin = createAdminClient();
     const context = await buildReadingContext(admin, userId as string, date);
 
+    const preview = buildAstrologyChannelBriefPreview({
+      mode: 'live_user',
+      date: context.date,
+      userId: userId as string,
+      channelBrief: context.channelBrief,
+    });
+
     return NextResponse.json({
       ok: true,
-      preview: buildAstrologyChannelBriefPreview({
-        mode: 'live_user',
-        date: context.date,
-        userId: userId as string,
-        channelBrief: context.channelBrief,
-      }),
+      preview,
+      laneInputs: buildAstrologyLaneInputBundleFromPreview(preview),
     });
   } catch (error) {
     logError(error, { route: '/api/reading/channel-brief-preview' });

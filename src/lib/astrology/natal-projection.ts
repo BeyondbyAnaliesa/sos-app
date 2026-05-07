@@ -1,9 +1,13 @@
 import { buildNatalSummary, getHouse } from '@/lib/astrology/domain-types';
 import type { NatalChart } from '@/lib/astrology/types';
 
-export type NatalProjectionDignityCondition = 'domicile' | 'exaltation' | 'detriment' | 'fall' | 'peregrine';
+export type NatalProjectionDignityCondition = 'domicile' | 'exaltation' | 'detriment' | 'fall' | 'neutral';
 export type NatalProjectionAngularity = 'angle' | 'angular' | 'succedent' | 'cadent' | 'unknown';
 export type NatalProjectionTargetType = 'planet' | 'angle';
+export type NatalProjectionSectClass = 'day' | 'night' | 'unknown';
+export type NatalProjectionSectCondition = 'in_sect' | 'out_of_sect' | 'not_applicable' | 'unknown';
+export type NatalProjectionReceptionStatus = 'mutual' | 'one_way' | 'none' | 'unavailable';
+export type NatalProjectionReceptionDirection = 'transit_to_natal' | 'natal_to_transit' | 'both' | 'neither' | 'unknown';
 
 export interface NatalProjectionAspectContext {
   otherBody: string;
@@ -70,6 +74,27 @@ export interface NatalProjectionDispositorChain {
   limitations: string[];
 }
 
+export interface NatalProjectionSect {
+  chartSect: NatalProjectionSectClass;
+  basis: 'sun_house_relative_to_horizon' | 'unavailable';
+  sunHouse: number | null;
+  targetCondition: NatalProjectionSectCondition;
+  limitations: string[];
+}
+
+export interface NatalProjectionSimpleReception {
+  system: 'modern' | 'traditional';
+  status: NatalProjectionReceptionStatus;
+  direction: NatalProjectionReceptionDirection;
+  sourceLabel: string;
+  sourceSign: string | null;
+  counterpartLabel: string;
+  counterpartSign: string | null;
+  sourceInCounterpartRulership: boolean;
+  counterpartInSourceRulership: boolean;
+  limitations: string[];
+}
+
 export interface NatalProjection {
   targetKey: string;
   targetLabel: string;
@@ -82,6 +107,7 @@ export interface NatalProjection {
   chartRuler: NatalProjectionChartRuler;
   signRuler: NatalProjectionSignRulerContext;
   dispositors: NatalProjectionDispositorChain[];
+  sect: NatalProjectionSect;
   targetIsModernChartRuler: boolean;
   targetIsTraditionalChartRuler: boolean;
   targetIsAngle: boolean;
@@ -154,7 +180,19 @@ const DIGNITY_RULES: Record<string, {
   Pluto: { domicile: ['Scorpio'], detriment: ['Taurus'] },
 };
 
+const DAY_SECT_PLANETS = new Set(['Sun', 'Jupiter', 'Saturn']);
+const NIGHT_SECT_PLANETS = new Set(['Moon', 'Venus', 'Mars']);
 const SIGNS = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'];
+const MODERN_RULED_SIGNS = invertRulers(MODERN_RULERS);
+const TRADITIONAL_RULED_SIGNS = invertRulers(TRADITIONAL_RULERS);
+
+function invertRulers(source: Record<string, string>) {
+  return Object.entries(source).reduce<Record<string, string[]>>((acc, [sign, ruler]) => {
+    acc[ruler] ??= [];
+    acc[ruler].push(sign);
+    return acc;
+  }, {});
+}
 
 function oppositeHouse(house: number | null) {
   if (house == null) return null;
@@ -172,6 +210,27 @@ function normalizeKey(label: string) {
 function degreeFromLongitude(longitude: number) {
   const normalized = ((longitude % 360) + 360) % 360;
   return Number((normalized % 30).toFixed(2));
+}
+
+function normalizePlanetLabel(label: string) {
+  if (label === 'ASC') return 'Ascendant';
+  if (label === 'MC') return 'Midheaven';
+  if (label === 'IC') return 'IC';
+  if (label === 'DSC') return 'Descendant';
+  return label;
+}
+
+function ruledSignsFor(label: string, system: 'modern' | 'traditional') {
+  const normalized = normalizePlanetLabel(label);
+  return system === 'modern'
+    ? (MODERN_RULED_SIGNS[normalized] ?? [])
+    : (TRADITIONAL_RULED_SIGNS[normalized] ?? []);
+}
+
+function buildReceptionLimitations() {
+  return [
+    'Reception v1 is sign-rulership only. It does not compute exaltation reception, house-based reception, terms/bounds, faces/decans, or wider traditional condition.',
+  ];
 }
 
 export function getHouseLifeArea(house: number | null): NatalProjectionHouseContext {
@@ -273,23 +332,158 @@ export function getChartRuler(chart: NatalChart): NatalProjectionChartRuler {
 }
 
 export function getBasicDignity(label: string, sign: string): NatalProjectionDignity | null {
-  const rules = DIGNITY_RULES[label];
+  const rules = DIGNITY_RULES[normalizePlanetLabel(label)];
   if (!rules) return null;
 
-  let condition: NatalProjectionDignityCondition = 'peregrine';
+  let condition: NatalProjectionDignityCondition = 'neutral';
   if (rules.domicile?.includes(sign)) condition = 'domicile';
   else if (rules.exaltation?.includes(sign)) condition = 'exaltation';
   else if (rules.detriment?.includes(sign)) condition = 'detriment';
   else if (rules.fall?.includes(sign)) condition = 'fall';
 
   const limitations = [
-    'Dignity is simplified in this slice: essential dignity only, with no sect, term, face, combustion, or dispositor-chain weighting.',
+    'Dignity v1 is sign-based essential dignity only. It does not compute terms/bounds, decans/faces, combustion/cazimi, house-strength, or sect-weighted dignity.',
   ];
   if (['Uranus', 'Neptune', 'Pluto'].includes(label)) {
     limitations.push('Outer-planet dignity is limited to modern domicile/detriment only here; no exaltation or fall claims are made for those planets.');
   }
 
   return { condition, limitations };
+}
+
+export function getSectConditionForBody(chartSect: NatalProjectionSectClass, label: string): NatalProjectionSectCondition {
+  if (chartSect === 'unknown') return 'unknown';
+  const normalized = normalizePlanetLabel(label);
+  if (normalized === 'Mercury') return 'not_applicable';
+  if (DAY_SECT_PLANETS.has(normalized)) return chartSect === 'day' ? 'in_sect' : 'out_of_sect';
+  if (NIGHT_SECT_PLANETS.has(normalized)) return chartSect === 'night' ? 'in_sect' : 'out_of_sect';
+  return 'not_applicable';
+}
+
+export function buildSectContext(chart: NatalChart, targetLabel: string): NatalProjectionSect {
+  const sun = chart.placements.find((placement) => placement.label === 'Sun' || placement.key === 'sun') ?? null;
+  const limitations = [
+    'Sect v1 only derives day/night from the Sun house relative to the horizon when house data is safe to use. It does not compute Mercury sect, hemisphere nuance, rejoicing, or house-based traditional condition beyond day/night.',
+  ];
+
+  if (!chart.metadata?.timeExact) {
+    return {
+      chartSect: 'unknown',
+      basis: 'unavailable',
+      sunHouse: null,
+      targetCondition: 'unknown',
+      limitations: [...limitations, 'Birth time is not exact, so day/night sect is fenced instead of guessed.'],
+    };
+  }
+
+  if (chart.metadata.warnings.houses || !chart.houses?.length || chart.houses.length !== 12 || !sun) {
+    return {
+      chartSect: 'unknown',
+      basis: 'unavailable',
+      sunHouse: null,
+      targetCondition: 'unknown',
+      limitations: [...limitations, 'Safe house-based Sun placement was not available, so day/night sect is fenced instead of guessed.'],
+    };
+  }
+
+  const sunHouse = getHouse(sun.longitude, chart.houses);
+  const chartSect: NatalProjectionSectClass = sunHouse >= 7 ? 'day' : 'night';
+
+  return {
+    chartSect,
+    basis: 'sun_house_relative_to_horizon',
+    sunHouse,
+    targetCondition: getSectConditionForBody(chartSect, targetLabel),
+    limitations,
+  };
+}
+
+export function buildSimpleReception(params: {
+  sourceLabel: string;
+  sourceSign: string | null;
+  counterpartLabel: string;
+  counterpartSign: string | null;
+  system: 'modern' | 'traditional';
+}): NatalProjectionSimpleReception {
+  const limitations = buildReceptionLimitations();
+  const sourceLabel = normalizePlanetLabel(params.sourceLabel);
+  const counterpartLabel = normalizePlanetLabel(params.counterpartLabel);
+
+  if (!params.sourceSign || !params.counterpartSign) {
+    return {
+      system: params.system,
+      status: 'unavailable',
+      direction: 'unknown',
+      sourceLabel,
+      sourceSign: params.sourceSign,
+      counterpartLabel,
+      counterpartSign: params.counterpartSign,
+      sourceInCounterpartRulership: false,
+      counterpartInSourceRulership: false,
+      limitations: [...limitations, 'Reception could not be tested because one or both signs are unavailable in this slice.'],
+    };
+  }
+
+  if (sourceLabel === counterpartLabel) {
+    return {
+      system: params.system,
+      status: 'unavailable',
+      direction: 'unknown',
+      sourceLabel,
+      sourceSign: params.sourceSign,
+      counterpartLabel,
+      counterpartSign: params.counterpartSign,
+      sourceInCounterpartRulership: false,
+      counterpartInSourceRulership: false,
+      limitations: [...limitations, 'Reception v1 only compares distinct planets or points; self-comparison is fenced.'],
+    };
+  }
+
+  const counterpartSigns = ruledSignsFor(counterpartLabel, params.system);
+  const sourceSigns = ruledSignsFor(sourceLabel, params.system);
+
+  if (counterpartSigns.length === 0 || sourceSigns.length === 0) {
+    return {
+      system: params.system,
+      status: 'unavailable',
+      direction: 'unknown',
+      sourceLabel,
+      sourceSign: params.sourceSign,
+      counterpartLabel,
+      counterpartSign: params.counterpartSign,
+      sourceInCounterpartRulership: false,
+      counterpartInSourceRulership: false,
+      limitations: [...limitations, 'Reception could not be tested because one or both bodies have no supported sign rulership in this system.'],
+    };
+  }
+
+  const sourceInCounterpartRulership = counterpartSigns.includes(params.sourceSign);
+  const counterpartInSourceRulership = sourceSigns.includes(params.counterpartSign);
+  const status: NatalProjectionReceptionStatus = sourceInCounterpartRulership && counterpartInSourceRulership
+    ? 'mutual'
+    : sourceInCounterpartRulership || counterpartInSourceRulership
+      ? 'one_way'
+      : 'none';
+  const direction: NatalProjectionReceptionDirection = sourceInCounterpartRulership && counterpartInSourceRulership
+    ? 'both'
+    : sourceInCounterpartRulership
+      ? 'transit_to_natal'
+      : counterpartInSourceRulership
+        ? 'natal_to_transit'
+        : 'neither';
+
+  return {
+    system: params.system,
+    status,
+    direction,
+    sourceLabel,
+    sourceSign: params.sourceSign,
+    counterpartLabel,
+    counterpartSign: params.counterpartSign,
+    sourceInCounterpartRulership,
+    counterpartInSourceRulership,
+    limitations,
+  };
 }
 
 export function buildDispositorChain(params: {
@@ -427,6 +621,7 @@ export function buildNatalProjection(params: {
       buildDispositorChain({ chart: params.chart, sign: source?.sign ?? null, chartRuler, system: 'modern' }),
       buildDispositorChain({ chart: params.chart, sign: source?.sign ?? null, chartRuler, system: 'traditional' }),
     ],
+    sect: buildSectContext(params.chart, targetLabel),
     targetIsModernChartRuler: targetLabel === chartRuler.modernRuler || params.targetKey === chartRuler.modernRuler.toLowerCase(),
     targetIsTraditionalChartRuler: targetLabel === chartRuler.traditionalRuler || params.targetKey === chartRuler.traditionalRuler?.toLowerCase(),
     targetIsAngle: !placement && Boolean(angle),
@@ -446,6 +641,7 @@ export function buildNatalProjection(params: {
       'Natal projection in this slice is deterministic and limited to chart data already stored on the natal chart.',
       'Natal aspect context is limited to aspects already computed on the chart; no new aspect families are solved here.',
       'Rulership/dispositorship depth v1 is intentionally bounded to chart ruler placement, sign rulers, and short modern/traditional sign-ruler chains only.',
+      'Reception is only attached when the judgment receipt has a second supported planet or point to compare against.',
     ],
   };
 }

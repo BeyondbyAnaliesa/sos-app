@@ -1,5 +1,11 @@
+import type {
+  NatalProjection,
+  NatalProjectionDignity,
+  NatalProjectionReceptionStatus,
+  NatalProjectionSect,
+  NatalProjectionSectCondition,
+} from '@/lib/astrology/natal-projection';
 import type { AstrologyMeaningFactors } from '@/lib/astrology/meaning-kernel';
-import type { NatalProjection } from '@/lib/astrology/natal-projection';
 
 export type JudgmentTier = 'foreground' | 'supporting' | 'background' | 'noise';
 export type JudgmentSource = 'major_arc' | 'daily_transit' | 'guidance' | 'memory';
@@ -98,6 +104,28 @@ export interface AstrologyCollectiveBridge {
   limitations: string[];
 }
 
+export interface AstrologyJudgmentReceptionFact {
+  system: 'modern' | 'traditional';
+  status: NatalProjectionReceptionStatus;
+  direction: 'transit_to_natal' | 'natal_to_transit' | 'both' | 'neither' | 'unknown';
+  transitPlanet: string;
+  natalTargetLabel: string;
+  transitSign: string | null;
+  natalSign: string | null;
+  transitInNatalRulership: boolean;
+  natalInTransitRulership: boolean;
+  limitations: string[];
+}
+
+export interface AstrologyJudgmentSectFact {
+  chartSect: NatalProjectionSect['chartSect'];
+  basis: NatalProjectionSect['basis'];
+  sunHouse: number | null;
+  transitPlanetCondition: NatalProjectionSectCondition;
+  natalTargetCondition: NatalProjectionSectCondition;
+  limitations: string[];
+}
+
 export interface AstrologyJudgmentReceipt {
   arcKey?: string;
   transitPlanet: string;
@@ -108,6 +136,7 @@ export interface AstrologyJudgmentReceipt {
   phase: JudgmentPhase;
   transitSign: string | null;
   transitDegree: number | null;
+  transitDignity?: NatalProjectionDignity | null;
   natalSign: string | null;
   natalHouse: number | null;
   lifeArea: string;
@@ -125,6 +154,8 @@ export interface AstrologyJudgmentReceipt {
   }>;
   memorySummary: string | null;
   natalProjection: NatalProjection | null;
+  reception?: AstrologyJudgmentReceptionFact[] | null;
+  sect?: AstrologyJudgmentSectFact | null;
   meaningFactors?: AstrologyMeaningFactors | null;
   collectiveBridge?: AstrologyCollectiveBridge | null;
   currentSkyRarity?: CollectiveSkyHistoricalRarityFact | null;

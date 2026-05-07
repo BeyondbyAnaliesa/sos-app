@@ -66,7 +66,7 @@ const memory: MajorWaveMemoryInput = {
 };
 
 describe('buildAstrologyJudgment', () => {
-  it('builds a tiered judgment with receipts, memory linkage, and real current-sky events', () => {
+  it('builds a tiered judgment with dignity, reception, sect, receipts, and current-sky events', () => {
     const judgment = buildAstrologyJudgment({
       date: '2026-05-06',
       chart,
@@ -81,6 +81,21 @@ describe('buildAstrologyJudgment', () => {
       transitPlanet: 'Saturn',
       aspect: 'opposition',
       natalTarget: 'venus',
+      transitDignity: {
+        condition: 'fall',
+      },
+      reception: expect.arrayContaining([
+        expect.objectContaining({
+          system: 'traditional',
+          status: 'none',
+          direction: 'neither',
+        }),
+      ]),
+      sect: {
+        chartSect: 'day',
+        transitPlanetCondition: 'in_sect',
+        natalTargetCondition: 'out_of_sect',
+      },
       natalHouse: 4,
       exactDate: '2026-05-14',
       passCount: 2,
@@ -93,6 +108,10 @@ describe('buildAstrologyJudgment', () => {
         house: {
           house: 4,
           label: 'home, family of origin, roots, private life, foundation',
+        },
+        sect: {
+          chartSect: 'day',
+          targetCondition: 'out_of_sect',
         },
         signRuler: {
           sign: 'Libra',
@@ -144,7 +163,9 @@ describe('buildAstrologyJudgment', () => {
       },
     });
     expect(judgment.foreground[0]?.receipts[0].memorySummary).toContain('family');
-    expect(judgment.foreground[0]?.supportNotes.some((note) => note.includes('Venus is in Libra, ruled traditionally by Venus'))).toBe(true);
+    expect(judgment.foreground[0]?.supportNotes.some((note) => note.includes('Venus is in Libra in domicile'))).toBe(true);
+    expect(judgment.foreground[0]?.supportNotes.some((note) => note.includes('Saturn is in Aries in fall'))).toBe(true);
+    expect(judgment.foreground[0]?.supportNotes.some((note) => note.includes('This is a day chart by Sun house'))).toBe(true);
     expect(judgment.currentSky.status).toBe('collective-scan-v1');
     expect(judgment.currentSky.events.length).toBeGreaterThan(0);
     expect(judgment.currentSky.events[0]?.scope).toBe('collective');
@@ -231,5 +252,4 @@ describe('buildAstrologyJudgment', () => {
       },
     });
   });
-
 });

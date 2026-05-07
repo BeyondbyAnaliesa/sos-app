@@ -68,7 +68,25 @@ export function compactAstrologyJudgmentReceipt(receipt: AstrologyJudgmentReceip
         targetIsAngle: receipt.natalProjection.targetIsAngle,
         targetIsModernChartRuler: receipt.natalProjection.targetIsModernChartRuler,
         targetIsTraditionalChartRuler: receipt.natalProjection.targetIsTraditionalChartRuler,
+        dignity: receipt.natalProjection.dignity?.condition ?? null,
+        sect: {
+          chartSect: receipt.natalProjection.sect.chartSect,
+          targetCondition: receipt.natalProjection.sect.targetCondition,
+        },
         repeatedLifeAreaSignalCount: receipt.natalProjection.repeatedLifeAreaSignalCount,
+      }
+      : null,
+    transitDignity: receipt.transitDignity?.condition ?? null,
+    reception: receipt.reception?.filter((fact) => fact.status === 'mutual' || fact.status === 'one_way').slice(0, 2).map((fact) => ({
+      system: fact.system,
+      status: fact.status,
+      direction: fact.direction,
+    })) ?? [],
+    sect: receipt.sect
+      ? {
+        chartSect: receipt.sect.chartSect,
+        transitPlanetCondition: receipt.sect.transitPlanetCondition,
+        natalTargetCondition: receipt.sect.natalTargetCondition,
       }
       : null,
     collectiveBridge: compactCollectiveBridge(receipt.collectiveBridge),

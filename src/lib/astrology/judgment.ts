@@ -11,7 +11,13 @@ import {
   pickMeaningDemand,
   resolveMeaningFactors,
 } from '@/lib/astrology/meaning-kernel';
-import { buildNatalProjection, type NatalProjection } from '@/lib/astrology/natal-projection';
+import {
+  buildNatalProjection,
+  buildSimpleReception,
+  getBasicDignity,
+  getSectConditionForBody,
+  type NatalProjection,
+} from '@/lib/astrology/natal-projection';
 import { buildTransitArcJudgment } from '@/lib/astrology/transit-arc-judgment';
 import type { MajorTransitArc } from '@/lib/astrology/major-transits';
 import type { NatalChart } from '@/lib/astrology/types';
@@ -146,6 +152,26 @@ function applyCollectiveBridge(receipt: AstrologyJudgmentReceipt, currentSkyEven
   };
 }
 
+function dignityScoreBonus(condition: string | null | undefined) {
+  if (condition === 'domicile' || condition === 'exaltation') return 0.07;
+  return 0;
+}
+
+function receptionScoreBonus(reception: AstrologyJudgmentReceipt['reception']) {
+  if (!reception?.length) return 0;
+  if (reception.some((fact) => fact.status === 'mutual')) return 0.1;
+  if (reception.some((fact) => fact.status === 'one_way')) return 0.04;
+  return 0;
+}
+
+function sectScoreBonus(sect: AstrologyJudgmentReceipt['sect']) {
+  if (!sect) return 0;
+  let bonus = 0;
+  if (sect.transitPlanetCondition === 'in_sect') bonus += 0.04;
+  if (sect.natalTargetCondition === 'in_sect') bonus += 0.03;
+  return Number(bonus.toFixed(2));
+}
+
 function natalProjectionScoreBonus(receipt: AstrologyJudgmentReceipt) {
   const projection = receipt.natalProjection;
   if (!projection) return 0;
@@ -158,6 +184,7 @@ function natalProjectionScoreBonus(receipt: AstrologyJudgmentReceipt) {
   if (projection.targetIsModernChartRuler || projection.targetIsTraditionalChartRuler) bonus += 0.55;
   if (projection.signRuler.traditionalRulerPlacement?.angularity === 'angular' || projection.signRuler.modernRulerPlacement?.angularity === 'angular') bonus += 0.08;
   if (projection.dispositors.some((chain) => chain.termination === 'self_ruled')) bonus += 0.06;
+  if (projection.dignity && ['domicile', 'exaltation'].includes(projection.dignity.condition)) bonus += 0.05;
   if (projection.repeatedLifeAreaSignalCount >= 3) bonus += 0.25;
   else if (projection.repeatedLifeAreaSignalCount >= 2) bonus += 0.12;
 
@@ -181,6 +208,86 @@ function natalRulershipSupportNote(projection: NatalProjection | null | undefine
       : 'chain remains bounded in this slice.';
 
   return `${projection.targetLabel} is in ${projection.targetSign}, ruled ${primaryChain?.system ?? 'bounded'}ly by ${firstStep.ruler} in ${houseText}; ${ending}`;
+}
+
+function natalDignitySupportNote(projection: NatalProjection | null | undefined) {
+  if (!projection?.dignity || !projection.targetSign) return null;
+  if (projection.dignity.condition === 'neutral') return null;
+  return `${projection.targetLabel} is in ${projection.targetSign} in ${projection.dignity.condition}.`;
+}
+
+function transitDignitySupportNote(receipt: AstrologyJudgmentReceipt) {
+  if (!receipt.transitDignity || !receipt.transitSign) return null;
+  if (receipt.transitDignity.condition === 'neutral') return null;
+  return `${receipt.transitPlanet} is in ${receipt.transitSign} in ${receipt.transitDignity.condition}.`;
+}
+
+function receptionSupportNote(receipt: AstrologyJudgmentReceipt) {
+  const fact = receipt.reception?.find((entry) => entry.status === 'mutual')
+    ?? receipt.reception?.find((entry) => entry.status === 'one_way')
+    ?? null;
+  if (!fact) return null;
+
+  if (fact.status === 'mutual') {
+    return `${fact.transitPlanet} and ${fact.natalTargetLabel} are in mutual reception (${fact.system}).`;
+  }
+
+  const direction = fact.direction === 'transit_to_natal'
+    ? `${fact.transitPlanet} is in ${fact.natalTargetLabel}'s sign`
+    : fact.direction === 'natal_to_transit'
+      ? `${fact.natalTargetLabel} is in ${fact.transitPlanet}'s sign`
+      : `${fact.transitPlanet} and ${fact.natalTargetLabel} have one-way reception`;
+  return `${direction} (${fact.system}).`;
+}
+
+function sectSupportNote(receipt: AstrologyJudgmentReceipt) {
+  if (!receipt.sect) return null;
+  if (receipt.sect.chartSect === 'unknown') return 'Chart sect is fenced in this slice; day/night could not be derived safely.';
+
+  const targetPart = receipt.sect.natalTargetCondition === 'in_sect'
+    ? `${receipt.targetLabel} is in sect`
+    : receipt.sect.natalTargetCondition === 'out_of_sect'
+      ? `${receipt.targetLabel} is out of sect`
+      : `${receipt.targetLabel} has no sect claim here`;
+  const transitPart = receipt.sect.transitPlanetCondition === 'in_sect'
+    ? `${receipt.transitPlanet} is in sect`
+    : receipt.sect.transitPlanetCondition === 'out_of_sect'
+      ? `${receipt.transitPlanet} is out of sect`
+      : `${receipt.transitPlanet} has no sect claim here`;
+
+  return `This is a ${receipt.sect.chartSect} chart by Sun house; ${targetPart}, ${transitPart}.`;
+}
+
+function buildReceiptReceptionFacts(params: {
+  transitPlanet: string;
+  transitSign: string | null;
+  natalTargetLabel: string;
+  natalSign: string | null;
+}) {
+  if (!params.transitSign) return null;
+
+  return (['modern', 'traditional'] as const).map((system) => {
+    const fact = buildSimpleReception({
+      sourceLabel: params.transitPlanet,
+      sourceSign: params.transitSign,
+      counterpartLabel: params.natalTargetLabel,
+      counterpartSign: params.natalSign,
+      system,
+    });
+
+    return {
+      system: fact.system,
+      status: fact.status,
+      direction: fact.direction,
+      transitPlanet: params.transitPlanet,
+      natalTargetLabel: params.natalTargetLabel,
+      transitSign: params.transitSign,
+      natalSign: params.natalSign,
+      transitInNatalRulership: fact.sourceInCounterpartRulership,
+      natalInTransitRulership: fact.counterpartInSourceRulership,
+      limitations: fact.limitations,
+    };
+  });
 }
 
 function matchingLifeSignals(memory: MajorWaveMemoryInput, lifeArea: string, targetLabel: string) {
@@ -232,6 +339,22 @@ function buildArcReceipt(
   });
   const arcLifecycle = buildTransitArcJudgment({ arc, chart, memory, date });
 
+  const transitDignity = position?.sign ? getBasicDignity(arc.transit.transitPlanet, position.sign) : null;
+  const reception = buildReceiptReceptionFacts({
+    transitPlanet: arc.transit.transitPlanet,
+    transitSign: position?.sign ?? null,
+    natalTargetLabel: arc.context.targetLabel,
+    natalSign: arc.context.targetSign,
+  });
+  const sect = {
+    chartSect: natalProjection.sect.chartSect,
+    basis: natalProjection.sect.basis,
+    sunHouse: natalProjection.sect.sunHouse,
+    transitPlanetCondition: getSectConditionForBody(natalProjection.sect.chartSect, arc.transit.transitPlanet),
+    natalTargetCondition: natalProjection.sect.targetCondition,
+    limitations: natalProjection.sect.limitations,
+  };
+
   return applyCollectiveBridge({
     arcKey: arc.key,
     transitPlanet: arc.transit.transitPlanet,
@@ -242,6 +365,7 @@ function buildArcReceipt(
     phase: phaseFromArc(arc),
     transitSign: position?.sign ?? null,
     transitDegree: position ? Number(position.degree.toFixed(2)) : null,
+    transitDignity,
     natalSign: arc.context.targetSign,
     natalHouse: arc.context.targetHouse,
     lifeArea,
@@ -254,6 +378,8 @@ function buildArcReceipt(
     stations: arc.stations,
     memorySummary,
     natalProjection,
+    reception,
+    sect,
     arcLifecycle,
   }, currentSkyEvents);
 }
@@ -294,6 +420,23 @@ function buildTransitReceipt(
   const lifeArea = natalProjection.house.label ?? defaultLifeArea;
   const repeatedLifeAreaSignalCount = countLifeAreaRepeats(memory, lifeArea, targetLabel);
 
+  const transitDignity = position?.sign ? getBasicDignity(transit.transitPlanet, position.sign) : null;
+  const reception = buildReceiptReceptionFacts({
+    transitPlanet: transit.transitPlanet,
+    transitSign: position?.sign ?? null,
+    natalTargetLabel: targetLabel,
+    natalSign: natalPlacement?.sign ?? null,
+  });
+  const projectionWithRepeats = { ...natalProjection, repeatedLifeAreaSignalCount };
+  const sect = {
+    chartSect: projectionWithRepeats.sect.chartSect,
+    basis: projectionWithRepeats.sect.basis,
+    sunHouse: projectionWithRepeats.sect.sunHouse,
+    transitPlanetCondition: getSectConditionForBody(projectionWithRepeats.sect.chartSect, transit.transitPlanet),
+    natalTargetCondition: projectionWithRepeats.sect.targetCondition,
+    limitations: projectionWithRepeats.sect.limitations,
+  };
+
   return applyCollectiveBridge({
     transitPlanet: transit.transitPlanet,
     aspect: transit.aspect,
@@ -303,6 +446,7 @@ function buildTransitReceipt(
     phase: phaseFromTransit(transit),
     transitSign: position?.sign ?? null,
     transitDegree: position ? Number(position.degree.toFixed(2)) : null,
+    transitDignity,
     natalSign: natalPlacement?.sign ?? null,
     natalHouse: natalPlacement && 'house' in natalPlacement ? natalPlacement.house : null,
     lifeArea,
@@ -314,7 +458,9 @@ function buildTransitReceipt(
     currentPass: null,
     stations: [],
     memorySummary: buildMemorySummary(memory, lifeArea, targetLabel),
-    natalProjection: { ...natalProjection, repeatedLifeAreaSignalCount },
+    natalProjection: projectionWithRepeats,
+    reception,
+    sect,
   }, currentSkyEvents);
 }
 
@@ -330,6 +476,9 @@ function buildSignalFromArc(
   const meaningDemand = pickMeaningDemand(receipt.meaningFactors, demandFor(arc.transit.transitPlanet, arc.transit.aspect));
   const score = scoreTransitSignal(arc.transit, arc.activeToday, Boolean(receipt.memorySummary))
     + natalProjectionScoreBonus(receipt)
+    + dignityScoreBonus(receipt.transitDignity?.condition)
+    + receptionScoreBonus(receipt.reception)
+    + sectScoreBonus(receipt.sect)
     + meaningScoreBonus(receipt.meaningFactors)
     + collectiveBridgeScoreBonus(receipt.collectiveBridge)
     + (arc.phase === 'peaking' ? 0.45 : 0);
@@ -360,6 +509,10 @@ function buildSignalFromArc(
       receipt.memorySummary,
       receipt.natalProjection?.targetIsAngle ? 'This directly hits a natal angle.' : null,
       receipt.natalProjection?.targetIsModernChartRuler || receipt.natalProjection?.targetIsTraditionalChartRuler ? 'This hits the chart ruler.' : null,
+      natalDignitySupportNote(receipt.natalProjection),
+      transitDignitySupportNote(receipt),
+      receptionSupportNote(receipt),
+      sectSupportNote(receipt),
       natalRulershipSupportNote(receipt.natalProjection),
       lifecycle && lifecycle.memoryLinkage.matchedSignalCount > 0 ? `Saved signals linked: ${lifecycle.memoryLinkage.matchedSignalCount}.` : null,
       receipt.natalProjection && receipt.natalProjection.repeatedLifeAreaSignalCount >= 2 ? `Saved signals already repeat this life area (${receipt.natalProjection.repeatedLifeAreaSignalCount}).` : null,
@@ -382,6 +535,9 @@ function buildSignalFromTransit(
   const meaningDemand = pickMeaningDemand(receipt.meaningFactors, demandFor(transit.transitPlanet, transit.aspect));
   const score = scoreTransitSignal(transit, false, Boolean(receipt.memorySummary))
     + natalProjectionScoreBonus(receipt)
+    + dignityScoreBonus(receipt.transitDignity?.condition)
+    + receptionScoreBonus(receipt.reception)
+    + sectScoreBonus(receipt.sect)
     + meaningScoreBonus(receipt.meaningFactors)
     + collectiveBridgeScoreBonus(receipt.collectiveBridge);
 
@@ -403,6 +559,10 @@ function buildSignalFromTransit(
       receipt.memorySummary,
       receipt.natalProjection?.targetIsAngle ? 'This directly hits a natal angle.' : null,
       receipt.natalProjection?.targetIsModernChartRuler || receipt.natalProjection?.targetIsTraditionalChartRuler ? 'This hits the chart ruler.' : null,
+      natalDignitySupportNote(receipt.natalProjection),
+      transitDignitySupportNote(receipt),
+      receptionSupportNote(receipt),
+      sectSupportNote(receipt),
       natalRulershipSupportNote(receipt.natalProjection),
       receipt.natalProjection && receipt.natalProjection.repeatedLifeAreaSignalCount >= 2 ? `Saved signals already repeat this life area (${receipt.natalProjection.repeatedLifeAreaSignalCount}).` : null,
     ].filter((value): value is string => Boolean(value)),

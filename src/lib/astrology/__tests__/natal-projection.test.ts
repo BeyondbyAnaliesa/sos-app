@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { buildDispositorChain, buildNatalProjection, classifyAngularity, getBasicDignity, getChartRuler, getHouseLifeArea, getSignRulers } from '@/lib/astrology/natal-projection';
+import {
+  buildDispositorChain,
+  buildNatalProjection,
+  buildSimpleReception,
+  buildSectContext,
+  classifyAngularity,
+  getBasicDignity,
+  getChartRuler,
+  getHouseLifeArea,
+  getSignRulers,
+} from '@/lib/astrology/natal-projection';
 import type { NatalChart } from '@/lib/astrology/types';
 
 const chart: NatalChart = {
@@ -44,7 +54,7 @@ describe('natal projection helpers', () => {
     expect(uranusProjection.targetIsTraditionalChartRuler).toBe(false);
   });
 
-  it('maps houses and dignity with explicit limitations', () => {
+  it('maps houses, dignity, and sect with explicit limitations', () => {
     const projection = buildNatalProjection({ chart, targetKey: 'saturn', targetLabel: 'Saturn', repeatedLifeAreaSignalCount: 3 });
 
     expect(getHouseLifeArea(9)).toMatchObject({
@@ -55,11 +65,21 @@ describe('natal projection helpers', () => {
     expect(getSignRulers('Libra')).toEqual({ modernRuler: 'Venus', traditionalRuler: 'Venus' });
     expect(classifyAngularity('saturn', 9)).toBe('cadent');
     expect(getBasicDignity('Saturn', 'Libra')).toMatchObject({ condition: 'exaltation' });
+    expect(buildSectContext(chart, 'Saturn')).toMatchObject({
+      chartSect: 'night',
+      basis: 'sun_house_relative_to_horizon',
+      sunHouse: 3,
+      targetCondition: 'out_of_sect',
+    });
     expect(projection).toMatchObject({
       targetHouse: 9,
       angularity: 'cadent',
       repeatedLifeAreaSignalCount: 3,
       dignity: { condition: 'exaltation' },
+      sect: {
+        chartSect: 'night',
+        targetCondition: 'out_of_sect',
+      },
       signRuler: {
         sign: 'Libra',
         modernRuler: 'Venus',
@@ -96,6 +116,51 @@ describe('natal projection helpers', () => {
       steps: [{ sourceSign: 'Scorpio', ruler: 'Pluto', rulerSign: null, rulerHouse: null }],
     });
     expect(chain.limitations).toContain('Dispositor depth v1 follows sign rulers from stored natal placements only; it does not add sect, house-strength, term, face, combustion, or reception weighting.');
+  });
+
+  it('detects one-way and mutual sign-rulership reception conservatively', () => {
+    expect(buildSimpleReception({
+      sourceLabel: 'Saturn',
+      sourceSign: 'Libra',
+      counterpartLabel: 'Venus',
+      counterpartSign: 'Capricorn',
+      system: 'traditional',
+    })).toMatchObject({
+      status: 'mutual',
+      direction: 'both',
+      sourceInCounterpartRulership: true,
+      counterpartInSourceRulership: true,
+    });
+
+    expect(buildSimpleReception({
+      sourceLabel: 'Saturn',
+      sourceSign: 'Taurus',
+      counterpartLabel: 'Venus',
+      counterpartSign: 'Libra',
+      system: 'traditional',
+    })).toMatchObject({
+      status: 'one_way',
+      direction: 'transit_to_natal',
+      sourceInCounterpartRulership: true,
+      counterpartInSourceRulership: false,
+    });
+  });
+
+  it('fences sect when birth time or safe houses are unavailable', () => {
+    const unknownSect = buildSectContext({
+      ...chart,
+      metadata: {
+        ...chart.metadata,
+        timeExact: false,
+      },
+    }, 'Saturn');
+
+    expect(unknownSect).toMatchObject({
+      chartSect: 'unknown',
+      basis: 'unavailable',
+      targetCondition: 'unknown',
+    });
+    expect(unknownSect.limitations).toContain('Birth time is not exact, so day/night sect is fenced instead of guessed.');
   });
 
   it('treats ascendant as an angle target', () => {

@@ -125,6 +125,18 @@ export interface AstrologyLaneInputBundle {
   };
 }
 
+export type AstrologyLaneKey = keyof AstrologyLaneInputBundle['lanes'];
+
+export interface AstrologyLaneInputExport {
+  status: 'astrology-lane-input-export-v1';
+  date: string;
+  privacy: 'internal-operator-only';
+  requestedLane: AstrologyLaneKey | null;
+  computedSkyFacts: AstrologyLaneInputBundle['computedSkyFacts'];
+  source: AstrologyLaneInputBundle['source'];
+  lanes: Partial<AstrologyLaneInputBundle['lanes']>;
+}
+
 const BASE_TONE_RULES = [
   'Plain language only.',
   'Stay precise, adult, and consequential.',
@@ -415,5 +427,28 @@ export function buildAstrologyLaneInputBundleFromPreview(preview: AstrologyChann
       fixtureId: preview.source.fixtureId,
       userId: preview.source.userId,
     },
+  };
+}
+
+export function isAstrologyLaneKey(value: string | null | undefined): value is AstrologyLaneKey {
+  return value === 'socials' || value === 'substack' || value === 'aeonLore';
+}
+
+export function buildAstrologyLaneInputExport(
+  bundle: AstrologyLaneInputBundle,
+  requestedLane: AstrologyLaneKey | null = null,
+): AstrologyLaneInputExport {
+  const lanes = requestedLane
+    ? { [requestedLane]: bundle.lanes[requestedLane] }
+    : bundle.lanes;
+
+  return {
+    status: 'astrology-lane-input-export-v1',
+    date: bundle.date,
+    privacy: bundle.privacy,
+    requestedLane,
+    computedSkyFacts: bundle.computedSkyFacts,
+    source: bundle.source,
+    lanes,
   };
 }

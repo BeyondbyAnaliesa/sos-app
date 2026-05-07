@@ -21,6 +21,7 @@ const PLANET_FEEL: Record<string, string> = {
   Pluto: 'power, compulsion, endings, deep fear, and the pattern that wants to be transformed rather than decorated',
   Chiron: 'old pain, repair, sensitivity, and the place that becomes wisdom when handled cleanly',
   'North Node': 'direction, unfamiliar growth, and the choice that pulls you out of the old loop',
+  'South Node': 'old pattern memory, release pressure, and the habit loop that is easier to repeat than to outgrow',
 };
 
 const NATAL_FEEL: Record<string, string> = {
@@ -34,11 +35,22 @@ const NATAL_FEEL: Record<string, string> = {
   uranus: 'freedom, disruption, and individuation',
   neptune: 'longing, sensitivity, dreams, and porousness',
   pluto: 'power, survival patterns, control, and deep change',
+  chiron: 'repair work, sensitivity, and the sore spot that can become skill',
+  northnode: 'growth direction and the stretch away from the familiar loop',
+  southnode: 'habit memory, depletion, and what may need release rather than repetition',
   ascendant: 'identity, body, first impression, and how life meets you',
   midheaven: 'public direction, work, reputation, and visibility',
+  descendant: 'partnership patterns, mirrors, and the terms you meet through other people',
+  imumcoeli: 'home base, roots, family patterning, and your private foundation',
 };
 
 export function formatNatalPoint(key: string) {
+  if (key === 'ascendant') return 'Ascendant';
+  if (key === 'midheaven') return 'Midheaven';
+  if (key === 'descendant') return 'Descendant';
+  if (key === 'imumCoeli') return 'IC';
+  if (key === 'northNode') return 'North Node';
+  if (key === 'southNode') return 'South Node';
   return key.charAt(0).toUpperCase() + key.slice(1);
 }
 
@@ -94,6 +106,8 @@ export function buildWaveUse(t: Transit, lifeArea?: string) {
       return `${where}Use it to handle the old sore spot without making it your whole identity.`;
     case 'North Node':
       return `${where}Use it to practice the unfamiliar choice. The old loop will feel easier, but easier is not the point.`;
+    case 'South Node':
+      return `${where}Use it to spot the loop that is draining more than it is helping. Release beats repetition here.`;
     default:
       return `${where}Use this window by treating the pattern as real and watching what repeats.`;
   }

@@ -79,6 +79,10 @@ describe('buildAstrologyJudgment', () => {
     expect(judgment.foreground[0]?.id).toBe('saturn-opposition-venus');
     expect(judgment.foreground[0]?.receipts[0]).toMatchObject({
       transitPlanet: 'Saturn',
+      transitObject: {
+        label: 'Saturn',
+        category: 'planet',
+      },
       aspect: 'opposition',
       natalTarget: 'venus',
       transitDignity: {
@@ -95,6 +99,10 @@ describe('buildAstrologyJudgment', () => {
         chartSect: 'day',
         transitPlanetCondition: 'in_sect',
         natalTargetCondition: 'out_of_sect',
+      },
+      natalTargetObject: {
+        label: 'Venus',
+        category: 'planet',
       },
       natalHouse: 4,
       exactDate: '2026-05-14',
@@ -172,6 +180,11 @@ describe('buildAstrologyJudgment', () => {
     expect(judgment.currentSky.limitations).toContain('Rarity and consequence scores are heuristic and explicitly do not claim historical proof.');
     expect(judgment.foreground[0]?.receipts[0]?.currentSkyRarity?.status).toBe('not_computed');
     expect(judgment.activatedLifeAreas).toContain('home, family of origin, roots, private life, foundation');
+    expect(judgment.objectInventory).toMatchObject({
+      status: 'expanded-object-inventory-v1',
+      transitLabels: expect.arrayContaining(['Saturn', 'Moon']),
+      targetLabels: expect.arrayContaining(['Venus', 'Sun']),
+    });
     expect(judgment.foreground[0]?.scope).toMatch(/personal|both/);
     expect(judgment.foreground[0]?.collectiveBridge).toMatchObject({
       collectiveEvent: {

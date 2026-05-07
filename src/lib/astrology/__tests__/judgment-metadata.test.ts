@@ -92,6 +92,13 @@ describe('buildAstrologyJudgmentMetadata', () => {
         events: [],
         limitations: ['Current-sky coverage is bounded.'],
       },
+      objectInventory: {
+        status: 'expanded-object-inventory-v1',
+        transitLabels: [],
+        targetLabels: [],
+        categoryCounts: {},
+        fencedLabels: [],
+      },
       receipts: [],
     };
 
@@ -133,6 +140,13 @@ describe('buildAstrologyJudgmentMetadata', () => {
         sectReceipts: 0,
         arcLifecycleReceipts: 0,
         collectiveBridgeReceipts: 0,
+      },
+      objectInventory: {
+        status: 'expanded-object-inventory-v1',
+        transitLabels: [],
+        targetLabels: [],
+        categoryCounts: {},
+        fencedLabels: [],
       },
       lead: {
         signalIds: [],

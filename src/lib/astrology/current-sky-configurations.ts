@@ -4,26 +4,13 @@ import type {
   JudgmentTier,
 } from '@/lib/astrology/judgment-types';
 import { buildNotComputedHistoricalRarityFact } from '@/lib/astrology/rarity-facts';
+import { supportsCurrentSkyConfiguration } from '@/lib/astrology/object-inventory';
 
 type PatternAspect = 'square' | 'opposition' | 'trine';
 type PatternMatch = {
   aspect: PatternAspect;
   orb: number;
 };
-
-const SIGN_CLUSTER_SUPPORT = new Set([
-  'Sun',
-  'Moon',
-  'Mercury',
-  'Venus',
-  'Mars',
-  'Jupiter',
-  'Saturn',
-  'Uranus',
-  'Neptune',
-  'Pluto',
-  'Chiron',
-]);
 
 const PATTERN_SUPPORT = new Set([
   'Sun',
@@ -94,7 +81,7 @@ function average(values: number[]) {
 function buildSignClusterEvents(positions: CollectiveSkyBodyState[]): AstrologyCollectiveSkyEvent[] {
   const buckets = new Map<string, CollectiveSkyBodyState[]>();
   for (const position of positions) {
-    if (!SIGN_CLUSTER_SUPPORT.has(position.body)) continue;
+    if (!supportsCurrentSkyConfiguration(position.body)) continue;
     const existing = buckets.get(position.sign) ?? [];
     existing.push(position);
     buckets.set(position.sign, existing);

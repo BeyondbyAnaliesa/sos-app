@@ -199,6 +199,20 @@ describe('scanCurrentSkyFromPositions', () => {
     expect(currentSky.events.find((event) => event.id === 'aspect:Saturn:conjunction:Neptune')?.rarity.limitations.join(' ')).toContain('within 2.0° orb');
   });
 
+  it('filters derived nodes and fenced asteroids out of generic current-sky aspect scanning', () => {
+    const currentSky = scanCurrentSkyFromPositions([
+      body('Saturn', 10, 0.03),
+      body('South Node', 10.1, -0.05, true),
+      body('Ceres', 10.2, 0.02),
+      body('North Node', 0.4, -0.05, true),
+    ], { date: new Date('2026-02-20T12:00:00Z') });
+
+    expect(currentSky.events.some((event) => event.id === 'aspect:Saturn:conjunction:South Node')).toBe(false);
+    expect(currentSky.events.some((event) => event.id === 'aspect:Saturn:conjunction:Ceres')).toBe(false);
+    expect(currentSky.events.some((event) => event.id === 'ingress:North Node:post_ingress')).toBe(true);
+    expect(currentSky.events.some((event) => event.id === 'ingress:South Node:post_ingress')).toBe(false);
+  });
+
   it('detects compact sign concentration as a bounded collective configuration', () => {
     const currentSky = scanCurrentSkyFromPositions([
       body('Sun', 12, 0.98),

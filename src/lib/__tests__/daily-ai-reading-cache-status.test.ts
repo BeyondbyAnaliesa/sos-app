@@ -37,6 +37,13 @@ const judgment: AstrologyJudgment = {
     events: [],
     limitations: ['Current-sky coverage is bounded.'],
   },
+  objectInventory: {
+    status: 'expanded-object-inventory-v1',
+    transitLabels: [],
+    targetLabels: [],
+    categoryCounts: {},
+    fencedLabels: [],
+  },
   receipts: [],
 };
 

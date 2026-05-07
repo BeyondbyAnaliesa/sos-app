@@ -108,6 +108,10 @@ const judgment: AstrologyJudgment = {
           basis: 'heuristic',
           status: 'not_computed',
           confidence: 'none',
+          assessment: 'bounded_limited',
+          method: 'none',
+          searchWindowDays: null,
+          comparisonCriteria: [],
           recurrence: null,
           limitations: ['historical proof not computed'],
           historicalGapYears: null,
@@ -119,6 +123,13 @@ const judgment: AstrologyJudgment = {
       },
     ],
     limitations: ['Rarity and consequence scores are heuristic and explicitly do not claim historical proof.'],
+  },
+  objectInventory: {
+    status: 'expanded-object-inventory-v1',
+    transitLabels: ['Saturn'],
+    targetLabels: ['Sun'],
+    categoryCounts: { planet: 1, luminary: 1 },
+    fencedLabels: ['Ceres', 'Pallas', 'Juno', 'Vesta'],
   },
   receipts: [
     {

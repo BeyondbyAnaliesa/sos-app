@@ -32,7 +32,13 @@ function getAngleDifference(a: number, b: number) {
 }
 
 // Calculate where all planets are on a given date
-export function getPlanetaryPositions(date: Date) {
+export function getPlanetaryPositions(date: Date): Array<{
+  key: string;
+  label: string;
+  longitude: number;
+  speed: number;
+  retrograde: boolean;
+}> {
   const year  = date.getUTCFullYear();
   const month = date.getUTCMonth() + 1;
   const day   = date.getUTCDate();
@@ -41,7 +47,13 @@ export function getPlanetaryPositions(date: Date) {
   const jdUt = julday(year, month, day, hour, constants.SE_GREG_CAL);
   const flags = constants.SEFLG_MOSEPH | constants.SEFLG_SPEED;
 
-  return transitPlanets.map((planet) => {
+  const positions: Array<{
+    key: string;
+    label: string;
+    longitude: number;
+    speed: number;
+    retrograde: boolean;
+  }> = transitPlanets.map((planet) => {
     const result = calc_ut(jdUt, planet.id, flags);
     return {
       key:        planet.key,
@@ -51,6 +63,19 @@ export function getPlanetaryPositions(date: Date) {
       retrograde: result.data[3] < 0,
     };
   });
+
+  const northNode = positions.find((planet) => planet.key === 'northNode');
+  if (northNode) {
+    positions.push({
+      key: 'southNode',
+      label: 'South Node',
+      longitude: (northNode.longitude + 180) % 360,
+      speed: northNode.speed,
+      retrograde: northNode.retrograde,
+    });
+  }
+
+  return positions;
 }
 
 // Calculate which transiting planets are forming aspects to natal placements
@@ -84,6 +109,12 @@ export function calculateTransitsForDate(
     for (const [angleKey, angleData] of Object.entries({
       ascendant: natalChart.angles.ascendant,
       midheaven: natalChart.angles.midheaven,
+      descendant: {
+        longitude: ((natalChart.angles.ascendant.longitude + 180) % 360 + 360) % 360,
+      },
+      imumCoeli: {
+        longitude: ((natalChart.angles.midheaven.longitude + 180) % 360 + 360) % 360,
+      },
     })) {
       const difference = getAngleDifference(transit.longitude, angleData.longitude);
       const match = transitAspects.find(

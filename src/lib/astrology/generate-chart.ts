@@ -1,5 +1,5 @@
 import { calc_ut, constants, houses_ex2, julday, split_deg } from 'sweph';
-import type { BirthDataInput, NatalChart } from './types';
+import type { BirthDataInput, NatalChart, PlanetPlacement } from './types';
 
 const zodiac = [
   'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo',
@@ -17,6 +17,7 @@ const planetDefinitions = [
   { key: 'uranus',    label: 'Uranus',     id: constants.SE_URANUS    },
   { key: 'neptune',   label: 'Neptune',    id: constants.SE_NEPTUNE   },
   { key: 'pluto',     label: 'Pluto',      id: constants.SE_PLUTO     },
+  { key: 'chiron',    label: 'Chiron',     id: constants.SE_CHIRON    },
   { key: 'northNode', label: 'North Node', id: constants.SE_TRUE_NODE },
 ] as const;
 
@@ -48,7 +49,7 @@ export function generateNatalChart(input: BirthDataInput): NatalChart {
   );
   const flags = constants.SEFLG_MOSEPH | constants.SEFLG_SPEED;
 
-  const placements = planetDefinitions.map((planet) => {
+  const placements: PlanetPlacement[] = planetDefinitions.map((planet) => {
     const result = calc_ut(jdUt, planet.id, flags);
     return {
       key:   planet.key,
@@ -59,6 +60,18 @@ export function generateNatalChart(input: BirthDataInput): NatalChart {
       warning:    result.error || null,
     };
   });
+
+  const northNode = placements.find((placement) => placement.key === 'northNode');
+  if (northNode) {
+    placements.push({
+      key: 'southNode',
+      label: 'South Node',
+      ...formatLongitude((northNode.longitude + 180) % 360),
+      speed: northNode.speed,
+      retrograde: northNode.retrograde,
+      warning: northNode.warning,
+    });
+  }
 
   const houses = houses_ex2(jdUt, 0, input.latitude, input.longitude, 'P');
   const angles = {

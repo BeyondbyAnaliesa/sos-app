@@ -13,6 +13,10 @@ import {
   buildSlowBodyIngressHistoricalRarityFact,
   buildSlowBodyStationHistoricalRarityFact,
 } from '@/lib/astrology/rarity-facts';
+import {
+  supportsCurrentSkyIngress,
+  supportsCurrentSkyPairing,
+} from '@/lib/astrology/object-inventory';
 
 const SIGNS = [
   'Aries',
@@ -347,14 +351,17 @@ export function scanCurrentSkyFromPositions(positions: CollectiveSkyBodyState[],
       events.push(buildStationEvent(body, threshold, options?.date ?? null));
     }
 
-    if (body.degree >= 28) {
-      events.push(buildIngressEvent(body, 'pre_ingress', 30 - body.degree, options?.date ?? null));
-    } else if (body.degree <= 2) {
-      events.push(buildIngressEvent(body, 'post_ingress', body.degree, options?.date ?? null));
+    if (supportsCurrentSkyIngress(body.body)) {
+      if (body.degree >= 28) {
+        events.push(buildIngressEvent(body, 'pre_ingress', 30 - body.degree, options?.date ?? null));
+      } else if (body.degree <= 2) {
+        events.push(buildIngressEvent(body, 'post_ingress', body.degree, options?.date ?? null));
+      }
     }
 
     for (let inner = index + 1; inner < positions.length; inner += 1) {
       const other = positions[inner];
+      if (!supportsCurrentSkyPairing(body.body) || !supportsCurrentSkyPairing(other.body)) continue;
       const difference = angleDifference(body.longitude, other.longitude);
       const match = MAJOR_ASPECTS.find((candidate) => Math.abs(difference - candidate.angle) <= candidate.orb);
       if (!match) continue;

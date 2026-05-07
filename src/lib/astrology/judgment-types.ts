@@ -6,6 +6,10 @@ import type {
   NatalProjectionSectCondition,
 } from '@/lib/astrology/natal-projection';
 import type { AstrologyMeaningFactors } from '@/lib/astrology/meaning-kernel';
+import type {
+  AstrologyObjectCategory,
+  AstrologyObjectReceiptSummary,
+} from '@/lib/astrology/object-inventory';
 
 export type JudgmentTier = 'foreground' | 'supporting' | 'background' | 'noise';
 export type JudgmentSource = 'major_arc' | 'daily_transit' | 'guidance' | 'memory';
@@ -129,8 +133,10 @@ export interface AstrologyJudgmentSectFact {
 export interface AstrologyJudgmentReceipt {
   arcKey?: string;
   transitPlanet: string;
+  transitObject?: AstrologyObjectReceiptSummary | null;
   aspect: string;
   natalTarget: string;
+  natalTargetObject?: AstrologyObjectReceiptSummary | null;
   targetLabel: string;
   orb: number;
   phase: JudgmentPhase;
@@ -258,6 +264,14 @@ export interface AstrologyJudgmentCurrentSky {
   limitations: string[];
 }
 
+export interface AstrologyJudgmentObjectInventorySummary {
+  status: 'expanded-object-inventory-v1';
+  transitLabels: string[];
+  targetLabels: string[];
+  categoryCounts: Partial<Record<AstrologyObjectCategory, number>>;
+  fencedLabels: string[];
+}
+
 export interface AstrologyJudgment {
   date: string;
   foreground: AstrologyJudgmentSignal[];
@@ -269,5 +283,6 @@ export interface AstrologyJudgment {
   timing: AstrologyJudgmentTiming;
   activatedLifeAreas: string[];
   currentSky: AstrologyJudgmentCurrentSky;
+  objectInventory: AstrologyJudgmentObjectInventorySummary;
   receipts: AstrologyJudgmentReceipt[];
 }

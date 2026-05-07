@@ -12,6 +12,11 @@ import {
   resolveMeaningFactors,
 } from '@/lib/astrology/meaning-kernel';
 import {
+  getAstrologyObjectRankingWeight,
+  getAstrologyObjectReceiptSummary,
+  getFencedAstrologyObjects,
+} from '@/lib/astrology/object-inventory';
+import {
   buildNatalProjection,
   buildSimpleReception,
   getBasicDignity,
@@ -105,10 +110,11 @@ function demandFor(transitPlanet: string, aspect: string, meaningDemand?: Judgme
 }
 
 function scoreTransitSignal(transit: Transit, activeToday = false, hasMemory = false): number {
-  const planet = PLANET_WEIGHT[transit.transitPlanet] ?? 0.5;
+  const planet = (PLANET_WEIGHT[transit.transitPlanet] ?? 0.5) * getAstrologyObjectRankingWeight(transit.transitPlanet);
+  const targetWeight = getAstrologyObjectRankingWeight(transit.natalPlanet);
   const aspect = ASPECT_WEIGHT[transit.aspect] ?? 0.6;
   const closeness = Math.max(0.2, 1.8 - Math.min(transit.orb, 6) * 0.22);
-  return Number((planet + aspect + closeness + (activeToday ? 0.4 : 0) + (hasMemory ? 0.35 : 0)).toFixed(2));
+  return Number((planet + aspect + closeness + (targetWeight - 0.7) * 0.22 + (activeToday ? 0.4 : 0) + (hasMemory ? 0.35 : 0)).toFixed(2));
 }
 
 function countLifeAreaRepeats(memory: MajorWaveMemoryInput, lifeArea: string, targetLabel: string) {
@@ -358,8 +364,10 @@ function buildArcReceipt(
   return applyCollectiveBridge({
     arcKey: arc.key,
     transitPlanet: arc.transit.transitPlanet,
+    transitObject: getAstrologyObjectReceiptSummary(arc.transit.transitPlanet, 'transit'),
     aspect: arc.transit.aspect,
     natalTarget: arc.transit.natalPlanet,
+    natalTargetObject: getAstrologyObjectReceiptSummary(arc.transit.natalPlanet, 'natal'),
     targetLabel: arc.context.targetLabel,
     orb: arc.todayOrb ?? arc.peakOrb,
     phase: phaseFromArc(arc),
@@ -409,9 +417,13 @@ function buildTransitReceipt(
     ? 'Ascendant'
     : transit.natalPlanet === 'midheaven'
       ? 'Midheaven'
-      : natalPlacement && 'label' in natalPlacement
-        ? natalPlacement.label
-        : transit.natalPlanet;
+      : transit.natalPlanet === 'descendant'
+        ? 'Descendant'
+        : transit.natalPlanet === 'imumCoeli'
+          ? 'IC'
+          : natalPlacement && 'label' in natalPlacement
+            ? natalPlacement.label
+            : transit.natalPlanet;
   const natalProjection = buildNatalProjection({
     chart,
     targetKey: transit.natalPlanet,
@@ -439,8 +451,10 @@ function buildTransitReceipt(
 
   return applyCollectiveBridge({
     transitPlanet: transit.transitPlanet,
+    transitObject: getAstrologyObjectReceiptSummary(transit.transitPlanet, 'transit'),
     aspect: transit.aspect,
     natalTarget: transit.natalPlanet,
+    natalTargetObject: getAstrologyObjectReceiptSummary(transit.natalPlanet, 'natal'),
     targetLabel,
     orb: transit.orb,
     phase: phaseFromTransit(transit),
@@ -589,6 +603,26 @@ function timingFromSignals(date: string, foreground: AstrologyJudgmentSignal[], 
   };
 }
 
+function buildObjectInventorySummary(receipts: AstrologyJudgmentReceipt[]) {
+  const transitLabels = dedupe(receipts.map((receipt) => receipt.transitObject?.label).filter((value): value is string => Boolean(value))).slice(0, 8);
+  const targetLabels = dedupe(receipts.map((receipt) => receipt.natalTargetObject?.label).filter((value): value is string => Boolean(value))).slice(0, 8);
+  const categoryCounts = receipts.reduce<Partial<Record<'luminary' | 'planet' | 'asteroid' | 'node' | 'angle' | 'lot', number>>>((acc, receipt) => {
+    const categories = [receipt.transitObject?.category, receipt.natalTargetObject?.category].filter((value): value is 'luminary' | 'planet' | 'asteroid' | 'node' | 'angle' | 'lot' => Boolean(value));
+    for (const category of categories) {
+      acc[category] = (acc[category] ?? 0) + 1;
+    }
+    return acc;
+  }, {});
+
+  return {
+    status: 'expanded-object-inventory-v1' as const,
+    transitLabels,
+    targetLabels,
+    categoryCounts,
+    fencedLabels: getFencedAstrologyObjects().map((entry) => entry.label),
+  };
+}
+
 export function buildAstrologyJudgment(params: {
   date: string;
   chart: NatalChart;
@@ -654,6 +688,7 @@ export function buildAstrologyJudgment(params: {
     timing: timingFromSignals(params.date, foreground, supporting, params.todayTransits.transits.length),
     activatedLifeAreas,
     currentSky,
+    objectInventory: buildObjectInventorySummary(receipts),
     receipts,
   };
 }

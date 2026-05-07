@@ -125,6 +125,13 @@ const judgment: AstrologyJudgment = {
     events: [],
     limitations: [],
   },
+  objectInventory: {
+    status: 'expanded-object-inventory-v1',
+    transitLabels: [],
+    targetLabels: [],
+    categoryCounts: {},
+    fencedLabels: [],
+  },
   receipts: [],
 };
 

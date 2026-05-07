@@ -53,6 +53,8 @@ describe('meaning-kernel', () => {
   it('covers tier-1 body and aspect lookups used by the engine', () => {
     expect(getTransitBodyMeaning('Pluto')).toMatchObject({ label: 'Pluto' });
     expect(getTransitBodyMeaning('Ascendant')).toMatchObject({ label: 'Ascendant' });
+    expect(getTransitBodyMeaning('southNode')).toMatchObject({ label: 'South Node' });
+    expect(getTransitBodyMeaning('IC')).toMatchObject({ label: 'IC' });
     expect(getAspectMeaning('opposition')).toMatchObject({ label: 'Opposition' });
   });
 });

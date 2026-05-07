@@ -114,10 +114,33 @@ function buildContext(natalChart: NatalChart, natalPoint: string): MajorTransitC
     ? natalChart.angles.ascendant
     : natalPoint === 'midheaven'
       ? natalChart.angles.midheaven
-      : null;
+      : natalPoint === 'descendant'
+        ? {
+            longitude: ((natalChart.angles.ascendant.longitude + 180) % 360 + 360) % 360,
+            sign: formatLongitude(((natalChart.angles.ascendant.longitude + 180) % 360 + 360) % 360).sign,
+            degree: formatLongitude(((natalChart.angles.ascendant.longitude + 180) % 360 + 360) % 360).degree,
+            minute: natalChart.angles.ascendant.minute,
+          }
+        : natalPoint === 'imumCoeli'
+          ? {
+              longitude: ((natalChart.angles.midheaven.longitude + 180) % 360 + 360) % 360,
+              sign: formatLongitude(((natalChart.angles.midheaven.longitude + 180) % 360 + 360) % 360).sign,
+              degree: formatLongitude(((natalChart.angles.midheaven.longitude + 180) % 360 + 360) % 360).degree,
+              minute: natalChart.angles.midheaven.minute,
+            }
+          : null;
   const source = placement ?? angle;
   const house = source?.longitude != null && natalChart.houses?.length === 12 ? getHouse(source.longitude, natalChart.houses) : null;
-  const targetLabel = placement?.label ?? (natalPoint === 'ascendant' ? 'Ascendant' : natalPoint === 'midheaven' ? 'Midheaven' : natalPoint.charAt(0).toUpperCase() + natalPoint.slice(1));
+  const targetLabel = placement?.label
+    ?? (natalPoint === 'ascendant'
+      ? 'Ascendant'
+      : natalPoint === 'midheaven'
+        ? 'Midheaven'
+        : natalPoint === 'descendant'
+          ? 'Descendant'
+          : natalPoint === 'imumCoeli'
+            ? 'IC'
+            : natalPoint.charAt(0).toUpperCase() + natalPoint.slice(1));
 
   return {
     targetLabel,

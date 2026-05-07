@@ -52,8 +52,22 @@ export function compactAstrologyJudgmentReceipt(receipt: AstrologyJudgmentReceip
   return {
     arcKey: receipt.arcKey ?? null,
     transitPlanet: receipt.transitPlanet,
+    transitObject: receipt.transitObject
+      ? {
+        label: receipt.transitObject.label,
+        category: receipt.transitObject.category,
+        supportLevel: receipt.transitObject.supportLevel,
+      }
+      : null,
     aspect: receipt.aspect,
     natalTarget: receipt.natalTarget,
+    natalTargetObject: receipt.natalTargetObject
+      ? {
+        label: receipt.natalTargetObject.label,
+        category: receipt.natalTargetObject.category,
+        supportLevel: receipt.natalTargetObject.supportLevel,
+      }
+      : null,
     targetLabel: receipt.targetLabel,
     lifeArea: receipt.lifeArea,
     orb: receipt.orb,
@@ -140,6 +154,11 @@ export function buildAstrologyJudgmentPromptSnapshot(judgment: AstrologyJudgment
       summary: judgment.currentSky.summary,
       events: judgment.currentSky.events.slice(0, 4).map(compactCollectiveSkyEvent),
       limitations: judgment.currentSky.limitations.slice(0, 4),
+    },
+    objectInventory: {
+      status: judgment.objectInventory.status,
+      transitLabels: judgment.objectInventory.transitLabels.slice(0, 6),
+      targetLabels: judgment.objectInventory.targetLabels.slice(0, 6),
     },
     receipts: judgment.receipts.slice(0, 6).map(compactAstrologyJudgmentReceipt),
   };

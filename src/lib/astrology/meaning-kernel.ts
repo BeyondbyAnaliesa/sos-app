@@ -388,8 +388,8 @@ function lookupBodyMeaning(name: string | null | undefined): AstrologyMeaningRef
   if (normalized === 'midheaven') return TIER_1_BODY_MEANINGS.MC;
   if (normalized === 'descendant') return TIER_1_BODY_MEANINGS.DSC;
   if (normalized === 'imumcoeli' || normalized === 'ic') return TIER_1_BODY_MEANINGS.IC;
-  if (normalized === 'north node') return TIER_1_BODY_MEANINGS['North Node'];
-  if (normalized === 'south node') return TIER_1_BODY_MEANINGS['South Node'];
+  if (normalized === 'north node' || normalized === 'northnode') return TIER_1_BODY_MEANINGS['North Node'];
+  if (normalized === 'south node' || normalized === 'southnode') return TIER_1_BODY_MEANINGS['South Node'];
   return null;
 }
 

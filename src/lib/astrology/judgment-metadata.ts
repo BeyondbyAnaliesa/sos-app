@@ -4,6 +4,7 @@ import type {
   AstrologyJudgmentSignal,
   JudgmentSource,
 } from '@/lib/astrology/judgment-types';
+import type { AstrologyObjectCategory } from '@/lib/astrology/object-inventory';
 
 export interface AstrologyJudgmentMetadata {
   status: 'astrology-judgment-metadata-v1';
@@ -29,6 +30,13 @@ export interface AstrologyJudgmentMetadata {
       heuristicOnly: number;
       unsupported: number;
     };
+  };
+  objectInventory: {
+    status: AstrologyJudgment['objectInventory']['status'];
+    transitLabels: string[];
+    targetLabels: string[];
+    categoryCounts: Partial<Record<AstrologyObjectCategory, number>>;
+    fencedLabels: string[];
   };
   availability: {
     transitDignityReceipts: number;
@@ -130,6 +138,13 @@ export function buildAstrologyJudgmentMetadata(judgment: AstrologyJudgment): Ast
       sectReceipts: receipts.filter((receipt) => Boolean(receipt.sect)).length,
       arcLifecycleReceipts: receipts.filter((receipt) => Boolean(receipt.arcLifecycle)).length,
       collectiveBridgeReceipts: receipts.filter((receipt) => Boolean(receipt.collectiveBridge)).length,
+    },
+    objectInventory: {
+      status: judgment.objectInventory.status,
+      transitLabels: judgment.objectInventory.transitLabels,
+      targetLabels: judgment.objectInventory.targetLabels,
+      categoryCounts: judgment.objectInventory.categoryCounts,
+      fencedLabels: judgment.objectInventory.fencedLabels,
     },
     lead: {
       signalIds: signals.slice(0, 3).map((signal) => signal.id),

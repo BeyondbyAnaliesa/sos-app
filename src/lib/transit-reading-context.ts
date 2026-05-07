@@ -6,6 +6,7 @@ import type { NatalChart } from '@/lib/astrology/types';
 import { interpretTransits } from '@/lib/interpret';
 import { listSecureLifeSignals } from '@/lib/astrology/secure-life-signals';
 import { buildAstrologyJudgment } from '@/lib/astrology/judgment';
+import { buildAstrologyChannelBrief, type AstrologyChannelBrief } from '@/lib/astrology/channel-brief';
 import type { AstrologyJudgment } from '@/lib/astrology/judgment-types';
 import type { MajorWaveMemoryInput } from '@/lib/major-transit-reading';
 
@@ -20,6 +21,7 @@ export type ReadingContext = {
   upcomingMajorArcs: ReturnType<typeof calculateMajorTransitArcs>['arcs'];
   memory: MajorWaveMemoryInput;
   judgment: AstrologyJudgment;
+  channelBrief: AstrologyChannelBrief;
 };
 
 type DbClient = Pick<SupabaseClient, 'from' | 'rpc'>;
@@ -83,6 +85,7 @@ export async function buildReadingContext(client: DbClient, userId: string, now 
     guidance,
     memory,
   });
+  const channelBrief = buildAstrologyChannelBrief(judgment);
 
   return {
     chart,
@@ -95,5 +98,6 @@ export async function buildReadingContext(client: DbClient, userId: string, now 
     upcomingMajorArcs,
     memory,
     judgment,
+    channelBrief,
   };
 }

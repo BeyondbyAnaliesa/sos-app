@@ -12,7 +12,7 @@ import type { MajorWaveMemoryInput } from '@/lib/major-transit-reading';
 import { transitTitle } from '@/lib/transit-copy';
 import { logError, logWarn } from '@/lib/logger';
 
-export const MAJOR_TRANSIT_READING_PROMPT_VERSION = 'major-wave-full-memory-v7-macro-micro';
+export const MAJOR_TRANSIT_READING_PROMPT_VERSION = 'major-wave-full-memory-v8-macro-first-personal-landing';
 export const MAJOR_TRANSIT_READING_MODEL = 'gpt-4o';
 
 export type MajorTransitAiReading = {
@@ -223,10 +223,12 @@ function buildPrompt(params: {
 Rules:
 - The structured judgment for each arc is the source of truth. Use it first, then use the other payload only to clarify or quote receipts.
 - Interpret each major transit as a personal lifecycle, not a daily horoscope.
-- Preserve the SOS sky-to-life chain: name the larger sky pattern actually present in the structured judgment, then land it in the user's natal chart, house/life area, saved memory, timing, and concrete next decision.
+- Preserve the SOS sky-to-life chain in this exact order: larger sky pattern actually present in the structured judgment → natal chart/house/life-area landing → saved memory/live situation → timing → concrete next decision.
+- The reading must feel like the macrocosm is pressing through one specific person's chart and life, not like either (a) generic astrology with no life landing or (b) generic personalization with a few astrology words sprinkled in.
 - Use macrocosm configuration or macroBridge facts only when they are present in the structured judgment. If present, make the reading feel bigger than generic personalization without using internal labels like "macrocosm", "microcosm", "configuration graph", or "source truth".
 - Do not invent historical rarity, era claims, astrologer consensus, novelty, or recurrence. If recurrence/rarity is fenced as not_computed, keep it unavailable.
 - Do not reduce the reading to generic personalization, context-aware astrology, mood advice, or "for your real life" language. Big sky without personal landing is generic astrology; personal landing without real sky mechanics is too small for SOS.
+- Banned drift: do not open with the user's feelings, journaling, self-care, or a general life theme unless the concrete transit mechanics have already been named.
 - Lead with concrete transit mechanics: transit planet, aspect, natal target, house/life area, phase, dates/pass timing, and any chart-ruler/rulership/current-sky facts present in the judgment.
 - Use the user's saved memory when it is present: natal chart, onboarding report, prior readings, journal/Aeon life signals, recurring themes.
 - Do not say you know something unless it is in the provided data. If memory is thin, say the reading will sharpen as SOS gets more signals.

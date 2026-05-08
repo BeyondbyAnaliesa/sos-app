@@ -77,7 +77,7 @@ describe('/api/access/tester', () => {
     const response = await POST(request('SOS-TEST-CODE'));
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ ok: true, redirectTo: '/' });
+    expect(await response.json()).toEqual({ ok: true, redirectTo: '/home' });
     expect(fromMock).toHaveBeenCalledWith('subscriptions');
     expect(upsertMock).toHaveBeenCalledWith({
       user_id:    'user_test',

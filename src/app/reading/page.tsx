@@ -94,7 +94,7 @@ export default async function ReadingPage() {
 
   const paid = isActive(sub);
 
-  // ── No chart at all ──
+  // No chart row → onboarding. Corrupted chart row → chart-error.
   if (!chartResult.data) {
     return (
       <main className="mx-auto w-full max-w-xl px-5 py-10 text-center sm:px-6">
@@ -104,6 +104,9 @@ export default async function ReadingPage() {
         </Link>
       </main>
     );
+  }
+  if (!chartResult.data.placements_json || !chartResult.data.angles_json) {
+    redirect('/chart-error');
   }
 
   // ── Reading still generating ──
@@ -127,7 +130,7 @@ export default async function ReadingPage() {
           <p className="mt-2 text-xs text-[var(--color-text-muted)]">
             SOS is reading the chart in more detail now. Keep this screen open for a moment.
           </p>
-          <ReadingRefresh />
+          <ReadingRefresh repairNatalReading />
         </div>
         <AeonFloatingButton />
         <BottomNav />

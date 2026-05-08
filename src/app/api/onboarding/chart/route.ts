@@ -19,8 +19,8 @@ function getOpenAIClient() {
   return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 }
 
-// Fire-and-forget: generates the deep natal reading in the background
-// so it's ready by the time the user finishes onboarding questions.
+// Fire-and-forget during onboarding, but also reusable for on-demand repair when
+// /reading finds a chart row without its companion natal_readings row.
 async function generateNatalReading(userId: string, chart: ReturnType<typeof generateNatalChart>, attempt = 0) {
   try {
     const { system, user } = buildNatalReadingPrompt(chart);
@@ -221,7 +221,7 @@ export async function POST(request: Request) {
 // Returns { error: 'needs-onboarding' } with status 422 if no birth data is on file.
 //
 // Used by /chart-error when a user has a corrupted natal_charts row (null columns).
-export async function PATCH() {
+export async function PATCH(request: Request) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -230,16 +230,46 @@ export async function PATCH() {
     }
 
     const admin = createAdminClient();
+    let regenerateReading = false;
+
+    try {
+      const body = await request.json();
+      regenerateReading = Boolean(body?.regenerateReading);
+    } catch {
+      // PATCH is also used without a body from /chart-error.
+    }
 
     // Check if the chart is already valid — idempotent fast path.
     const { data: existingChart } = await admin
       .from('natal_charts')
-      .select('placements_json, angles_json')
+      .select('placements_json, angles_json, houses_json, aspects_json, metadata_json')
       .eq('user_id', user.id)
       .single();
 
     if (existingChart?.placements_json && existingChart?.angles_json) {
-      return NextResponse.json({ success: true, alreadyValid: true });
+      if (!regenerateReading) {
+        return NextResponse.json({ success: true, alreadyValid: true });
+      }
+
+      const { data: existingReading } = await admin
+        .from('natal_readings')
+        .select('user_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (existingReading) {
+        return NextResponse.json({ success: true, alreadyValid: true, readingAlreadyPresent: true });
+      }
+
+      await generateNatalReading(user.id, {
+        placements: existingChart.placements_json,
+        angles: existingChart.angles_json,
+        houses: existingChart.houses_json ?? [],
+        aspects: existingChart.aspects_json ?? [],
+        metadata: existingChart.metadata_json ?? {},
+      });
+
+      return NextResponse.json({ success: true, readingGenerated: true });
     }
 
     // Load stored birth data — if absent, the user must complete onboarding.
@@ -274,7 +304,11 @@ export async function PATCH() {
       metadata_json:   chart.metadata,
     }, { onConflict: 'user_id' });
 
-    return NextResponse.json({ success: true });
+    if (regenerateReading) {
+      await generateNatalReading(user.id, chart);
+    }
+
+    return NextResponse.json({ success: true, readingGenerated: regenerateReading });
   } catch (err) {
     logError(err, { route: '/api/onboarding/chart', action: 'regenerate' });
     const message = err instanceof Error ? err.message : 'Something went wrong';

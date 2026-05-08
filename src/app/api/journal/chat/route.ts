@@ -19,9 +19,10 @@ import type { DailyTransits } from '@/lib/astrology/domain-types';
 import { extractLifeSignals } from '@/lib/astrology/life-signal-extract';
 import { listSecureLifeSignals } from '@/lib/astrology/secure-life-signals';
 import { track } from '@/lib/analytics';
-import { logError } from '@/lib/logger';
+import { logError, logWarn } from '@/lib/logger';
 import { consumeAeonTurn, getAeonUsageStatus } from '@/lib/aeon/usage';
 import { interpretTransits } from '@/lib/interpret';
+import { shouldUseJournalStarterFastPath } from '@/lib/journal/chat-path';
 import {
   createSecureJournalEntry,
   insertSecureJournalMessage,
@@ -52,9 +53,17 @@ export async function POST(request: Request) {
       entryId?: string;
       message?: string;
     };
+    const useStarterFastPath = shouldUseJournalStarterFastPath({ entryText, message });
+    const preStreamStartedAt = Date.now();
+    const preStreamTiming: Record<string, number> = {};
+    const markTiming = (label: string, startedAt: number) => {
+      preStreamTiming[label] = Date.now() - startedAt;
+    };
 
     const admin = createAdminClient();
+    const usageStartedAt = Date.now();
     const usageBefore = await getAeonUsageStatus(user.id);
+    markTiming('usage', usageStartedAt);
 
     if (!usageBefore.paid && usageBefore.totalTurnsRemaining <= 0) {
       return new Response('You have used your free Aeon conversations for now. Upgrade to keep going deeper.', {
@@ -70,11 +79,13 @@ export async function POST(request: Request) {
     let resolvedEntryId = entryId;
 
     if (entryText?.trim()) {
+      const entryCreateStartedAt = Date.now();
       const entry = await createSecureJournalEntry(admin, {
         userId: user.id,
         entryText: entryText.trim(),
         entryDate: new Date().toISOString().split('T')[0],
       });
+      markTiming('createEntry', entryCreateStartedAt);
       resolvedEntryId = entry.id;
 
       track('journal_entry_created', { userId: user.id, entryId: entry.id });
@@ -105,12 +116,14 @@ export async function POST(request: Request) {
     // --- Load user's chart and context ---
     let userContext: string | undefined;
 
+    const contextStartedAt = Date.now();
     const [chartResult, profileResult, reportResult, natalReadingResult] = await Promise.all([
       admin.from('natal_charts').select('placements_json, angles_json, houses_json, aspects_json, metadata_json').eq('user_id', user.id).single(),
       admin.from('profiles').select('user_context').eq('id', user.id).single(),
       admin.from('onboarding_reports').select('report_json').eq('user_id', user.id).maybeSingle(),
       admin.from('natal_readings').select('reading_json').eq('user_id', user.id).maybeSingle(),
     ]);
+    markTiming('loadContext', contextStartedAt);
 
     if (profileResult.data?.user_context) {
       userContext = profileResult.data.user_context;
@@ -131,12 +144,14 @@ export async function POST(request: Request) {
 
     // --- Calculate REAL transits ---
     const today = new Date();
+    const dailyMemoryStartedAt = Date.now();
     const todayMemory = await ensureDailyTransitMemory({
       userId: user.id,
       richChart,
       date: today,
       source: 'journal',
     });
+    markTiming('ensureDailyTransitMemory', dailyMemoryStartedAt);
     const todayTransits = todayMemory.snapshot;
     const currentExtractedSignals = entryText?.trim() ? extractLifeSignals(entryText.trim()) : [];
     const journalMemoryAudit: Record<string, unknown> = {
@@ -160,12 +175,17 @@ export async function POST(request: Request) {
     };
 
     const guidance = interpretTransits(todayTransits.transits, natalSummary);
+    const majorArcsStartedAt = Date.now();
     const { arcs: majorArcs } = calculateMajorTransitArcs(richChart, {
       centerDate: today,
       pastDays: 150,
       futureDays: 240,
     });
+    markTiming('calculateMajorTransitArcs', majorArcsStartedAt);
+    const lifeSignalsStartedAt = Date.now();
     const lifeSignals = await listSecureLifeSignals(admin, { userId: user.id, limit: 12 }).catch(() => []);
+    markTiming('listSecureLifeSignals', lifeSignalsStartedAt);
+    const judgmentStartedAt = Date.now();
     const astrologyJudgment = (() => {
       try {
         return buildAstrologyJudgment({
@@ -185,19 +205,23 @@ export async function POST(request: Request) {
         return null;
       }
     })();
+    markTiming('buildAstrologyJudgment', judgmentStartedAt);
 
     journalMemoryAudit['hasStructuredAstrologyJudgment'] = Boolean(astrologyJudgment);
     journalMemoryAudit['structuredAstrologyLead'] = astrologyJudgment?.foreground[0]?.title ?? astrologyJudgment?.supporting[0]?.title ?? null;
 
-    const { createdLifeSignalIds } = entryText?.trim()
-      ? await createJournalLifeSignals({
+    let createdLifeSignalIds: string[] = [];
+    if (entryText?.trim() && !useStarterFastPath) {
+      const createSignalsStartedAt = Date.now();
+      ({ createdLifeSignalIds } = await createJournalLifeSignals({
         userId: user.id,
         entryId: resolvedEntryId,
         entryText: entryText.trim(),
         snapshot: todayTransits,
         signalTimestamp: today.toISOString(),
-      })
-      : { createdLifeSignalIds: [] };
+      }));
+      markTiming('createJournalLifeSignals', createSignalsStartedAt);
+    }
 
     // Compute upcoming 7-day transit range early — used by both the arc peak scan
     // (injected into buildArcMemorySystemSection) and the raw upcomingContext block below.
@@ -208,7 +232,9 @@ export async function POST(request: Request) {
 
     // Arc memory context: structured retrieval layer — injected into Aeon system prompt
     // Non-fatal: if this fails, journal flow continues without arc context
+    const arcMemoryStartedAt = Date.now();
     const arcMemory = await getRelevantTransitMemoryForToday(user.id).catch(() => null);
+    markTiming('getRelevantTransitMemoryForToday', arcMemoryStartedAt);
     const arcMemorySection = buildArcMemorySystemSection({
       arcMemory,
       currentSignals: currentExtractedSignals,
@@ -216,15 +242,21 @@ export async function POST(request: Request) {
       nowMs: Date.now(),
     });
 
-    const recurringTransitContext = await buildRecurringTransitContext({
-      userId: user.id,
-      snapshot: todayTransits,
-      currentSignals: currentExtractedSignals,
-      excludeLifeSignalId: createdLifeSignalIds[0],
-    });
+    let recurringTransitContext = '';
+    if (!useStarterFastPath) {
+      const recurringStartedAt = Date.now();
+      recurringTransitContext = await buildRecurringTransitContext({
+        userId: user.id,
+        snapshot: todayTransits,
+        currentSignals: currentExtractedSignals,
+        excludeLifeSignalId: createdLifeSignalIds[0],
+      });
+      markTiming('buildRecurringTransitContext', recurringStartedAt);
+    }
 
     journalMemoryAudit['createdLifeSignalIds'] = createdLifeSignalIds;
     journalMemoryAudit['hasRecurringTransitContext'] = Boolean(recurringTransitContext.trim());
+    journalMemoryAudit['starterFastPath'] = useStarterFastPath;
 
     const recurringContextResultPreview = recurringTransitContext
       .split('--- PRIOR MOMENTS UNDER SIMILAR TRANSITS ---')[1]
@@ -232,11 +264,13 @@ export async function POST(request: Request) {
       ?.slice(0, 1200) ?? '';
     journalMemoryAudit['recurringContextPreview'] = recurringContextResultPreview;
 
-    const journalAuditEntry = await insertSecureJournalMessage(admin, {
-      entryId: resolvedEntryId,
-      role: 'assistant',
-      content: `[MEMORY_AUDIT]\n${JSON.stringify(journalMemoryAudit)}`,
-    });
+    const journalAuditEntry = useStarterFastPath
+      ? null
+      : await insertSecureJournalMessage(admin, {
+        entryId: resolvedEntryId,
+        role: 'assistant',
+        content: `[MEMORY_AUDIT]\n${JSON.stringify(journalMemoryAudit)}`,
+      });
     journalMemoryAudit['journalMessagesAvailable'] = true;
 
     // Build raw upcoming context string for Aeon — reuses upcomingTransitsForScan
@@ -260,10 +294,12 @@ export async function POST(request: Request) {
 
     // --- Fetch recent prior journal entries for Day 2+ callback ---
     let priorEntriesContext = '';
-    const recentEntries = await listSecureJournalEntries(admin, {
-      userId: user.id,
-      limit: 7,
-    });
+    const recentEntries = useStarterFastPath
+      ? []
+      : await listSecureJournalEntries(admin, {
+        userId: user.id,
+        limit: 7,
+      });
 
     if (recentEntries.length > 0) {
       // Exclude today's entry if it's the one we just created
@@ -291,9 +327,11 @@ export async function POST(request: Request) {
     // --- Build conversation ---
     const systemPrompt = buildSystemPrompt(natalSummary, todayTransits, userContext, { judgment: astrologyJudgment }) + arcMemorySection + recurringTransitContext + upcomingContext + priorEntriesContext;
 
-    const existingMessages = await listSecureJournalMessages(admin, {
-      entryId: resolvedEntryId,
-    });
+    const existingMessages = message?.trim()
+      ? await listSecureJournalMessages(admin, {
+        entryId: resolvedEntryId,
+      })
+      : [];
 
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
       { role: 'system', content: systemPrompt },
@@ -323,6 +361,14 @@ export async function POST(request: Request) {
       });
     }
 
+    logWarn('journal_chat_prestream_timing', {
+      route: '/api/journal/chat',
+      userId: user.id,
+      starterFastPath: useStarterFastPath,
+      durationMs: Date.now() - preStreamStartedAt,
+      timings: preStreamTiming,
+    });
+
     // --- Stream the AI response ---
     const openai = getOpenAIClient();
     const stream = await openai.chat.completions.create({
@@ -347,21 +393,47 @@ export async function POST(request: Request) {
 
           await consumeAeonTurn(user.id);
 
-          await insertSecureJournalMessage(admin, {
-            entryId: resolvedEntryId,
-            role: 'assistant',
-            content: fullResponse,
-          });
+          const postStreamTasks: Promise<unknown>[] = [
+            insertSecureJournalMessage(admin, {
+              entryId: resolvedEntryId,
+              role: 'assistant',
+              content: fullResponse,
+            }),
+          ];
+
+          if (entryText?.trim() && useStarterFastPath) {
+            postStreamTasks.push(
+              createJournalLifeSignals({
+                userId: user.id,
+                entryId: resolvedEntryId,
+                entryText: entryText.trim(),
+                snapshot: todayTransits,
+                signalTimestamp: today.toISOString(),
+              }).then(({ createdLifeSignalIds: deferredIds }) => {
+                journalMemoryAudit['createdLifeSignalIds'] = deferredIds;
+              }),
+            );
+          }
+
+          const finalAuditContent = `[MEMORY_AUDIT_FINAL]\n${JSON.stringify({
+            ...journalMemoryAudit,
+            responseLength: fullResponse.length,
+          })}`;
 
           if (journalAuditEntry?.id) {
-            await updateSecureJournalMessageContent(admin, {
+            postStreamTasks.push(updateSecureJournalMessageContent(admin, {
               messageId: journalAuditEntry.id,
-              content: `[MEMORY_AUDIT_FINAL]\n${JSON.stringify({
-                ...journalMemoryAudit,
-                responseLength: fullResponse.length,
-              })}`,
-            });
+              content: finalAuditContent,
+            }));
+          } else {
+            postStreamTasks.push(insertSecureJournalMessage(admin, {
+              entryId: resolvedEntryId,
+              role: 'assistant',
+              content: finalAuditContent,
+            }));
           }
+
+          await Promise.allSettled(postStreamTasks);
 
           controller.close();
         } catch (err) {

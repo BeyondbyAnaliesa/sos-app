@@ -506,7 +506,7 @@ function buildLaneWarnings(brief: AstrologyChannelBrief, lane: 'socials' | 'subs
       ];
 
   const availabilityWarnings = [
-    getJudgmentMetadata(brief).availability.receptionReceipts === 0 ? 'No supported reception receipts are available in this export; do not imply reception analysis.' : null,
+    getJudgmentMetadata(brief).availability.supportedReceptionReceipts === 0 ? 'No supported reception receipts are available in this export; do not imply reception analysis.' : null,
     getJudgmentMetadata(brief).availability.sectReceipts === 0 ? 'No sect receipts are available in this export; do not imply sect analysis.' : null,
     getObjectInventory(brief).fencedLabels.length > 0 ? `Fenced objects remain out of scope here: ${getObjectInventory(brief).fencedLabels.join(', ')}.` : null,
   ];

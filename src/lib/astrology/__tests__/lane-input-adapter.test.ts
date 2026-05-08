@@ -179,6 +179,18 @@ describe('buildAstrologyLaneInputBundle', () => {
     expect(JSON.stringify(bundle).toLowerCase()).not.toContain('rare celestial moment');
   });
 
+  it('warns when only unavailable reception receipts exist', () => {
+    const fixture = buildAstrologyChannelBriefFixture();
+    fixture.channelBrief.judgmentMetadata.availability.receptionReceipts = 2;
+    fixture.channelBrief.judgmentMetadata.availability.supportedReceptionReceipts = 0;
+
+    const bundle = buildAstrologyLaneInputBundle(fixture.channelBrief);
+
+    expect(bundle.lanes.socials.laneWarnings).toContain(
+      'No supported reception receipts are available in this export; do not imply reception analysis.',
+    );
+  });
+
   it('stays plain, non-poetic, and uses preview metadata when adapting from preview', () => {
     const fixture = buildAstrologyChannelBriefFixture();
     const preview = buildAstrologyChannelBriefPreview({

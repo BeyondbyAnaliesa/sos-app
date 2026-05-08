@@ -10,6 +10,10 @@ import type {
   AstrologyObjectCategory,
   AstrologyObjectReceiptSummary,
 } from '@/lib/astrology/object-inventory';
+import type {
+  MacroConfigurationReceipt,
+  MacroLandscapeReceipt,
+} from '@/lib/astrology/macrocosm-types';
 
 export type JudgmentTier = 'foreground' | 'supporting' | 'background' | 'noise';
 export type JudgmentSource = 'major_arc' | 'daily_transit' | 'guidance' | 'memory';
@@ -108,6 +112,26 @@ export interface AstrologyCollectiveBridge {
   limitations: string[];
 }
 
+export interface AstrologyMacroPersonalBridge {
+  configurationId: string;
+  bridgeStrengthScore: number;
+  bridgeStrengthTier: 'foreground' | 'supporting' | 'background';
+  natalTargets: Array<{
+    targetLabel: string;
+    targetType: 'planet' | 'angle' | 'house_ruler' | 'house_axis';
+    reason: string;
+  }>;
+  activationArea: string[];
+  memoryLinks: {
+    matchedSignalCount: number;
+    matchedThemes: string[];
+    excerpts: string[];
+  };
+  manifestationClass: 'loud' | 'structural' | 'subtle' | 'delayed' | 'internal';
+  decisionPressure: 'immediate' | 'active' | 'building' | 'background';
+  limitations: string[];
+}
+
 export interface AstrologyJudgmentReceptionFact {
   system: 'modern' | 'traditional';
   status: NatalProjectionReceptionStatus;
@@ -164,6 +188,7 @@ export interface AstrologyJudgmentReceipt {
   sect?: AstrologyJudgmentSectFact | null;
   meaningFactors?: AstrologyMeaningFactors | null;
   collectiveBridge?: AstrologyCollectiveBridge | null;
+  macroBridge?: AstrologyMacroPersonalBridge | null;
   currentSkyRarity?: CollectiveSkyHistoricalRarityFact | null;
   arcLifecycle?: ArcLifecycleJudgment | null;
 }
@@ -180,6 +205,7 @@ export interface AstrologyJudgmentSignal {
   score: number;
   receipts: AstrologyJudgmentReceipt[];
   collectiveBridge?: AstrologyCollectiveBridge | null;
+  macroBridge?: AstrologyMacroPersonalBridge | null;
   supportNotes: string[];
 }
 
@@ -261,6 +287,7 @@ export interface AstrologyJudgmentCurrentSky {
   summary: string;
   scannedBodies: string[];
   events: AstrologyCollectiveSkyEvent[];
+  macroConfigurations?: MacroConfigurationReceipt[];
   limitations: string[];
 }
 
@@ -270,6 +297,13 @@ export interface AstrologyJudgmentObjectInventorySummary {
   targetLabels: string[];
   categoryCounts: Partial<Record<AstrologyObjectCategory, number>>;
   fencedLabels: string[];
+}
+
+export interface AstrologyJudgmentMacrocosm {
+  status: 'macrocosm-engine-v1';
+  configurations: MacroConfigurationReceipt[];
+  landscapeTopics: MacroLandscapeReceipt[];
+  limitations: string[];
 }
 
 export interface AstrologyJudgment {
@@ -283,6 +317,7 @@ export interface AstrologyJudgment {
   timing: AstrologyJudgmentTiming;
   activatedLifeAreas: string[];
   currentSky: AstrologyJudgmentCurrentSky;
+  macrocosm?: AstrologyJudgmentMacrocosm | null;
   objectInventory: AstrologyJudgmentObjectInventorySummary;
   receipts: AstrologyJudgmentReceipt[];
 }

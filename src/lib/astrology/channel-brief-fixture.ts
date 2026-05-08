@@ -66,7 +66,7 @@ const memory: MajorWaveMemoryInput = {
   ],
 };
 
-export function buildAstrologyChannelBriefFixture(date = '2026-05-06') {
+export function buildAstrologyChannelBriefFixture(date = '2025-05-25') {
   const judgment = buildAstrologyJudgment({
     date,
     chart,

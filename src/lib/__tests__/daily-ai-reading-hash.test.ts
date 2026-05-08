@@ -10,7 +10,9 @@ const chart: Parameters<typeof buildDailyAiReadingMemoryHash>[0]['chart'] = {
       sign: 'Aries',
       degree: 12,
       minute: 0,
+      speed: 1,
       retrograde: false,
+      warning: null,
       longitude: 12,
     },
   ],
@@ -20,7 +22,12 @@ const chart: Parameters<typeof buildDailyAiReadingMemoryHash>[0]['chart'] = {
   },
   houses: [],
   aspects: [],
-  metadata: null,
+  metadata: {
+    jdUt: 0,
+    timeExact: true,
+    coordinates: { latitude: 0, longitude: 0 },
+    warnings: { houses: null },
+  },
 };
 
 const baseJudgment: AstrologyJudgment = {
@@ -65,7 +72,7 @@ describe('buildDailyAiReadingMemoryHash', () => {
       majorArcs: [],
       guidance: [],
       memory: { report: null, natalReading: null, lifeSignals: [] },
-    } as const;
+    };
 
     const morningHash = buildDailyAiReadingMemoryHash({
       ...base,
@@ -99,7 +106,7 @@ describe('buildDailyAiReadingMemoryHash', () => {
       majorArcs: [],
       guidance: [],
       memory: { report: null, natalReading: null, lifeSignals: [] },
-    } as const;
+    };
 
     expect(buildDailyAiReadingMemoryHash({ ...common, judgment: baseJudgment })).not.toBe(
       buildDailyAiReadingMemoryHash({
@@ -117,7 +124,7 @@ describe('buildDailyAiReadingMemoryHash', () => {
       majorArcs: [],
       guidance: [],
       memory: { report: null, natalReading: null, lifeSignals: [] },
-    } as const;
+    };
 
     const withBridge: AstrologyJudgment = {
       ...baseJudgment,
@@ -180,7 +187,7 @@ describe('buildDailyAiReadingMemoryHash', () => {
       majorArcs: [],
       guidance: [],
       memory: { report: null, natalReading: null, lifeSignals: [] },
-    } as const;
+    };
 
     expect(buildDailyAiReadingMemoryHash({ ...common, date: '2026-05-06' })).not.toBe(
       buildDailyAiReadingMemoryHash({ ...common, date: '2026-05-07' }),

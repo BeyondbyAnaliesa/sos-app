@@ -4,6 +4,7 @@ import type {
   AstrologyJudgment,
   AstrologyJudgmentReceipt,
   AstrologyJudgmentSignal,
+  AstrologyMacroPersonalBridge,
 } from '@/lib/astrology/judgment-types';
 
 function compactCollectiveSkyEvent(event: AstrologyCollectiveSkyEvent) {
@@ -45,6 +46,74 @@ function compactCollectiveBridge(bridge: AstrologyCollectiveBridge | null | unde
     bridgeStrengthTier: bridge.bridgeStrengthTier,
     promoteScopeToBoth: bridge.promoteScopeToBoth,
     limitations: bridge.limitations.slice(0, 2),
+  };
+}
+
+function compactMacroPersonalBridge(bridge: AstrologyMacroPersonalBridge | null | undefined) {
+  if (!bridge) return null;
+
+  return {
+    configurationId: bridge.configurationId,
+    bridgeStrengthTier: bridge.bridgeStrengthTier,
+    manifestationClass: bridge.manifestationClass,
+    decisionPressure: bridge.decisionPressure,
+    activationArea: bridge.activationArea.slice(0, 3),
+    natalTargets: bridge.natalTargets.slice(0, 3).map((target) => ({
+      targetLabel: target.targetLabel,
+      targetType: target.targetType,
+    })),
+    memoryLinks: {
+      matchedSignalCount: bridge.memoryLinks.matchedSignalCount,
+      matchedThemes: bridge.memoryLinks.matchedThemes.slice(0, 4),
+    },
+    limitations: bridge.limitations.slice(0, 3),
+  };
+}
+
+function buildMacroDoNotClaimWarnings(judgment: AstrologyJudgment): string[] {
+  const configurations = judgment.macrocosm?.configurations ?? [];
+
+  return [
+    ...configurations.flatMap((configuration) => configuration.rarity.status === 'computed'
+      ? []
+      : [`Do not claim historical recurrence for ${configuration.id}; recurrence is not computed.`]),
+    ...configurations.flatMap((configuration) => configuration.landscape?.statusLabel === 'saturated'
+      ? [`Do not frame ${configuration.id} as novel; the landscape is saturated.`]
+      : []),
+    ...configurations.flatMap((configuration) => configuration.landscape
+      ? []
+      : [`Do not infer novelty for ${configuration.id}; landscape coverage is unknown.`]),
+  ].slice(0, 6);
+}
+
+function compactMacrocosm(judgment: AstrologyJudgment) {
+  const configurations = judgment.macrocosm?.configurations ?? [];
+
+  return {
+    status: judgment.macrocosm?.status ?? 'macrocosm-engine-v1',
+    configurations: configurations.slice(0, 4).map((configuration) => ({
+      id: configuration.id,
+      kind: configuration.kind,
+      title: configuration.title,
+      summary: configuration.summary,
+      bodies: configuration.bodies,
+      signs: configuration.signs,
+      timeWindow: configuration.timeWindow,
+      landscapeStatus: configuration.landscape?.statusLabel ?? 'unknown',
+      underStudiedAngles: configuration.landscape?.underStudiedAngles.slice(0, 3) ?? [],
+      recurrence: {
+        status: configuration.rarity.status,
+        assessment: configuration.rarity.assessment,
+        historicalGapYears: configuration.rarity.historicalGapYears,
+      },
+      limitations: [
+        ...configuration.limitations,
+        ...configuration.rarity.limitations,
+        ...(configuration.landscape?.limitations ?? []),
+      ].slice(0, 4),
+    })),
+    doNotClaim: buildMacroDoNotClaimWarnings(judgment),
+    limitations: judgment.macrocosm?.limitations.slice(0, 4) ?? [],
   };
 }
 
@@ -106,6 +175,7 @@ export function compactAstrologyJudgmentReceipt(receipt: AstrologyJudgmentReceip
       }
       : null,
     collectiveBridge: compactCollectiveBridge(receipt.collectiveBridge),
+    macroBridge: compactMacroPersonalBridge(receipt.macroBridge),
     arcLifecycle: receipt.arcLifecycle
       ? {
         phaseLabel: receipt.arcLifecycle.phaseLabel,
@@ -132,6 +202,7 @@ export function compactAstrologyJudgmentSignal(signal: AstrologyJudgmentSignal, 
     lifeAreas: signal.lifeAreas,
     supportNotes: signal.supportNotes.slice(0, 3),
     collectiveBridge: compactCollectiveBridge(signal.collectiveBridge),
+    macroBridge: compactMacroPersonalBridge(signal.macroBridge),
     receipts: signal.receipts.slice(0, options?.receiptLimit ?? 2).map(compactAstrologyJudgmentReceipt),
   };
 }
@@ -155,6 +226,7 @@ export function buildAstrologyJudgmentPromptSnapshot(judgment: AstrologyJudgment
       events: judgment.currentSky.events.slice(0, 4).map(compactCollectiveSkyEvent),
       limitations: judgment.currentSky.limitations.slice(0, 4),
     },
+    macrocosm: compactMacrocosm(judgment),
     objectInventory: {
       status: judgment.objectInventory.status,
       transitLabels: judgment.objectInventory.transitLabels.slice(0, 6),

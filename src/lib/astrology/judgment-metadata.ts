@@ -31,6 +31,14 @@ export interface AstrologyJudgmentMetadata {
       unsupported: number;
     };
   };
+  macrocosm: {
+    configurationCount: number;
+    landscapeTopicCount: number;
+    computedRecurrenceCount: number;
+    fencedRecurrenceCount: number;
+    saturatedCount: number;
+    underDiscussedCount: number;
+  };
   objectInventory: {
     status: AstrologyJudgment['objectInventory']['status'];
     transitLabels: string[];
@@ -129,6 +137,14 @@ export function buildAstrologyJudgmentMetadata(judgment: AstrologyJudgment): Ast
         heuristicOnly: currentSkyEvents.filter((event) => event.rarity.assessment === 'heuristic_only').length,
         unsupported: currentSkyEvents.filter((event) => event.rarity.assessment === 'unsupported').length,
       },
+    },
+    macrocosm: {
+      configurationCount: judgment.macrocosm?.configurations.length ?? 0,
+      landscapeTopicCount: judgment.macrocosm?.landscapeTopics.length ?? 0,
+      computedRecurrenceCount: judgment.macrocosm?.configurations.filter((configuration) => configuration.rarity.status === 'computed').length ?? 0,
+      fencedRecurrenceCount: judgment.macrocosm?.configurations.filter((configuration) => configuration.rarity.status !== 'computed').length ?? 0,
+      saturatedCount: judgment.macrocosm?.configurations.filter((configuration) => configuration.landscape?.statusLabel === 'saturated').length ?? 0,
+      underDiscussedCount: judgment.macrocosm?.configurations.filter((configuration) => configuration.landscape?.statusLabel === 'under_discussed' || configuration.landscape?.statusLabel === 'niche').length ?? 0,
     },
     availability: {
       transitDignityReceipts: receipts.filter((receipt) => Boolean(receipt.transitDignity)).length,

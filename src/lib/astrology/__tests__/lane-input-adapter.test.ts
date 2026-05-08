@@ -64,12 +64,21 @@ describe('buildAstrologyLaneInputBundle', () => {
       },
     });
 
+    expect(bundle.macrocosm).toMatchObject({
+      status: 'macrocosm-lane-source-v1',
+      topConfigurationIds: expect.any(Array),
+      doNotClaim: expect.any(Array),
+    });
     expect(bundle.lanes.socials.requiredReceipts[0]).toMatchObject({
       signalId: 'saturn-opposition-venus',
       exactDate: '2026-05-14',
+      macroBridge: {
+        configurationId: expect.stringMatching(/^macro:/),
+        manifestationClass: expect.any(String),
+        decisionPressure: expect.any(String),
+      },
       rarity: {
-        status: 'not_computed',
-        historicalGapYears: null,
+        status: expect.any(String),
       },
     });
     expect(bundle.lanes.socials.laneWarnings.length).toBeGreaterThan(0);
@@ -82,9 +91,10 @@ describe('buildAstrologyLaneInputBundle', () => {
     const fixture = buildAstrologyChannelBriefFixture();
     const bundle = buildAstrologyLaneInputBundle(fixture.channelBrief);
 
-    expect(bundle.lanes.socials.requiredReceipts.every((receipt) => receipt.rarity?.status === 'not_computed')).toBe(true);
+    expect(bundle.lanes.socials.requiredReceipts.every((receipt) => receipt.rarity?.status === 'computed' || receipt.rarity?.status === 'not_computed')).toBe(true);
     expect(bundle.lanes.socials.limitations).toContain('Historical rarity remains unavailable here unless a computed value is supplied.');
     expect(bundle.lanes.substack.doNotClaim).toContain('Do not claim historical rarity unless the engine computes it.');
+    expect(bundle.lanes.socials.doNotClaim.some((warning) => warning.toLowerCase().includes('novel') || warning.toLowerCase().includes('macro'))).toBe(true);
     expect('finalPublicCopy' in bundle.lanes.socials).toBe(false);
     expect('finalPublicCopy' in bundle.lanes.substack).toBe(false);
     expect('finalPublicCopy' in bundle.lanes.aeonLore).toBe(false);

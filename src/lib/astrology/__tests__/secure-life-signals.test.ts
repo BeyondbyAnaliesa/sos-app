@@ -163,7 +163,7 @@ describe('secure life signal store', () => {
 
   it('writes a migration that removes plaintext life_signal content and exposes decrypted reads safely', () => {
     const migration = readFileSync(
-      resolve(process.cwd(), 'supabase/migrations/20260428_life_signals_encryption_at_rest.sql'),
+      resolve(process.cwd(), 'supabase/migrations/20260429_life_signals_encryption_at_rest.sql'),
       'utf8',
     );
 
@@ -179,7 +179,7 @@ describe('secure life signal store', () => {
 
   it('keeps the Aeon recurring-memory content_text reads covered by the computed field bridge', () => {
     const migration = readFileSync(
-      resolve(process.cwd(), 'supabase/migrations/20260428_life_signals_encryption_at_rest.sql'),
+      resolve(process.cwd(), 'supabase/migrations/20260429_life_signals_encryption_at_rest.sql'),
       'utf8',
     );
     const memoryStore = readFileSync(

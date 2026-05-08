@@ -132,6 +132,14 @@ describe('buildAstrologyJudgmentMetadata', () => {
           unsupported: 0,
         },
       },
+      macrocosm: {
+        configurationCount: 0,
+        landscapeTopicCount: 0,
+        computedRecurrenceCount: 0,
+        fencedRecurrenceCount: 0,
+        saturatedCount: 0,
+        underDiscussedCount: 0,
+      },
       availability: {
         transitDignityReceipts: 0,
         natalDignityReceipts: 0,
@@ -175,6 +183,8 @@ describe('buildAstrologyJudgmentMetadata', () => {
     });
     expect(metadata.currentSky.eventCount).toBeGreaterThan(0);
     expect(metadata.currentSky.computedFactCount + metadata.currentSky.fencedFactCount).toBe(metadata.currentSky.eventCount);
+    expect(metadata.macrocosm.configurationCount).toBeGreaterThan(0);
+    expect(metadata.macrocosm.fencedRecurrenceCount).toBe(metadata.macrocosm.configurationCount);
     expect(metadata.availability.transitDignityReceipts).toBeGreaterThan(0);
     expect(metadata.availability.natalDignityReceipts).toBeGreaterThan(0);
     expect(metadata.availability.receptionReceipts).toBeGreaterThan(0);

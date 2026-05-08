@@ -55,7 +55,9 @@ const chart = {
       sign: 'Aries',
       degree: 12,
       minute: 0,
+      speed: 1,
       retrograde: false,
+      warning: null,
       longitude: 12,
     },
   ],
@@ -65,7 +67,12 @@ const chart = {
   },
   houses: [],
   aspects: [],
-  metadata: null,
+  metadata: {
+    jdUt: 0,
+    timeExact: true,
+    coordinates: { latitude: 0, longitude: 0 },
+    warnings: { houses: null },
+  },
 };
 
 async function loadModule() {

@@ -32,6 +32,7 @@ export interface AstrologyLaneReceiptRequirement {
   endDate: string | null;
   reception: AstrologyChannelBriefReceipt['reception'];
   sect: AstrologyChannelBriefReceipt['sect'];
+  macroBridge: AstrologyChannelBriefReceipt['macroBridge'];
   limitations: string[];
   rarity: AstrologyLaneRarityRequirement | null;
 }
@@ -91,6 +92,7 @@ export interface AstrologyLaneJudgmentMetadataSummary {
   status: AstrologyChannelBrief['judgmentMetadata']['status'];
   signalCounts: AstrologyChannelBrief['judgmentMetadata']['signalCounts'];
   currentSky: AstrologyChannelBrief['judgmentMetadata']['currentSky'];
+  macrocosm: AstrologyChannelBrief['judgmentMetadata']['macrocosm'];
   availability: AstrologyChannelBrief['judgmentMetadata']['availability'];
   lead: AstrologyChannelBrief['judgmentMetadata']['lead'];
   limitations: string[];
@@ -108,6 +110,25 @@ export interface AstrologyLaneWatchNext {
   date: string | null;
   type: AstrologyChannelBrief['watchNext']['type'];
   summary: string;
+}
+
+export interface AstrologyLaneMacrocosmConfigurationFact {
+  configurationId: string;
+  landscapeStatus: AstrologyChannelBrief['macrocosmBrief']['configurations'][number]['landscapeStatus'];
+  underStudiedAngles: string[];
+  recurrenceStatus: AstrologyChannelBrief['macrocosmBrief']['configurations'][number]['recurrenceStatus'];
+  recurrenceAssessment: AstrologyChannelBrief['macrocosmBrief']['configurations'][number]['recurrenceAssessment'];
+  doNotClaimWarnings: string[];
+}
+
+export interface AstrologyLaneMacrocosmSource {
+  status: 'macrocosm-lane-source-v1';
+  topConfigurationIds: string[];
+  configurations: AstrologyLaneMacrocosmConfigurationFact[];
+  underStudiedAngles: string[];
+  recurrenceStatus: AstrologyChannelBrief['macrocosmBrief']['recurrenceStatus'];
+  limitations: string[];
+  doNotClaim: string[];
 }
 
 export interface AstrologySocialsHookCandidate {
@@ -169,6 +190,7 @@ export interface AstrologyLaneInputBundle {
     fixtureId: string | null;
     userId: string | null;
   };
+  macrocosm: AstrologyLaneMacrocosmSource;
   lanes: {
     socials: AstrologySocialsLaneInput;
     substack: AstrologyEditorialLaneInput;
@@ -190,6 +212,7 @@ export interface AstrologyLaneInputExport {
   objectInventory: AstrologyLaneInputBundle['objectInventory'];
   computedSkyFacts: AstrologyLaneInputBundle['computedSkyFacts'];
   source: AstrologyLaneInputBundle['source'];
+  macrocosm: AstrologyLaneInputBundle['macrocosm'];
   lanes: Partial<AstrologyLaneInputBundle['lanes']>;
 }
 
@@ -236,6 +259,7 @@ function buildReceiptRequirement(receipt: AstrologyChannelBriefReceipt): Astrolo
     endDate: receipt.endDate,
     reception: receipt.reception,
     sect: receipt.sect,
+    macroBridge: receipt.macroBridge,
     limitations: dedupe([
       ...receipt.limitations,
       'Historical rarity remains unavailable here unless a computed value is supplied.',
@@ -319,6 +343,14 @@ function getJudgmentMetadata(brief: AstrologyChannelBrief): AstrologyLaneJudgmen
         unsupported: 0,
       },
     },
+    macrocosm: {
+      configurationCount: brief.macrocosmBrief.topConfigurationIds.length,
+      landscapeTopicCount: brief.macrocosmBrief.configurations.filter((configuration) => configuration.landscapeStatus !== 'unknown').length,
+      computedRecurrenceCount: brief.macrocosmBrief.recurrenceStatus.computed.length,
+      fencedRecurrenceCount: brief.macrocosmBrief.recurrenceStatus.fenced.length,
+      saturatedCount: brief.macrocosmBrief.configurations.filter((configuration) => configuration.landscapeStatus === 'saturated').length,
+      underDiscussedCount: brief.macrocosmBrief.configurations.filter((configuration) => configuration.landscapeStatus === 'under_discussed' || configuration.landscapeStatus === 'niche').length,
+    },
     availability: {
       transitDignityReceipts: brief.receipts.filter((receipt) => Boolean(receipt.transitDignity)).length,
       natalDignityReceipts: brief.receipts.filter((receipt) => Boolean(receipt.natalDignity)).length,
@@ -346,8 +378,28 @@ function getObjectInventory(brief: AstrologyChannelBrief): AstrologyLaneObjectIn
   };
 }
 
+function buildMacrocosmSource(brief: AstrologyChannelBrief): AstrologyLaneMacrocosmSource {
+  return {
+    status: 'macrocosm-lane-source-v1',
+    topConfigurationIds: brief.macrocosmBrief.topConfigurationIds,
+    configurations: brief.macrocosmBrief.configurations.map((configuration) => ({
+      configurationId: configuration.configurationId,
+      landscapeStatus: configuration.landscapeStatus,
+      underStudiedAngles: configuration.underStudiedAngles,
+      recurrenceStatus: configuration.recurrenceStatus,
+      recurrenceAssessment: configuration.recurrenceAssessment,
+      doNotClaimWarnings: configuration.doNotClaimWarnings,
+    })),
+    underStudiedAngles: brief.macrocosmBrief.underStudiedAngles,
+    recurrenceStatus: brief.macrocosmBrief.recurrenceStatus,
+    limitations: brief.macrocosmBrief.limitations,
+    doNotClaim: brief.macrocosmBrief.doNotClaimWarnings,
+  };
+}
+
 function buildSourceFacts(brief: AstrologyChannelBrief): AstrologyLaneSourceFact[] {
   const watchNext = getWatchNext(brief);
+  const macrocosm = buildMacrocosmSource(brief);
   return [
     {
       key: 'dominant_story',
@@ -361,7 +413,12 @@ function buildSourceFacts(brief: AstrologyChannelBrief): AstrologyLaneSourceFact
     },
     {
       key: 'personal_relevance',
-      fact: compact(brief.personalRelevance.summary, 'Personal relevance is limited in this pass.'),
+      fact: compact([
+        brief.personalRelevance.summary,
+        brief.personalRelevance.macroBridge
+          ? `Macro bridge: ${brief.personalRelevance.macroBridge.configurationId} (${brief.personalRelevance.macroBridge.manifestationClass}, ${brief.personalRelevance.macroBridge.decisionPressure}).`
+          : null,
+      ].filter(Boolean).join(' '), 'Personal relevance is limited in this pass.'),
       supportSignalIds: brief.receipts.slice(0, 2).map((receipt) => receipt.signalId),
     },
     {
@@ -385,9 +442,15 @@ function buildSourceFacts(brief: AstrologyChannelBrief): AstrologyLaneSourceFact
         brief.dominantStory.currentSkyRarity
           ? `Current-sky rarity status: ${brief.dominantStory.currentSkyRarity.status}${brief.dominantStory.currentSkyRarity.historicalGapYears != null ? ` (${brief.dominantStory.currentSkyRarity.historicalGapYears}y spacing).` : '.'}`
           : null,
+        macrocosm.topConfigurationIds.length > 0
+          ? `Macro configs: ${macrocosm.topConfigurationIds.join(', ')}. Recurrence computed=${macrocosm.recurrenceStatus.computed.length}; fenced=${macrocosm.recurrenceStatus.fenced.length}.`
+          : null,
+        macrocosm.underStudiedAngles.length > 0
+          ? `Under-studied angles: ${macrocosm.underStudiedAngles.join('; ')}.`
+          : null,
         brief.limitations.join(' '),
       ].filter(Boolean).join(' '),
-      supportSignalIds: [],
+      supportSignalIds: brief.receipts.slice(0, 2).map((receipt) => receipt.signalId),
     },
   ];
 }
@@ -412,6 +475,14 @@ function buildAllowedAngles(brief: AstrologyChannelBrief, lane: 'socials' | 'sub
   const surface = lane === 'socials' ? 'social' : lane;
   const laneHookAngles = brief.hookAngles.filter((angle) => angle.surfaces.includes(surface));
   const angles = laneHookAngles.map((angle) => angle.rationale);
+  const macrocosm = buildMacrocosmSource(brief);
+
+  if (macrocosm.topConfigurationIds.length > 0) {
+    angles.push(`Use macro configuration ids as internal scaffolding only: ${macrocosm.topConfigurationIds.join(', ')}.`);
+  }
+  if (macrocosm.underStudiedAngles.length > 0) {
+    angles.push(`Under-studied angles can guide research framing: ${macrocosm.underStudiedAngles.join('; ')}.`);
+  }
 
   if (lane === 'socials') {
     angles.push('Lead with one concrete sky-to-life connection that a person would save or send because it is useful, not because it sounds pretty.');
@@ -490,6 +561,7 @@ function buildEditorialOutline(brief: AstrologyChannelBrief, lane: 'substack' | 
 }
 
 function buildLaneWarnings(brief: AstrologyChannelBrief, lane: 'socials' | 'substack' | 'aeon_lore') {
+  const macrocosm = buildMacrocosmSource(brief);
   const laneSpecific = lane === 'socials'
     ? [
       'Use hook candidates as briefing inputs only. Do not draft final captions here.',
@@ -509,12 +581,14 @@ function buildLaneWarnings(brief: AstrologyChannelBrief, lane: 'socials' | 'subs
     getJudgmentMetadata(brief).availability.supportedReceptionReceipts === 0 ? 'No supported reception receipts are available in this export; do not imply reception analysis.' : null,
     getJudgmentMetadata(brief).availability.sectReceipts === 0 ? 'No sect receipts are available in this export; do not imply sect analysis.' : null,
     getObjectInventory(brief).fencedLabels.length > 0 ? `Fenced objects remain out of scope here: ${getObjectInventory(brief).fencedLabels.join(', ')}.` : null,
+    ...macrocosm.doNotClaim,
   ];
 
   return dedupe([...laneSpecific, ...availabilityWarnings]);
 }
 
 function buildCommonLimitations(brief: AstrologyChannelBrief, lane: 'socials' | 'substack' | 'aeon_lore') {
+  const macrocosm = buildMacrocosmSource(brief);
   const laneSpecific = lane === 'socials'
     ? ['Do not treat hook candidates as finished captions.']
     : lane === 'substack'
@@ -523,6 +597,7 @@ function buildCommonLimitations(brief: AstrologyChannelBrief, lane: 'socials' | 
 
   return dedupe([
     ...brief.limitations,
+    ...macrocosm.limitations,
     ...brief.receipts.flatMap((receipt) => receipt.limitations),
     ...laneSpecific,
     'Historical rarity remains unavailable here unless a computed value is supplied.',
@@ -534,6 +609,7 @@ export function buildAstrologyLaneInputBundle(brief: AstrologyChannelBrief): Ast
   const sourceFacts = buildSourceFacts(brief);
   const watchNext = getWatchNext(brief);
   const judgmentMetadata = getJudgmentMetadata(brief);
+  const macrocosm = buildMacrocosmSource(brief);
   const objectInventory = getObjectInventory(brief);
   const socialsLimitations = buildCommonLimitations(brief, 'socials');
   const substackLimitations = buildCommonLimitations(brief, 'substack');
@@ -556,6 +632,7 @@ export function buildAstrologyLaneInputBundle(brief: AstrologyChannelBrief): Ast
       fixtureId: null,
       userId: null,
     },
+    macrocosm,
     lanes: {
       socials: {
         lane: 'socials',
@@ -565,7 +642,7 @@ export function buildAstrologyLaneInputBundle(brief: AstrologyChannelBrief): Ast
         requiredReceipts,
         laneWarnings: buildLaneWarnings(brief, 'socials'),
         limitations: socialsLimitations,
-        doNotClaim: BASE_DO_NOT_CLAIM,
+        doNotClaim: dedupe([...BASE_DO_NOT_CLAIM, ...macrocosm.doNotClaim]),
         toneRules: BASE_TONE_RULES,
         hookCandidates: buildSocialsHookCandidates(brief),
         timingRequirements: buildTimingRequirements(brief),
@@ -579,7 +656,7 @@ export function buildAstrologyLaneInputBundle(brief: AstrologyChannelBrief): Ast
         requiredReceipts,
         laneWarnings: buildLaneWarnings(brief, 'substack'),
         limitations: substackLimitations,
-        doNotClaim: BASE_DO_NOT_CLAIM,
+        doNotClaim: dedupe([...BASE_DO_NOT_CLAIM, ...macrocosm.doNotClaim]),
         toneRules: BASE_TONE_RULES,
         bigSkyOutline: buildEditorialOutline(brief, 'substack'),
         personalLanding: compact(brief.personalRelevance.summary, 'Personal landing is limited in this pass.'),
@@ -595,7 +672,7 @@ export function buildAstrologyLaneInputBundle(brief: AstrologyChannelBrief): Ast
         requiredReceipts,
         laneWarnings: buildLaneWarnings(brief, 'aeon_lore'),
         limitations: aeonLoreLimitations,
-        doNotClaim: BASE_DO_NOT_CLAIM,
+        doNotClaim: dedupe([...BASE_DO_NOT_CLAIM, ...macrocosm.doNotClaim]),
         toneRules: BASE_TONE_RULES,
         bigSkyOutline: buildEditorialOutline(brief, 'aeon_lore'),
         personalLanding: `${compact(brief.personalRelevance.summary, 'Personal landing is limited in this pass.')} Keep it in plain language and stay with the strongest life-area activation.`,
@@ -644,6 +721,7 @@ export function buildAstrologyLaneInputExport(
     objectInventory: bundle.objectInventory,
     computedSkyFacts: bundle.computedSkyFacts,
     source: bundle.source,
+    macrocosm: bundle.macrocosm,
     lanes,
   };
 }

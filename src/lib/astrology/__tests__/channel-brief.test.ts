@@ -20,8 +20,7 @@ describe('buildAstrologyChannelBrief', () => {
         matchReasons: expect.arrayContaining([expect.any(String)]),
       },
       rarity: {
-        status: 'not_computed',
-        historicalGapYears: null,
+        status: expect.any(String),
       },
     });
     expect(brief.timing.windowLabel).toContain('2026-05-14');
@@ -32,10 +31,25 @@ describe('buildAstrologyChannelBrief', () => {
     expect(brief.watchNext.summary).toContain('2026-05-14');
     expect(brief.objectInventory.status).toBe('expanded-object-inventory-v1');
     expect(brief.judgmentMetadata.status).toBe('astrology-judgment-metadata-v1');
+    expect(brief.macrocosmBrief.topConfigurationIds.length).toBeGreaterThan(0);
+    expect(brief.macrocosmBrief.configurations[0]).toMatchObject({
+      configurationId: expect.any(String),
+      landscapeStatus: expect.any(String),
+      recurrenceStatus: expect.any(String),
+    });
     expect(brief.limitations).toContain('Historical rarity claims remain unavailable unless the engine computes them explicitly.');
     expect(brief.personalRelevance.bridge).toMatchObject({
       eventId: expect.any(String),
       matchReasons: expect.arrayContaining([expect.any(String)]),
+    });
+    expect(brief.personalRelevance.macroBridge).toMatchObject({
+      configurationId: expect.stringMatching(/^macro:/),
+      manifestationClass: expect.any(String),
+      decisionPressure: expect.any(String),
+    });
+    expect(brief.receipts[0]?.macroBridge).toMatchObject({
+      configurationId: expect.stringMatching(/^macro:/),
+      activationArea: expect.any(Array),
     });
     expect(brief.dominantStory.currentSkyRarity?.status).toBeDefined();
     expect(brief.computedSkyFacts.computed.length).toBeGreaterThan(0);
@@ -50,7 +64,8 @@ describe('buildAstrologyChannelBrief', () => {
     expect(serialized).not.toContain('big shifts');
     expect(serialized).not.toContain('the stars are aligning');
     expect(brief.limitations).toContain('Historical rarity claims remain unavailable unless the engine computes them explicitly.');
-    expect(brief.receipts.every((receipt) => receipt.rarity?.status === 'not_computed')).toBe(true);
+    expect(brief.macrocosmBrief.doNotClaimWarnings.some((warning) => warning.includes('not_computed'))).toBe(true);
+    expect(brief.receipts.every((receipt) => receipt.rarity?.status === 'computed' || receipt.rarity?.status === 'not_computed')).toBe(true);
   });
 
 
@@ -111,6 +126,10 @@ describe('buildAstrologyChannelBrief', () => {
                 basis: 'heuristic',
                 status: 'not_computed',
                 confidence: 'none',
+                assessment: 'bounded_limited',
+                method: 'none',
+                searchWindowDays: null,
+                comparisonCriteria: [],
                 recurrence: null,
                 limitations: ['Transit aspect recurrence remains fenced in this slice.'],
                 historicalGapYears: null,

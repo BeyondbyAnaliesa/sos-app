@@ -146,6 +146,7 @@ describe('GET /api/reading/astrology-lane-input', () => {
           activatedLifeAreas: ['career'],
           scope: 'personal',
           bridge: null,
+          macroBridge: null,
         },
         channelRelevance: {
           social: 'Internal social guidance only.',
@@ -168,6 +169,14 @@ describe('GET /api/reading/astrology-lane-input', () => {
           notComputed: [],
         },
         hookAngles: [],
+        macrocosmBrief: {
+          topConfigurationIds: [],
+          configurations: [],
+          underStudiedAngles: [],
+          recurrenceStatus: { computed: [], fenced: [] },
+          doNotClaimWarnings: [],
+          limitations: [],
+        },
         limitations: ['This brief is an internal adapter. It is not final public copy.'],
       },
     });

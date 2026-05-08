@@ -14,7 +14,12 @@ const chart: NatalChart = {
   },
   houses: [100, 130, 160, 190, 220, 250, 280, 310, 340, 10, 40, 70],
   aspects: [],
-  metadata: null,
+  metadata: {
+    jdUt: 0,
+    timeExact: true,
+    coordinates: { latitude: 0, longitude: 0 },
+    warnings: { houses: null },
+  },
 };
 
 const arc: MajorTransitArc = {

@@ -6,6 +6,7 @@ import {
   buildCollectivePersonalBridge,
   collectiveBridgeScoreBonus,
 } from '@/lib/astrology/collective-personal-bridge';
+import { buildMacroPersonalBridge } from '@/lib/astrology/macro-personal-bridge';
 import {
   meaningScoreBonus,
   pickMeaningDemand,
@@ -24,6 +25,7 @@ import {
   type NatalProjection,
 } from '@/lib/astrology/natal-projection';
 import { buildTransitArcJudgment } from '@/lib/astrology/transit-arc-judgment';
+import { buildMacrocosmEngine } from '@/lib/astrology/macrocosm-engine';
 import type { MajorTransitArc } from '@/lib/astrology/major-transits';
 import type { NatalChart } from '@/lib/astrology/types';
 import type { GuidanceResult } from '@/lib/interpret';
@@ -129,8 +131,21 @@ function findCurrentSkyEvent(events: AstrologyCollectiveSkyEvent[], body: string
     ?? null;
 }
 
-function applyCollectiveBridge(receipt: AstrologyJudgmentReceipt, currentSkyEvents: AstrologyCollectiveSkyEvent[]) {
+function applyCollectiveBridge(
+  receipt: AstrologyJudgmentReceipt,
+  currentSkyEvents: AstrologyCollectiveSkyEvent[],
+  macroConfigurations: NonNullable<AstrologyJudgment['macrocosm']>['configurations'],
+  memory: MajorWaveMemoryInput,
+) {
   const collectiveBridge = buildCollectivePersonalBridge(receipt, currentSkyEvents);
+  const macroBridge = buildMacroPersonalBridge({
+    receipt: {
+      ...receipt,
+      collectiveBridge,
+    },
+    macroConfigurations,
+    memory,
+  });
   const bridgeEvent = collectiveBridge
     ? currentSkyEvents.find((event) => event.id === collectiveBridge.collectiveEvent.id) ?? null
     : null;
@@ -145,6 +160,7 @@ function applyCollectiveBridge(receipt: AstrologyJudgmentReceipt, currentSkyEven
   return {
     ...receipt,
     collectiveBridge,
+    macroBridge,
     currentSkyRarity: rarityEvent?.rarity ?? null,
     meaningFactors: resolveMeaningFactors({
       transitBody: receipt.transitPlanet,
@@ -330,6 +346,7 @@ function buildArcReceipt(
   memory: MajorWaveMemoryInput,
   date: string,
   currentSkyEvents: AstrologyCollectiveSkyEvent[],
+  macroConfigurations: NonNullable<AstrologyJudgment['macrocosm']>['configurations'],
 ): AstrologyJudgmentReceipt {
   const position = positions.find((item) => item.label === arc.transit.transitPlanet);
   const lifeArea = arc.context.targetHouse != null
@@ -389,7 +406,7 @@ function buildArcReceipt(
     reception,
     sect,
     arcLifecycle,
-  }, currentSkyEvents);
+  }, currentSkyEvents, macroConfigurations, memory);
 }
 
 function buildTransitReceipt(
@@ -398,6 +415,7 @@ function buildTransitReceipt(
   positions: PositionedTransitBody[],
   memory: MajorWaveMemoryInput,
   currentSkyEvents: AstrologyCollectiveSkyEvent[],
+  macroConfigurations: NonNullable<AstrologyJudgment['macrocosm']>['configurations'],
 ): AstrologyJudgmentReceipt {
   const natalSummary = buildNatalSummary(chart);
   const natalPlacement = transit.natalPlanet === 'ascendant'
@@ -475,7 +493,7 @@ function buildTransitReceipt(
     natalProjection: projectionWithRepeats,
     reception,
     sect,
-  }, currentSkyEvents);
+  }, currentSkyEvents, macroConfigurations, memory);
 }
 
 function buildSignalFromArc(
@@ -485,8 +503,9 @@ function buildSignalFromArc(
   memory: MajorWaveMemoryInput,
   date: string,
   currentSkyEvents: AstrologyCollectiveSkyEvent[],
+  macroConfigurations: NonNullable<AstrologyJudgment['macrocosm']>['configurations'],
 ): AstrologyJudgmentSignal {
-  const receipt = buildArcReceipt(arc, chart, positions, memory, date, currentSkyEvents);
+  const receipt = buildArcReceipt(arc, chart, positions, memory, date, currentSkyEvents, macroConfigurations);
   const meaningDemand = pickMeaningDemand(receipt.meaningFactors, demandFor(arc.transit.transitPlanet, arc.transit.aspect));
   const score = scoreTransitSignal(arc.transit, arc.activeToday, Boolean(receipt.memorySummary))
     + natalProjectionScoreBonus(receipt)
@@ -515,11 +534,13 @@ function buildSignalFromArc(
     score: Number(score.toFixed(2)),
     receipts: [receipt],
     collectiveBridge: receipt.collectiveBridge,
+    macroBridge: receipt.macroBridge,
     supportNotes: [
       exactHit,
       passNote,
       lifecycle?.watchNextDate ? `Watch next ${lifecycle.watchNextType?.replace('_', ' ')} on ${lifecycle.watchNextDate}.` : null,
       receipt.collectiveBridge ? `Collective bridge: ${receipt.collectiveBridge.collectiveEvent.id} (${receipt.collectiveBridge.bridgeStrengthTier}).` : null,
+      receipt.macroBridge ? `Macro bridge: ${receipt.macroBridge.configurationId} (${receipt.macroBridge.manifestationClass}, ${receipt.macroBridge.decisionPressure}).` : null,
       receipt.memorySummary,
       receipt.natalProjection?.targetIsAngle ? 'This directly hits a natal angle.' : null,
       receipt.natalProjection?.targetIsModernChartRuler || receipt.natalProjection?.targetIsTraditionalChartRuler ? 'This hits the chart ruler.' : null,
@@ -541,8 +562,9 @@ function buildSignalFromTransit(
   memory: MajorWaveMemoryInput,
   guidance: GuidanceResult[],
   currentSkyEvents: AstrologyCollectiveSkyEvent[],
+  macroConfigurations: NonNullable<AstrologyJudgment['macrocosm']>['configurations'],
 ): AstrologyJudgmentSignal {
-  const receipt = buildTransitReceipt(transit, chart, positions, memory, currentSkyEvents);
+  const receipt = buildTransitReceipt(transit, chart, positions, memory, currentSkyEvents, macroConfigurations);
   const relatedGuidance = guidance
     .filter((item) => item.title.toLowerCase().includes(transit.transitPlanet.toLowerCase()) || item.message.toLowerCase().includes(transit.transitPlanet.toLowerCase()))
     .slice(0, 1);
@@ -567,9 +589,11 @@ function buildSignalFromTransit(
     score: Number(score.toFixed(2)),
     receipts: [receipt],
     collectiveBridge: receipt.collectiveBridge,
+    macroBridge: receipt.macroBridge,
     supportNotes: [
       relatedGuidance[0]?.summary,
       receipt.collectiveBridge ? `Collective bridge: ${receipt.collectiveBridge.collectiveEvent.id} (${receipt.collectiveBridge.bridgeStrengthTier}).` : null,
+      receipt.macroBridge ? `Macro bridge: ${receipt.macroBridge.configurationId} (${receipt.macroBridge.manifestationClass}, ${receipt.macroBridge.decisionPressure}).` : null,
       receipt.memorySummary,
       receipt.natalProjection?.targetIsAngle ? 'This directly hits a natal angle.' : null,
       receipt.natalProjection?.targetIsModernChartRuler || receipt.natalProjection?.targetIsTraditionalChartRuler ? 'This hits the chart ruler.' : null,
@@ -647,12 +671,34 @@ export function buildAstrologyJudgment(params: {
     { date: now },
   );
 
-  const arcSignals = params.majorArcs.map((arc) => buildSignalFromArc(arc, params.chart, positions, params.memory, params.date, currentSky.events));
+  const macrocosm = buildMacrocosmEngine({
+    currentSky,
+    date: params.date,
+  });
+  currentSky.macroConfigurations = macrocosm.configurations;
+
+  const arcSignals = params.majorArcs.map((arc) => buildSignalFromArc(
+    arc,
+    params.chart,
+    positions,
+    params.memory,
+    params.date,
+    currentSky.events,
+    macrocosm.configurations,
+  ));
   const coveredKeys = new Set(params.majorArcs.map((arc) => transitKey(arc.transit)));
   const transitSignals = params.todayTransits.transits
     .filter((transit) => !coveredKeys.has(transitKey(transit)))
     .slice(0, 8)
-    .map((transit) => buildSignalFromTransit(transit, params.chart, positions, params.memory, params.guidance, currentSky.events));
+    .map((transit) => buildSignalFromTransit(
+      transit,
+      params.chart,
+      positions,
+      params.memory,
+      params.guidance,
+      currentSky.events,
+      macrocosm.configurations,
+    ));
 
   const allSignals = [...arcSignals, ...transitSignals]
     .sort((a, b) => b.score - a.score);
@@ -688,6 +734,7 @@ export function buildAstrologyJudgment(params: {
     timing: timingFromSignals(params.date, foreground, supporting, params.todayTransits.transits.length),
     activatedLifeAreas,
     currentSky,
+    macrocosm,
     objectInventory: buildObjectInventorySummary(receipts),
     receipts,
   };

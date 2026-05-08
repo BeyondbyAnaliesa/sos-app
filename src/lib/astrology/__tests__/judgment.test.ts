@@ -176,6 +176,11 @@ describe('buildAstrologyJudgment', () => {
     expect(judgment.foreground[0]?.supportNotes.some((note) => note.includes('This is a day chart by Sun house'))).toBe(true);
     expect(judgment.currentSky.status).toBe('collective-scan-v1');
     expect(judgment.currentSky.events.length).toBeGreaterThan(0);
+    expect(judgment.macrocosm?.status).toBe('macrocosm-engine-v1');
+    expect(judgment.currentSky.macroConfigurations).toEqual(judgment.macrocosm?.configurations);
+    expect(judgment.macrocosm?.configurations.length).toBeGreaterThan(0);
+    expect(judgment.macrocosm?.configurations.every((configuration) => configuration.id.startsWith('macro:'))).toBe(true);
+    expect(judgment.macrocosm?.configurations.every((configuration) => configuration.rarity.status === 'not_computed')).toBe(true);
     expect(judgment.currentSky.events[0]?.scope).toBe('collective');
     expect(judgment.currentSky.limitations).toContain('Rarity and consequence scores are heuristic and explicitly do not claim historical proof.');
     expect(judgment.foreground[0]?.receipts[0]?.currentSkyRarity?.status).toBe('not_computed');
@@ -192,6 +197,8 @@ describe('buildAstrologyJudgment', () => {
       },
     });
     expect(judgment.foreground[0]?.receipts[0]?.collectiveBridge?.limitations).toContain('Bridge matching is heuristic and only covers body/body-pair, phase, natal target, and limited life-area context.');
+    expect(judgment.foreground[0]?.macroBridge).toBeNull();
+    expect(judgment.foreground[0]?.receipts[0]?.macroBridge).toBeNull();
 
     const dailySignal = judgment.background.find((signal) => signal.source === 'daily_transit')
       ?? judgment.supporting.find((signal) => signal.source === 'daily_transit')
@@ -266,6 +273,11 @@ describe('buildAstrologyJudgment', () => {
       recurrence: {
         comparator: 'same_body_sign_ingress_spacing_estimate',
       },
+    });
+    expect(ingressJudgment.receipts.find((receipt) => receipt.transitPlanet === 'Saturn')?.macroBridge).toMatchObject({
+      configurationId: 'macro:outer-ingress:saturn-neptune-aries',
+      manifestationClass: 'loud',
+      decisionPressure: 'immediate',
     });
   });
 

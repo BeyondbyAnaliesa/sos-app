@@ -88,8 +88,8 @@ const arcs: MajorTransitArc[] = [
 
 const chart: NatalChart = {
   placements: [
-    { key: 'sun', label: 'Sun', sign: 'Aries', degree: 12, minute: 0, retrograde: false, longitude: 12 },
-    { key: 'moon', label: 'Moon', sign: 'Cancer', degree: 20, minute: 0, retrograde: false, longitude: 110 },
+    { key: 'sun', label: 'Sun', sign: 'Aries', degree: 12, minute: 0, speed: 1, retrograde: false, warning: null, longitude: 12 },
+    { key: 'moon', label: 'Moon', sign: 'Cancer', degree: 20, minute: 0, speed: 1, retrograde: false, warning: null, longitude: 110 },
   ],
   angles: {
     ascendant: { sign: 'Leo', degree: 8, minute: 0, longitude: 128 },
@@ -97,7 +97,12 @@ const chart: NatalChart = {
   },
   houses: [],
   aspects: [],
-  metadata: null,
+  metadata: {
+    jdUt: 0,
+    timeExact: true,
+    coordinates: { latitude: 0, longitude: 0 },
+    warnings: { houses: null },
+  },
 };
 
 const memory: MajorWaveMemoryInput = { report: null, natalReading: null, lifeSignals: [] };

@@ -39,12 +39,14 @@ function buildLifeSegments(guidance: GuidanceResult[]): LifeSegmentData[] {
     return r.intensity === 'high' ? 'cautionary' : r.intensity === 'medium' ? 'supportive' : 'ambient';
   };
   return [
-    { label: 'BODY',   signal: signal('body') },
-    { label: 'MIND',   signal: signal('mind') },
-    { label: 'SPIRIT', signal: signal('spirit') },
-    { label: 'RELATE', signal: signal('relationships') },
-    { label: 'WORK',   signal: signal('career') },
-    { label: 'HOME',   signal: signal('home') },
+    { label: 'HOME',          signal: signal('home') },
+    { label: 'WORK',          signal: signal('career') },
+    { label: 'MONEY',         signal: signal('career') },
+    { label: 'BODY',          signal: signal('body') },
+    { label: 'MIND',          signal: signal('mind') },
+    { label: 'SPIRIT',        signal: signal('spirit') },
+    { label: 'LOVE',          signal: signal('relationships') },
+    { label: 'RELATIONSHIPS', signal: signal('relationships') },
   ];
 }
 
@@ -116,6 +118,7 @@ export default async function Home() {
     ...majorArcs.filter((arc) => !arc.activeToday).slice(0, paid ? 4 : 1),
   ], todayDate);
   const lifeSegments = buildLifeSegments(guidance);
+  const defaultLifeWheelActiveIndex = lifeSegments.findIndex((segment) => segment.signal !== 'quiet');
   const stateText = buildStateText(guidance);
   // Arc memory: fetch structured transit memory context (non-fatal — falls back to signal-based cue)
   const arcMemory = await getRelevantTransitMemoryForToday(user.id).catch(() => null);
@@ -166,16 +169,23 @@ export default async function Home() {
     <main className="mx-auto w-full max-w-xl animate-[fade-in_0.35s_ease-out] px-5 pb-24 pt-8 sm:px-6 sm:pt-12">
       <Header date={todayDate} />
 
-      <section className="flex flex-col items-center pb-8 pt-2">
-        <LifeWheel segments={lifeSegments} />
-        <p className="mt-5 max-w-[280px] text-center text-sm leading-relaxed text-[var(--color-text-muted)]">
-          {stateText}
+      <section className="overflow-hidden rounded-[28px] border border-[rgba(201,162,122,0.16)] bg-[radial-gradient(circle_at_top,rgba(239,68,136,0.12),rgba(22,20,34,0.96)_52%)] px-5 pb-6 pt-5 shadow-[0_18px_60px_rgba(0,0,0,0.24)]">
+        <p className="text-center text-[10px] uppercase tracking-[0.3em] text-[var(--color-copper-dim)]">
+          Your field today
         </p>
-        {overview.detail && (
-          <p className="mt-2 max-w-[300px] text-center text-[11px] leading-relaxed text-[var(--color-text-muted)] opacity-80">
-            {overview.detail}
+        <div className="flex flex-col items-center pt-3">
+          <LifeWheel segments={lifeSegments} defaultActiveIndex={defaultLifeWheelActiveIndex >= 0 ? defaultLifeWheelActiveIndex : null} />
+          <p className="mt-4 max-w-[320px] text-center text-[15px] leading-relaxed text-[var(--color-text)]">
+            {stateText}
           </p>
-        )}
+          {overview.detail && (
+            <div className="mt-4 max-w-[320px] rounded-full border border-white/6 bg-white/[0.03] px-4 py-2">
+              <p className="text-center text-[11px] leading-relaxed text-[var(--color-text-muted)] opacity-90">
+                {overview.detail}
+              </p>
+            </div>
+          )}
+        </div>
       </section>
 
       {timingSummary && (
@@ -189,12 +199,17 @@ export default async function Home() {
         </div>
       )}
 
-      <div className="rounded-[10px] border border-[var(--color-electric)]/60 bg-[linear-gradient(180deg,rgba(239,68,136,0.12),rgba(239,68,136,0.02))] px-5 py-5">
-        <p className="text-xs font-medium uppercase tracking-[0.25em] text-[var(--color-electric)]">
-          SOS noticed
-        </p>
-        <p className="mt-2 text-[15px] text-[var(--color-text)]">{memoryCue.headline}</p>
-        <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">{memoryCue.body}</p>
+      <div className="rounded-[18px] border border-[var(--color-electric)]/40 bg-[linear-gradient(180deg,rgba(239,68,136,0.10),rgba(22,20,34,0.94))] px-5 py-5 shadow-[0_0_0_1px_rgba(239,68,136,0.08)]">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.25em] text-[var(--color-electric)]">
+              SOS noticed
+            </p>
+            <p className="mt-2 text-[15px] leading-relaxed text-[var(--color-text)]">{memoryCue.headline}</p>
+          </div>
+          <span className="pt-0.5 text-[11px] uppercase tracking-[0.22em] text-[var(--color-electric)]/65">Memory</span>
+        </div>
+        <p className="mt-3 text-sm leading-relaxed text-[var(--color-text-muted)]">{memoryCue.body}</p>
       </div>
 
       <div className="mt-8 h-px bg-gradient-to-r from-transparent via-[var(--color-border-subtle)] to-transparent" />
@@ -208,11 +223,11 @@ export default async function Home() {
             <Link
               key={ctrl.title}
               href={ctrl.href}
-              className="relative rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-4 py-5 hover:border-[var(--color-border)] hover:bg-[var(--color-input)]"
+              className="relative rounded-[16px] border border-white/6 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] px-4 py-5 hover:border-[var(--color-border)] hover:bg-[rgba(244,239,232,0.03)]"
             >
               <span className="block text-lg text-[var(--color-copper-dim)]">{ctrl.glyph}</span>
               <span className="mt-2 block text-sm text-[var(--color-text)]">{ctrl.title}</span>
-              <span className="mt-0.5 block text-[11px] text-[var(--color-text-muted)]">{ctrl.desc}</span>
+              <span className="mt-1 block max-w-[12rem] text-[11px] leading-relaxed text-[var(--color-text-muted)]">{ctrl.desc}</span>
               {ctrl.locked && (
                 <span className="absolute right-3 top-3 text-[9px] text-[var(--color-text-muted)] opacity-40">
                   ◈

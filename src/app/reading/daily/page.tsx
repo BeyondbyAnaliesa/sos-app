@@ -400,7 +400,7 @@ export default async function DailyReadingPage() {
           href="/journal"
           className="flex items-center justify-between rounded-[10px] border border-[var(--color-border-subtle)] px-5 py-4 text-sm text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:text-[var(--color-text)]"
         >
-          <span>Bring this to Chat with Aeon</span>
+          <span>Ask Aeon about this</span>
           <span className="text-[var(--color-copper-dim)]">→</span>
         </Link>
       </div>

@@ -6,7 +6,11 @@ import OpenAI from 'openai';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import { generateNatalChart } from '@/lib/astrology/generate-chart';
 import { geocodeLocation } from '@/lib/astrology/geocode';
-import { buildNatalReadingPrompt, type NatalReadingReport } from '@/lib/natal-reading-prompt';
+import {
+  buildNatalReadingPrompt,
+  type NatalReadingReport,
+} from '@/lib/natal-reading-prompt';
+import { getSubscription, isActive } from '@/lib/subscription';
 import { logError } from '@/lib/logger';
 
 import tzLookup from 'tz-lookup';
@@ -21,9 +25,15 @@ function getOpenAIClient() {
 
 // Fire-and-forget during onboarding, but also reusable for on-demand repair when
 // /reading finds a chart row without its companion natal_readings row.
-async function generateNatalReading(userId: string, chart: ReturnType<typeof generateNatalChart>, attempt = 0): Promise<boolean> {
+async function generateNatalReading(
+  userId: string,
+  chart: ReturnType<typeof generateNatalChart>,
+  options?: { premium?: boolean; attempt?: number },
+): Promise<boolean> {
+  const premium = Boolean(options?.premium);
+  const attempt = options?.attempt ?? 0;
   try {
-    const { system, user } = buildNatalReadingPrompt(chart);
+    const { system, user, promptVersion } = buildNatalReadingPrompt(chart, { premium });
     const openai = getOpenAIClient();
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
@@ -42,7 +52,7 @@ async function generateNatalReading(userId: string, chart: ReturnType<typeof gen
       user_id:        userId,
       reading_json:   reading,
       model:          'gpt-4o',
-      prompt_version: 'v1',
+      prompt_version: promptVersion,
     }, { onConflict: 'user_id' });
 
     if (!readingError) return true;
@@ -59,7 +69,7 @@ async function generateNatalReading(userId: string, chart: ReturnType<typeof gen
           ...(chart.metadata ?? {}),
           natalReading: reading,
           natalReadingModel: 'gpt-4o',
-          natalReadingPromptVersion: 'v1',
+          natalReadingPromptVersion: promptVersion,
           natalReadingGeneratedAt: new Date().toISOString(),
           natalReadingFallbackReason: readingError.code ?? 'natal_readings_write_failed',
         },
@@ -72,7 +82,7 @@ async function generateNatalReading(userId: string, chart: ReturnType<typeof gen
     console.error(`Background natal reading generation failed (attempt ${attempt + 1}):`, err);
     if (attempt < 2) {
       await new Promise(r => setTimeout(r, 3000));
-      return generateNatalReading(userId, chart, attempt + 1);
+      return generateNatalReading(userId, chart, { premium, attempt: attempt + 1 });
     }
     return false;
   }
@@ -256,12 +266,21 @@ export async function PATCH(request: Request) {
 
     const admin = createAdminClient();
     let regenerateReading = false;
+    let forceRegenerateReading = false;
 
     try {
       const body = await request.json();
       regenerateReading = Boolean(body?.regenerateReading);
+      forceRegenerateReading = Boolean(body?.forceRegenerateReading);
     } catch {
       // PATCH is also used without a body from /chart-error.
+    }
+
+    if (forceRegenerateReading) {
+      const sub = await getSubscription(user.id);
+      if (!isActive(sub)) {
+        return NextResponse.json({ error: 'premium-required' }, { status: 403 });
+      }
     }
 
     // Check if the chart is already valid — idempotent fast path.
@@ -272,18 +291,20 @@ export async function PATCH(request: Request) {
       .single();
 
     if (existingChart?.placements_json && existingChart?.angles_json) {
-      if (!regenerateReading) {
+      if (!regenerateReading && !forceRegenerateReading) {
         return NextResponse.json({ success: true, alreadyValid: true });
       }
 
-      const { data: existingReading } = await admin
-        .from('natal_readings')
-        .select('user_id')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      if (!forceRegenerateReading) {
+        const { data: existingReading } = await admin
+          .from('natal_readings')
+          .select('user_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
 
-      if (existingReading) {
-        return NextResponse.json({ success: true, alreadyValid: true, readingAlreadyPresent: true });
+        if (existingReading) {
+          return NextResponse.json({ success: true, alreadyValid: true, readingAlreadyPresent: true });
+        }
       }
 
       const readingGenerated = await generateNatalReading(user.id, {
@@ -292,6 +313,8 @@ export async function PATCH(request: Request) {
         houses: existingChart.houses_json ?? [],
         aspects: existingChart.aspects_json ?? [],
         metadata: existingChart.metadata_json ?? {},
+      }, {
+        premium: forceRegenerateReading,
       });
 
       if (!readingGenerated) {

@@ -58,17 +58,17 @@ export default async function SuccessPage() {
                 <span className="text-[var(--color-copper-dim)]">◆</span>
               </Link>
               <Link
-                href="/calendar"
+                href="/transits"
                 className="flex items-center justify-between rounded-[10px] border border-[var(--color-border-subtle)] px-5 py-4 text-sm text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:text-[var(--color-text)]"
               >
-                <span>Open your transit calendar</span>
+                <span>Open your transits</span>
                 <span className="text-[var(--color-copper-dim)]">◇</span>
               </Link>
               <Link
                 href="/journal"
                 className="flex items-center justify-between rounded-[10px] border border-[var(--color-border-subtle)] px-5 py-4 text-sm text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:text-[var(--color-text)]"
               >
-                <span>Write today&apos;s journal</span>
+                <span>Ask Aeon</span>
                 <span className="text-[var(--color-copper-dim)]">→</span>
               </Link>
             </>

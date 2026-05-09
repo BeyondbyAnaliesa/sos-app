@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const getUserMock = vi.fn();
 const completionCreateMock = vi.fn();
+const getSubscriptionMock = vi.fn();
 const upsertMocks: Record<string, ReturnType<typeof vi.fn>> = {};
 const singleQueue: Array<unknown> = [];
 const maybeSingleQueue: Array<unknown> = [];
@@ -24,6 +25,11 @@ vi.mock('@/lib/supabase/server', () => ({
       upsert: upsertMocks[table] ?? (upsertMocks[table] = vi.fn(() => Promise.resolve({ error: null }))),
     }),
   })),
+}));
+
+vi.mock('@/lib/subscription', () => ({
+  getSubscription: getSubscriptionMock,
+  isActive: (sub: { status?: string } | null) => sub?.status === 'active' || sub?.status === 'trialing',
 }));
 
 vi.mock('openai', () => {
@@ -52,6 +58,7 @@ beforeEach(() => {
   maybeSingleQueue.length = 0;
   Object.keys(upsertMocks).forEach((key) => delete upsertMocks[key]);
   getUserMock.mockResolvedValue({ data: { user: { id: 'user_123' } } });
+  getSubscriptionMock.mockResolvedValue({ status: 'active' });
   completionCreateMock.mockResolvedValue({
     choices: [{ message: { content: JSON.stringify({ sunReading: 'a', moonReading: 'b', risingReading: 'c', aspectHighlights: 'd', synthesis: 'e' }) } }],
   });
@@ -91,6 +98,53 @@ describe('PATCH /api/onboarding/chart', () => {
       user_id: 'user_123',
       prompt_version: 'v1',
     }), { onConflict: 'user_id' });
+  });
+
+  it('force-regenerates an existing natal reading for premium prompt upgrades', async () => {
+    singleQueue.push({
+      data: {
+        placements_json: [{ key: 'sun', sign: 'Taurus', degree: 1, minute: 0, longitude: 31, label: 'Sun', retrograde: false }],
+        angles_json: {
+          ascendant: { sign: 'Leo', degree: 2, minute: 0, longitude: 122 },
+          midheaven: { sign: 'Aries', degree: 3, minute: 0, longitude: 3 },
+        },
+        houses_json: [],
+        aspects_json: [],
+        metadata_json: {},
+      },
+    });
+
+    const { PATCH } = await loadRoute();
+    const response = await PATCH(new Request('https://www.getsos.app/api/onboarding/chart', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ forceRegenerateReading: true }),
+    }));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ success: true, readingGenerated: true });
+    expect(completionCreateMock).toHaveBeenCalledTimes(1);
+    expect(maybeSingleQueue).toHaveLength(0);
+    expect(upsertMocks['natal_readings']).toHaveBeenCalledWith(expect.objectContaining({
+      user_id: 'user_123',
+      prompt_version: 'v2-premium-natal',
+    }), { onConflict: 'user_id' });
+  });
+
+  it('rejects force-regeneration for users without active premium access', async () => {
+    getSubscriptionMock.mockResolvedValue(null);
+
+    const { PATCH } = await loadRoute();
+    const response = await PATCH(new Request('https://www.getsos.app/api/onboarding/chart', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ forceRegenerateReading: true }),
+    }));
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({ error: 'premium-required' });
+    expect(singleQueue).toHaveLength(0);
+    expect(completionCreateMock).not.toHaveBeenCalled();
   });
 
   it('keeps the old chart-error fast path when no reading regeneration is requested', async () => {

@@ -37,7 +37,7 @@ export default function GuidanceCard({ result, showAskAeon = false }: { result: 
       <p className="text-sm leading-relaxed text-[var(--color-text)]">{result.message}</p>
       {showAskAeon && (
         <Link
-          href={`/journal?starter=${encodeURIComponent(`Go deeper on this ${result.title.toLowerCase()} reading.`)}&context=${encodeURIComponent(result.message)}`}
+          href={`/journal?starter=${encodeURIComponent(`Ask Aeon about this ${result.title.toLowerCase()} reading.`)}&context=${encodeURIComponent(result.message)}`}
           className="mt-4 flex items-center justify-between rounded-[10px] border border-[var(--color-border-subtle)] px-4 py-3 text-xs uppercase tracking-[0.18em] text-[var(--color-electric)] hover:border-[var(--color-electric)]"
         >
           <span>Ask Aeon about this</span>

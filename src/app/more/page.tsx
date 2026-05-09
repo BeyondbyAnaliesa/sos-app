@@ -5,6 +5,7 @@ import BottomNav from '@/components/BottomNav';
 import AppBackLink from '@/components/AppBackLink';
 import AeonFloatingButton from '@/components/AeonFloatingButton';
 import ManagePlanButton from '@/components/ManagePlanButton';
+import SignOutButton from '@/components/SignOutButton';
 
 const LINKS = [
   {
@@ -80,6 +81,7 @@ export default async function MorePage() {
             </Link>
           );
         })}
+        <SignOutButton />
       </div>
 
       <AeonFloatingButton />

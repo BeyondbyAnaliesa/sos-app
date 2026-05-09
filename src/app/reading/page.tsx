@@ -86,7 +86,7 @@ export default async function ReadingPage() {
       .single(),
     supabase
       .from('natal_charts')
-      .select('placements_json, angles_json, houses_json, aspects_json')
+      .select('placements_json, angles_json, houses_json, aspects_json, metadata_json')
       .eq('user_id', user.id)
       .single(),
     getSubscription(user.id),
@@ -109,8 +109,12 @@ export default async function ReadingPage() {
     redirect('/chart-error');
   }
 
+  const metadata = chartResult.data.metadata_json as { natalReading?: NatalReadingReport } | null;
+  const savedReading = (readingResult.data?.reading_json as NatalReadingReport | undefined)
+    ?? metadata?.natalReading;
+
   // ── Reading still generating ──
-  if (!readingResult.data) {
+  if (!savedReading) {
     return (
       <main className="mx-auto w-full max-w-xl px-5 py-10 sm:px-6">
         <AppBackLink />
@@ -140,7 +144,7 @@ export default async function ReadingPage() {
 
   track('reading_viewed', { userId: user.id, paid: String(paid) });
 
-  const reading = readingResult.data.reading_json as NatalReadingReport;
+  const reading = savedReading;
   const placements = (chartResult.data.placements_json ?? []) as Placement[];
   const angles = chartResult.data.angles_json as Angles | null;
   const houseCusps = (chartResult.data.houses_json ?? []) as number[];

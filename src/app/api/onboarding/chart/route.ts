@@ -21,7 +21,7 @@ function getOpenAIClient() {
 
 // Fire-and-forget during onboarding, but also reusable for on-demand repair when
 // /reading finds a chart row without its companion natal_readings row.
-async function generateNatalReading(userId: string, chart: ReturnType<typeof generateNatalChart>, attempt = 0) {
+async function generateNatalReading(userId: string, chart: ReturnType<typeof generateNatalChart>, attempt = 0): Promise<boolean> {
   try {
     const { system, user } = buildNatalReadingPrompt(chart);
     const openai = getOpenAIClient();
@@ -38,18 +38,43 @@ async function generateNatalReading(userId: string, chart: ReturnType<typeof gen
     const reading = JSON.parse(raw) as NatalReadingReport;
 
     const admin = createAdminClient();
-    await admin.from('natal_readings').upsert({
+    const { error: readingError } = await admin.from('natal_readings').upsert({
       user_id:        userId,
       reading_json:   reading,
       model:          'gpt-4o',
       prompt_version: 'v1',
     }, { onConflict: 'user_id' });
+
+    if (!readingError) return true;
+
+    // Production recovery guard: older prod DBs may not have the natal_readings
+    // cache table yet. Do not silently strand the user on the spinner — persist a
+    // fallback copy inside the existing natal_charts.metadata_json and let
+    // /reading render from there.
+    console.error('Natal reading table write failed; using chart metadata fallback:', readingError);
+    const { error: fallbackError } = await admin
+      .from('natal_charts')
+      .update({
+        metadata_json: {
+          ...(chart.metadata ?? {}),
+          natalReading: reading,
+          natalReadingModel: 'gpt-4o',
+          natalReadingPromptVersion: 'v1',
+          natalReadingGeneratedAt: new Date().toISOString(),
+          natalReadingFallbackReason: readingError.code ?? 'natal_readings_write_failed',
+        },
+      })
+      .eq('user_id', userId);
+
+    if (fallbackError) throw fallbackError;
+    return true;
   } catch (err) {
     console.error(`Background natal reading generation failed (attempt ${attempt + 1}):`, err);
     if (attempt < 2) {
       await new Promise(r => setTimeout(r, 3000));
       return generateNatalReading(userId, chart, attempt + 1);
     }
+    return false;
   }
 }
 
@@ -261,13 +286,17 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ success: true, alreadyValid: true, readingAlreadyPresent: true });
       }
 
-      await generateNatalReading(user.id, {
+      const readingGenerated = await generateNatalReading(user.id, {
         placements: existingChart.placements_json,
         angles: existingChart.angles_json,
         houses: existingChart.houses_json ?? [],
         aspects: existingChart.aspects_json ?? [],
         metadata: existingChart.metadata_json ?? {},
       });
+
+      if (!readingGenerated) {
+        return NextResponse.json({ error: 'natal-reading-generation-failed' }, { status: 500 });
+      }
 
       return NextResponse.json({ success: true, readingGenerated: true });
     }
@@ -305,7 +334,10 @@ export async function PATCH(request: Request) {
     }, { onConflict: 'user_id' });
 
     if (regenerateReading) {
-      await generateNatalReading(user.id, chart);
+      const readingGenerated = await generateNatalReading(user.id, chart);
+      if (!readingGenerated) {
+        return NextResponse.json({ error: 'natal-reading-generation-failed' }, { status: 500 });
+      }
     }
 
     return NextResponse.json({ success: true, readingGenerated: regenerateReading });

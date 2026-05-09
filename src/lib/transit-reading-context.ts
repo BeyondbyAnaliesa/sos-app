@@ -71,10 +71,11 @@ export async function buildReadingContext(client: DbClient, userId: string, now 
   });
   const activeMajorArcs = majorArcs.filter((arc) => arc.activeToday);
   const upcomingMajorArcs = majorArcs.filter((arc) => !arc.activeToday);
+  const metadata = chartResult.data.metadata_json as { natalReading?: unknown } | null;
   const lifeSignals = await listSecureLifeSignals(client, { userId, limit: 12 }).catch(() => []);
   const memory = {
     report: (reportResult.data?.report_json ?? null) as MajorWaveMemoryInput['report'],
-    natalReading: natalReadingResult.data?.reading_json ?? null,
+    natalReading: natalReadingResult.data?.reading_json ?? metadata?.natalReading ?? null,
     lifeSignals,
   } satisfies MajorWaveMemoryInput;
   const judgment = buildAstrologyJudgment({

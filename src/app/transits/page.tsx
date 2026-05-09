@@ -314,10 +314,11 @@ export default async function TransitRoomPage() {
   });
 
   const lockedDomainLabels = locked.map((r) => getTransitDomainLabel(r.domain));
+  const metadata = chartResult.data.metadata_json as { natalReading?: unknown } | null;
   const lifeSignals = await listSecureLifeSignals(supabase, { userId: user.id, limit: 12 }).catch(() => []);
   const waveMemory: MajorWaveMemoryInput = {
     report: (reportResult.data?.report_json ?? null) as MajorWaveMemoryInput['report'],
-    natalReading: natalReadingResult.data?.reading_json ?? null,
+    natalReading: natalReadingResult.data?.reading_json ?? metadata?.natalReading ?? null,
     lifeSignals,
   };
   const activeMajorArcs = majorArcs.filter((arc) => arc.activeToday).slice(0, paid ? 8 : 2);

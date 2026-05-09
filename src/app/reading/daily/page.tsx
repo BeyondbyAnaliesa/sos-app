@@ -120,10 +120,11 @@ export default async function DailyReadingPage() {
 
   const onboardingReport = reportResult.data?.report_json as { themes?: string[] | null; chartReading?: string | null; lookAhead?: string | null } | null;
   const personalTheme = Array.isArray(onboardingReport?.themes) ? onboardingReport?.themes?.[0] : null;
+  const metadata = chartResult.data.metadata_json as { natalReading?: unknown } | null;
   const lifeSignals = await listSecureLifeSignals(supabase, { userId: user.id, limit: 12 }).catch(() => []);
   const dailyMemory: MajorWaveMemoryInput = {
     report: onboardingReport,
-    natalReading: natalReadingResult.data?.reading_json ?? null,
+    natalReading: natalReadingResult.data?.reading_json ?? metadata?.natalReading ?? null,
     lifeSignals,
   };
   const activeMajorArcs = majorArcs.filter((arc) => arc.activeToday).slice(0, paid ? 8 : 3);
@@ -174,15 +175,18 @@ export default async function DailyReadingPage() {
         <div className="mt-6 h-px w-full bg-gradient-to-r from-transparent via-[var(--color-border-subtle)] to-transparent" />
       </header>
 
-      <section className="mb-8 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5 sm:px-6">
-        <p className="mb-1 text-xs font-medium uppercase tracking-widest text-[var(--color-copper)]">
-          ◑ Today&apos;s Sky
-        </p>
-        <p className="mt-3 text-sm leading-relaxed text-[var(--color-text)]">
+      <section className="mb-8 rounded-[20px] border border-white/6 bg-[rgba(244,239,232,0.02)] px-5 py-5 backdrop-blur-[1px] sm:px-6">
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-xs font-medium uppercase tracking-widest text-[var(--color-copper)]">
+            ◑ Today&apos;s Sky
+          </p>
+          <span className="text-[10px] uppercase tracking-[0.22em] text-[var(--color-text-muted)] opacity-70">Orientation</span>
+        </div>
+        <p className="mt-3 text-[15px] leading-relaxed text-[var(--color-text)]">
           {overview.summary}
         </p>
         {overview.detail && (
-          <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">
+          <p className="mt-2 max-w-[34rem] text-sm leading-relaxed text-[var(--color-text-muted)]">
             {overview.detail}
           </p>
         )}
@@ -235,26 +239,31 @@ export default async function DailyReadingPage() {
       )}
 
       {personalTheme && (
-        <section className="mb-6 rounded-2xl border border-[var(--color-electric)]/45 bg-[rgba(239,68,136,0.05)] px-5 py-5">
-          <p className="text-xs font-medium uppercase tracking-[0.25em] text-[var(--color-electric)]">
-            Personal thread
-          </p>
-          <p className="mt-2 text-[15px] leading-relaxed text-[var(--color-text)]">
+        <section className="mb-4 rounded-[18px] border border-[var(--color-electric)]/28 bg-[rgba(239,68,136,0.03)] px-5 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-xs font-medium uppercase tracking-[0.25em] text-[var(--color-electric)]">
+              Personal thread
+            </p>
+            <Link
+              href={`/journal?starter=${encodeURIComponent('Go deeper on this personal thread today.')}&context=${encodeURIComponent(personalTheme)}`}
+              className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-electric)] hover:underline"
+            >
+              Ask Aeon →
+            </Link>
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--color-text)]">
             {personalTheme}
           </p>
-          <Link
-            href={`/journal?starter=${encodeURIComponent('Go deeper on this personal thread today.')}&context=${encodeURIComponent(personalTheme)}`}
-            className="mt-4 inline-flex text-xs uppercase tracking-[0.18em] text-[var(--color-electric)] hover:underline"
-          >
-            Ask Aeon why this is active →
-          </Link>
         </section>
       )}
 
-      <section className="mb-6 rounded-2xl border border-[var(--color-border)] bg-[rgba(201,162,122,0.05)] px-5 py-5">
-        <p className="text-xs font-medium uppercase tracking-[0.25em] text-[var(--color-copper)]">
-          SOS noticed
-        </p>
+      <section className="mb-6 rounded-[18px] border border-[rgba(201,162,122,0.22)] bg-[linear-gradient(180deg,rgba(201,162,122,0.05),rgba(22,20,34,0.88))] px-5 py-4">
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-xs font-medium uppercase tracking-[0.25em] text-[var(--color-copper)]">
+            SOS noticed
+          </p>
+          <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)] opacity-70">Why this feels familiar</span>
+        </div>
         <p className="mt-2 text-[15px] leading-relaxed text-[var(--color-text)]">
           {memoryCue}
         </p>

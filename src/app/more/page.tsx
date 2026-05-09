@@ -9,10 +9,10 @@ import SignOutButton from '@/components/SignOutButton';
 
 const LINKS = [
   {
-    href:  '/calendar',
+    href:  '/transits',
     glyph: '◎',
-    title: 'Transit Calendar',
-    desc:  '30-day view of what is coming',
+    title: 'Transits',
+    desc:  'Major waves active now and what is coming next',
     paid:  true,
   },
   {

@@ -62,10 +62,11 @@ export async function POST() {
       ...arcs.filter((arc) => !arc.activeToday).slice(0, 4),
     ];
 
+    const metadata = chartResult.data.metadata_json as { natalReading?: unknown } | null;
     const lifeSignals = await listSecureLifeSignals(supabase, { userId: user.id, limit: 12 }).catch(() => []);
     const memory: MajorWaveMemoryInput = {
       report: (reportResult.data?.report_json ?? null) as MajorWaveMemoryInput['report'],
-      natalReading: natalReadingResult.data?.reading_json ?? null,
+      natalReading: natalReadingResult.data?.reading_json ?? metadata?.natalReading ?? null,
       lifeSignals,
     };
 

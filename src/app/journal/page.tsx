@@ -334,7 +334,7 @@ function JournalPageInner() {
             </div>
           )}
 
-          <div className="flex-1 space-y-6 pb-4">
+          <div className="flex-1 space-y-6 pb-40">
             {messages.map((msg, i) => (
               <div key={i}>
                 {msg.role === 'user' ? (
@@ -355,7 +355,7 @@ function JournalPageInner() {
                 )}
               </div>
             ))}
-            <div ref={bottomRef} />
+            <div ref={bottomRef} className="scroll-mb-40" />
           </div>
 
           {followUpError && (
@@ -363,7 +363,7 @@ function JournalPageInner() {
             )}
           <form
             onSubmit={handleFollowUp}
-            className="sticky bottom-[60px] border-t border-[var(--color-border-subtle)] bg-[var(--color-void)] pt-4 pb-4"
+            className="sticky bottom-[calc(60px+env(safe-area-inset-bottom))] border-t border-[var(--color-border-subtle)] bg-[var(--color-void)] pt-4 pb-4"
           >
             <div className="flex gap-3">
               <input

@@ -13,6 +13,7 @@ import AppBackLink from '@/components/AppBackLink';
 import AeonFloatingButton from '@/components/AeonFloatingButton';
 import NatalShareCard from '@/components/NatalShareCard';
 import NatalReadingUpgradeButton from '@/components/NatalReadingUpgradeButton';
+import PendingLink from '@/components/PendingLink';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -258,19 +259,27 @@ export default async function ReadingPage() {
         <div className="mt-6 h-px w-full bg-gradient-to-r from-transparent via-[var(--color-border-subtle)] to-transparent" />
       </header>
 
-      {paid && !hasPremiumNatalReading && <NatalReadingUpgradeButton />}
+      {!hasPremiumNatalReading && <NatalReadingUpgradeButton />}
+
+      <section className="mb-8 rounded-[18px] border border-[var(--color-copper-dim)]/25 bg-[linear-gradient(180deg,rgba(244,239,232,0.045),rgba(22,20,34,0.92))] px-5 py-6 text-center">
+        <p className="text-[10px] uppercase tracking-[0.25em] text-[var(--color-copper-dim)]">Permanent reference</p>
+        <p className="mt-3 text-lg font-light leading-relaxed text-[var(--color-text)]">
+          This is your life map: identity, instinct, desire, shadow, vocation, relationships, and the pattern underneath all of it.
+        </p>
+      </section>
 
       {/* Quick link to daily reading */}
-      <Link
+      <PendingLink
         href="/reading/daily"
-        className="mb-8 flex items-center justify-between rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-4 text-sm text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:text-[var(--color-text)]"
+        pendingLabel="Opening today"
+        className="relative mb-8 flex overflow-hidden items-center justify-between rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-4 text-sm text-[var(--color-text-muted)] hover:border-[var(--color-border)] hover:text-[var(--color-text)]"
       >
         <div>
           <span className="text-[var(--color-copper)]">◑</span>
           <span className="ml-2">Today&apos;s transit reading</span>
         </div>
         <span className="text-[var(--color-copper-dim)]">&rarr;</span>
-      </Link>
+      </PendingLink>
 
       <div className="space-y-5">
 

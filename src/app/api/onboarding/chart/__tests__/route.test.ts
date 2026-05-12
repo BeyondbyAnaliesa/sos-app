@@ -96,7 +96,7 @@ describe('PATCH /api/onboarding/chart', () => {
     expect(completionCreateMock).toHaveBeenCalledTimes(1);
     expect(upsertMocks['natal_readings']).toHaveBeenCalledWith(expect.objectContaining({
       user_id: 'user_123',
-      prompt_version: 'v1',
+      prompt_version: 'v2-premium-natal',
     }), { onConflict: 'user_id' });
   });
 
@@ -131,8 +131,20 @@ describe('PATCH /api/onboarding/chart', () => {
     }), { onConflict: 'user_id' });
   });
 
-  it('rejects force-regeneration for users without active premium access', async () => {
+  it('allows existing users to expand older short natal readings without a premium gate', async () => {
     getSubscriptionMock.mockResolvedValue(null);
+    singleQueue.push({
+      data: {
+        placements_json: [{ key: 'sun', sign: 'Taurus', degree: 1, minute: 0, longitude: 31, label: 'Sun', retrograde: false }],
+        angles_json: {
+          ascendant: { sign: 'Leo', degree: 2, minute: 0, longitude: 122 },
+          midheaven: { sign: 'Aries', degree: 3, minute: 0, longitude: 3 },
+        },
+        houses_json: [],
+        aspects_json: [],
+        metadata_json: {},
+      },
+    });
 
     const { PATCH } = await loadRoute();
     const response = await PATCH(new Request('https://www.getsos.app/api/onboarding/chart', {
@@ -141,10 +153,9 @@ describe('PATCH /api/onboarding/chart', () => {
       body: JSON.stringify({ forceRegenerateReading: true }),
     }));
 
-    expect(response.status).toBe(403);
-    expect(await response.json()).toEqual({ error: 'premium-required' });
-    expect(singleQueue).toHaveLength(0);
-    expect(completionCreateMock).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ success: true, readingGenerated: true });
+    expect(completionCreateMock).toHaveBeenCalledTimes(1);
   });
 
   it('keeps the old chart-error fast path when no reading regeneration is requested', async () => {

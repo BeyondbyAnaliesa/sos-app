@@ -6,30 +6,16 @@ import { redirect } from 'next/navigation';
 import { buildTransitOverview, interpretTransits } from '@/lib/interpret';
 import type { GuidanceResult } from '@/lib/interpret';
 import { calculateTransitsForDate, calculateTransitsForRange } from '@/lib/astrology/calculate-transits';
-import { calculateMajorTransitArcs } from '@/lib/astrology/major-transits';
 import type { NatalChart as RichChart } from '@/lib/astrology/types';
 import { buildNatalSummary } from '@/lib/astrology/domain-types';
 import { getSubscription, isActive } from '@/lib/subscription';
-import { getRelevantTransitMemoryForToday } from '@/lib/astrology/memory-store';
-import { buildHomeMemoryCue, buildStateText } from '@/lib/astrology/pure-fns';
-import { listSecureLifeSignals } from '@/lib/astrology/secure-life-signals';
+import { buildStateText } from '@/lib/astrology/pure-fns';
 import Header from '@/components/Header';
-import GuidanceCard from '@/components/GuidanceCard';
 import LandingPage from '@/components/LandingPage';
 import LifeWheel from '@/components/LifeWheel';
 import type { LifeSegmentData, LifeSignal } from '@/components/LifeWheel';
 import BottomNav from '@/components/BottomNav';
-import { buildTransitTimingSummary } from '@/lib/transit-timing';
-
-// H-1: Short life-area tags for locked transit rows. Matches existing domain taxonomy.
-const HOME_DOMAIN_TAGS = {
-  body:          'Body',
-  mind:          'Mind',
-  spirit:        'Spirit',
-  relationships: 'Relationships',
-  career:        'Career',
-  home:          'Home',
-} as const;
+import PendingLink from '@/components/PendingLink';
 
 function buildLifeSegments(guidance: GuidanceResult[]): LifeSegmentData[] {
   const g = Object.fromEntries(guidance.map((r) => [r.domain, r]));
@@ -61,21 +47,11 @@ export default async function Home() {
   const sub = await getSubscription(user.id);
   const paid = isActive(sub);
 
-  const [chartResult, reportResult, signalResult] = await Promise.all([
-    supabase
-      .from('natal_charts')
-      .select('placements_json, angles_json, houses_json, aspects_json, metadata_json')
-      .eq('user_id', user.id)
-      .single(),
-    supabase
-      .from('onboarding_reports')
-      .select('report_json')
-      .eq('user_id', user.id)
-      .single(),
-    listSecureLifeSignals(supabase, { userId: user.id, limit: 1 }).then((rows) => rows[0] ?? null),
-  ]);
-
-  const chartRow = chartResult.data;
+  const { data: chartRow } = await supabase
+    .from('natal_charts')
+    .select('placements_json, angles_json, houses_json, aspects_json, metadata_json')
+    .eq('user_id', user.id)
+    .single();
   // Guard: row exists but columns are null/malformed (partial write, schema mismatch, or
   // old migration) — redirect to chart-error so the user can regenerate without re-entering
   // birth data. Option B from sos-stability-audit-2026-04-27.md P1-4.
@@ -106,30 +82,8 @@ export default async function Home() {
   );
   const guidance = interpretTransits(activeTransits, natalSummary);
   const overview = buildTransitOverview(activeTransits, natalSummary, { lookAheadTransits });
-  const { arcs: majorArcs } = calculateMajorTransitArcs(richChart, {
-    centerDate: new Date(),
-    pastDays: 150,
-    futureDays: 240,
-  });
-  const timingSummary = buildTransitTimingSummary([
-    ...majorArcs.filter((arc) => arc.activeToday).slice(0, paid ? 8 : 3),
-    ...majorArcs.filter((arc) => !arc.activeToday).slice(0, paid ? 4 : 1),
-  ], todayDate);
   const lifeSegments = buildLifeSegments(guidance);
   const stateText = buildStateText(guidance);
-  // Arc memory: fetch structured transit memory context (non-fatal — falls back to signal-based cue)
-  const arcMemory = await getRelevantTransitMemoryForToday(user.id).catch(() => null);
-
-  const memoryCue = buildHomeMemoryCue({
-    signal: signalResult as { life_domain?: string | null; content_text?: string | null; themes_json?: string[] | null } | null,
-    report: (reportResult.data?.report_json ?? null) as { themes?: string[] | null } | null,
-    arcMemory,
-    nowMs: todayRef.getTime(),
-  });
-
-  // H-1: transit tease — one revealed, rest locked for free users.
-  const activeGuidanceForHome = guidance.filter((g) => g.intensity !== 'low');
-  const lockedGuidance = paid ? [] : activeGuidanceForHome.slice(1);
 
   const controls = [
     {
@@ -178,26 +132,7 @@ export default async function Home() {
         )}
       </section>
 
-      {timingSummary && (
-        <div className="mb-4 rounded-[10px] border border-[var(--color-electric)]/45 bg-[rgba(239,68,136,0.05)] px-5 py-5">
-          <p className="text-xs font-medium uppercase tracking-[0.25em] text-[var(--color-electric)]">Timing alert</p>
-          <p className="mt-2 text-[15px] leading-relaxed text-[var(--color-text)]">{timingSummary.headline}</p>
-          <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">{timingSummary.body}</p>
-          <Link href={timingSummary.href} className="mt-4 inline-flex text-xs uppercase tracking-[0.18em] text-[var(--color-electric)] hover:underline">
-            Open wave details →
-          </Link>
-        </div>
-      )}
-
-      <div className="rounded-[10px] border border-[var(--color-electric)]/60 bg-[linear-gradient(180deg,rgba(239,68,136,0.12),rgba(239,68,136,0.02))] px-5 py-5">
-        <p className="text-xs font-medium uppercase tracking-[0.25em] text-[var(--color-electric)]">
-          SOS noticed
-        </p>
-        <p className="mt-2 text-[15px] text-[var(--color-text)]">{memoryCue.headline}</p>
-        <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">{memoryCue.body}</p>
-      </div>
-
-      <div className="mt-8 h-px bg-gradient-to-r from-transparent via-[var(--color-border-subtle)] to-transparent" />
+      <div className="mt-4 h-px bg-gradient-to-r from-transparent via-[var(--color-border-subtle)] to-transparent" />
 
       <section className="pt-7">
         <p className="mb-4 text-[10px] uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
@@ -205,10 +140,11 @@ export default async function Home() {
         </p>
         <div className="grid grid-cols-2 gap-3">
           {controls.map((ctrl) => (
-            <Link
+            <PendingLink
               key={ctrl.title}
               href={ctrl.href}
-              className="relative rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-4 py-5 hover:border-[var(--color-border)] hover:bg-[var(--color-input)]"
+              className="relative overflow-hidden rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-4 py-5 hover:border-[var(--color-border)] hover:bg-[var(--color-input)]"
+              pendingLabel={ctrl.title === 'Transits' ? 'Opening transits' : 'Wait a moment'}
             >
               <span className="block text-lg text-[var(--color-copper-dim)]">{ctrl.glyph}</span>
               <span className="mt-2 block text-sm text-[var(--color-text)]">{ctrl.title}</span>
@@ -218,58 +154,10 @@ export default async function Home() {
                   ◈
                 </span>
               )}
-            </Link>
+            </PendingLink>
           ))}
         </div>
       </section>
-
-      {/* H-1: Transit tease — one guidance card revealed, rest shown as a locked list */}
-      {activeGuidanceForHome.length > 0 && (
-        <section className="mt-8">
-          <p className="mb-4 text-[10px] uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
-            Unlocked Today
-          </p>
-          <GuidanceCard result={activeGuidanceForHome[0]} />
-          {!paid && lockedGuidance.length > 0 && (
-            <div className="mt-3 overflow-hidden rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)]">
-              {/* Lock badge + thirst copy at the TOP of the locked block */}
-              <div className="border-b border-[var(--color-border-subtle)] px-5 py-4">
-                <span className="text-[10px] font-medium uppercase tracking-widest text-[var(--color-electric)]">
-                  ◈ Member
-                </span>
-                <p className="mt-1.5 text-sm text-[var(--color-text-muted)]">
-                  {/* SHIPPED: count-based, concrete and specific */}
-                  {lockedGuidance.length} more {lockedGuidance.length === 1 ? 'transit is' : 'transits are'} active in your chart right now.
-                  {/* ALT: "The rest of your sky is moving. Unlock to see where." */}
-                  {/* ALT: "More is alive in your chart than this." */}
-                </p>
-                <Link
-                  href="/upgrade"
-                  className="mt-2 inline-block text-xs text-[var(--color-copper-dim)] hover:text-[var(--color-copper)]"
-                >
-                  Unlock full access →
-                </Link>
-              </div>
-              {/* Locked transit rows — title + life-area tag only, no explanation */}
-              <div className="pointer-events-none select-none opacity-50">
-                {lockedGuidance.map((g) => (
-                  <div
-                    key={g.domain}
-                    className="flex items-center justify-between border-b border-[var(--color-border-subtle)] px-5 py-3 last:border-b-0"
-                  >
-                    <span className="capitalize text-sm text-[var(--color-text)]">
-                      {g.summary}
-                    </span>
-                    <span className="ml-3 shrink-0 rounded-full border border-[var(--color-border-subtle)] px-2.5 py-0.5 text-[10px] uppercase tracking-wide text-[var(--color-text-muted)]">
-                      {HOME_DOMAIN_TAGS[g.domain as keyof typeof HOME_DOMAIN_TAGS] ?? g.domain}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
-      )}
 
       <div className="mt-8 text-center">
         {paid ? (

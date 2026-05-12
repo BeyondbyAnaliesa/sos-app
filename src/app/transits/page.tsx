@@ -23,7 +23,6 @@ import AeonFloatingButton from '@/components/AeonFloatingButton';
 import { buildTransitFeel, buildTransitReading, buildWaveUse, transitColor, transitTitle } from '@/lib/transit-copy';
 import CalendarGrid from '@/app/calendar/CalendarGrid';
 import { listSecureLifeSignals } from '@/lib/astrology/secure-life-signals';
-import { buildTransitArcJudgment } from '@/lib/astrology/transit-arc-judgment';
 import { buildMajorWaveMemoryReading } from '@/lib/major-transit-reading';
 import type { MajorWaveMemoryInput } from '@/lib/major-transit-reading';
 import { getOrCreateMajorTransitAiReadings, majorTransitReadingKey } from '@/lib/major-transit-ai-reading';
@@ -56,16 +55,6 @@ function phaseCopy(arc: MajorTransitArc) {
   return daysPast === 1 ? 'Peaked yesterday' : `Peaked ${daysPast} days ago`;
 }
 
-function progressPercent(arc: MajorTransitArc) {
-  const elapsed = Math.max(0, Math.min(arc.totalDays, diffDaysLocal(new Date().toISOString().split('T')[0], arc.startDate)));
-  return Math.max(4, Math.min(100, Math.round((elapsed / Math.max(1, arc.totalDays)) * 100)));
-}
-
-function percentForDate(arc: MajorTransitArc, date: string) {
-  const elapsed = Math.max(0, Math.min(arc.totalDays, diffDaysLocal(date, arc.startDate)));
-  return Math.max(2, Math.min(98, Math.round((elapsed / Math.max(1, arc.totalDays)) * 100)));
-}
-
 function hitLabel(kind: 'exact' | 'closest') {
   return kind === 'exact' ? 'Exact' : 'Closest';
 }
@@ -74,12 +63,7 @@ function stationLabel(kind: 'retrograde' | 'direct') {
   return kind === 'retrograde' ? 'Rx station' : 'Direct station';
 }
 
-function diffDaysLocal(a: string, b: string) {
-  return Math.round((new Date(`${a}T12:00:00Z`).getTime() - new Date(`${b}T12:00:00Z`).getTime()) / 86_400_000);
-}
-
 function MajorTransitCard({ arc, memory, chart, aiReading }: { arc: MajorTransitArc; memory: MajorWaveMemoryInput; chart: RichChart; aiReading?: MajorTransitAiReading }) {
-  const arcFacts = buildTransitArcJudgment({ arc, chart, memory, date: new Date().toISOString().split('T')[0] });
   const memoryReading = buildMajorWaveMemoryReading(arc, memory, chart);
   const timing = buildTransitTiming(arc);
   const passMemory = buildPassMemoryCue(arc, memory.lifeSignals ?? []);
@@ -99,109 +83,69 @@ function MajorTransitCard({ arc, memory, chart, aiReading }: { arc: MajorTransit
         </span>
       </div>
 
-      <div className="mt-4">
-        <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
-          <span>{formatShortDate(arc.startDate)}</span>
-          <span>{arc.activeRunCount > 1 ? `${arc.activeRunCount} passes` : 'One pass'}</span>
-          <span>{formatShortDate(arc.endDate)}</span>
-        </div>
-        <div className="relative h-3 rounded-full bg-[rgba(244,239,232,0.08)]">
-          <div className="absolute left-0 top-0 h-full rounded-full opacity-80" style={{ width: `${progressPercent(arc)}%`, backgroundColor: color }} />
-          {arc.exactHits.map((hit, index) => (
-            <span
-              key={`${hit.date}-${index}`}
-              className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--color-void)] shadow-[0_0_0_1px_rgba(244,239,232,0.35)]"
-              style={{ left: `${percentForDate(arc, hit.date)}%`, backgroundColor: color }}
-              aria-label={`${hitLabel(hit.kind)} hit ${formatShortDate(hit.date)}`}
-            />
-          ))}
-          {arc.stations.map((station, index) => (
-            <span
-              key={`${station.date}-station-${index}`}
-              className="absolute top-1/2 h-5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[var(--color-void)] bg-[var(--color-text)] shadow-[0_0_0_1px_rgba(239,68,136,0.45)]"
-              style={{ left: `${percentForDate(arc, station.date)}%` }}
-              aria-label={`${stationLabel(station.kind)} ${formatShortDate(station.date)}`}
-            />
-          ))}
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {arc.exactHits.map((hit, index) => (
-            <span key={`${hit.date}-chip-${index}`} className="rounded-full border border-[var(--color-border-subtle)] px-3 py-1 text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
-              {hitLabel(hit.kind)} {formatShortDate(hit.date)} · {hit.orb}°
-            </span>
-          ))}
-          {arc.stations.map((station, index) => (
-            <span key={`${station.date}-station-chip-${index}`} className="rounded-full border border-[var(--color-electric)]/45 px-3 py-1 text-[10px] uppercase tracking-[0.14em] text-[var(--color-electric)]">
-              {stationLabel(station.kind)} {formatShortDate(station.date)} · {station.degree}° {station.sign}
-            </span>
-          ))}
-        </div>
-        <p className="mt-2 text-[11px] leading-relaxed text-[var(--color-text-muted)]">
-          Active lifecycle: {arcWindow(arc)} · {arc.totalDays} days from first contact to final fade in this scan.
-        </p>
-      </div>
-
-      <div className="mt-4 rounded-[10px] border border-[var(--color-electric)]/35 bg-[rgba(239,68,136,0.04)] px-4 py-3">
-        <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-electric)]">Timing</p>
-        <p className="mt-1 text-sm leading-relaxed text-[var(--color-text)]">{timing.peakLine}</p>
-        <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-muted)]">{timing.nextHitLine}</p>
-        {arc.exactHits.length > 1 && (
-          <p className="mt-2 text-xs leading-relaxed text-[var(--color-text-muted)] opacity-80">{passMemory.headline}</p>
-        )}
-        <p className="mt-2 text-xs leading-relaxed text-[var(--color-text-muted)] opacity-80">
-          Arc spine: {arcFacts.daysActive}/{arcFacts.durationDays} days active{arcFacts.percentComplete != null ? ` · ${arcFacts.percentComplete}% complete` : ''} · {arcFacts.totalPasses > 1 ? `pass ${arcFacts.currentPass ?? 1} of ${arcFacts.totalPasses}` : 'one visible pass'}{arcFacts.watchNextDate ? ` · watch ${arcFacts.watchNextType?.replace('_', ' ')} ${formatShortDate(arcFacts.watchNextDate)}` : ''}.
-        </p>
-      </div>
-
-      <div className="mt-4 grid grid-cols-2 gap-2 text-[10px] uppercase tracking-[0.14em] text-[var(--color-text-muted)]">
-        {arc.context.targetSign && (
-          <div className="rounded-[10px] border border-[var(--color-border-subtle)] px-3 py-2">
-            {arc.context.targetSign}{arc.context.targetDegree != null ? ` ${arc.context.targetDegree}°` : ''}
+      <div className="mt-5 rounded-[12px] border border-[var(--color-electric)]/35 bg-[rgba(239,68,136,0.05)] px-4 py-4">
+        <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-electric)]">What this means for you</p>
+        {aiReading ? (
+          <div className="mt-2 space-y-3">
+            <p className="text-base leading-relaxed text-[var(--color-text)]">{aiReading.headline}</p>
+            <p className="text-sm leading-relaxed text-[var(--color-text-muted)]">{aiReading.wave}</p>
+            <p className="text-sm leading-relaxed text-[var(--color-text-muted)]">{aiReading.whyYou}</p>
+            <p className="text-sm leading-relaxed text-[var(--color-text-muted)]">{aiReading.feel}</p>
+            {aiReading.memoryNote && <p className="text-xs leading-relaxed text-[var(--color-text-muted)] opacity-75">{aiReading.memoryNote}</p>}
           </div>
-        )}
-        {arc.context.targetHouse && (
-          <div className="rounded-[10px] border border-[var(--color-border-subtle)] px-3 py-2">
-            House {arc.context.targetHouse}
+        ) : (
+          <div className="mt-2 space-y-2">
+            <p className="text-sm leading-relaxed text-[var(--color-text)]">{memoryReading.personalLine}</p>
+            <p className="text-sm leading-relaxed text-[var(--color-text-muted)]">{memoryReading.memoryLine}</p>
           </div>
         )}
       </div>
 
-      <div className="mt-4 space-y-3">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper)]">What this is</p>
-          <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-muted)]">{buildTransitReading(arc.transit)}</p>
-        </div>
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper)]">Where it lands</p>
-          <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-muted)]">
-            This is hitting your natal {arc.context.targetLabel}{arc.context.targetHouse ? ` in the ${arc.context.targetHouse} house` : ''}: {arc.context.lifeArea}.
-          </p>
-        </div>
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper)]">Memory read</p>
-          {aiReading ? (
-            <div className="mt-1 space-y-3">
-              <p className="text-base leading-relaxed text-[var(--color-text)]">{aiReading.headline}</p>
-              <p className="text-sm leading-relaxed text-[var(--color-text-muted)]">{aiReading.wave}</p>
-              <p className="text-sm leading-relaxed text-[var(--color-text-muted)]">{aiReading.whyYou}</p>
-              <p className="text-sm leading-relaxed text-[var(--color-text-muted)]">{aiReading.feel}</p>
-              {aiReading.memoryNote && <p className="text-xs leading-relaxed text-[var(--color-text-muted)] opacity-75">{aiReading.memoryNote}</p>}
-            </div>
-          ) : (
-            <>
-              <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-muted)]">{memoryReading.personalLine}</p>
-              <p className="mt-2 text-xs leading-relaxed text-[var(--color-text-muted)] opacity-80">{memoryReading.memoryLine}</p>
-              <p className="mt-2 text-xs leading-relaxed text-[var(--color-electric)]">{memoryReading.lifecycleLine}</p>
-            </>
+      <div className="mt-4 rounded-[10px] border border-[var(--color-border-subtle)] bg-[rgba(244,239,232,0.02)] px-4 py-3">
+        <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper)]">How to use it</p>
+        <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-muted)]">{aiReading?.use ?? buildWaveUse(arc.transit, arc.context.lifeArea)}</p>
+        {aiReading?.doNotForce && <p className="mt-2 text-xs leading-relaxed text-[var(--color-text-muted)] opacity-80">Do not force: {aiReading.doNotForce}</p>}
+      </div>
+
+      <div className="mt-4 rounded-[10px] border border-[var(--color-border-subtle)] px-4 py-3">
+        <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper)]">Where it lands</p>
+        <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-muted)]">
+          This is hitting your natal {arc.context.targetLabel}{arc.context.targetHouse ? ` in the ${arc.context.targetHouse} house` : ''}: {arc.context.lifeArea}.
+        </p>
+      </div>
+
+      <details className="mt-4 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-4 py-3">
+        <summary className="cursor-pointer list-none text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)]">
+          Timing details — {timing.peakLine}
+        </summary>
+        <div className="mt-3 space-y-3 border-t border-[var(--color-border-subtle)] pt-3">
+          <p className="text-sm leading-relaxed text-[var(--color-text)]">{timing.nextHitLine}</p>
+          {arc.exactHits.length > 1 && (
+            <p className="text-xs leading-relaxed text-[var(--color-text-muted)] opacity-80">{passMemory.headline}</p>
+          )}
+          <div className="grid gap-2 text-xs leading-relaxed text-[var(--color-text-muted)]">
+            <div className="rounded-[8px] border border-[var(--color-border-subtle)] px-3 py-2">Starts: {formatShortDate(arc.startDate)}</div>
+            <div className="rounded-[8px] border border-[var(--color-border-subtle)] px-3 py-2">Peak window: {arc.exactHits.map((hit) => `${hitLabel(hit.kind)} ${formatShortDate(hit.date)}`).join(' · ') || formatShortDate(arc.peakDate)}</div>
+            <div className="rounded-[8px] border border-[var(--color-border-subtle)] px-3 py-2">Fades: {formatShortDate(arc.endDate)}</div>
+          </div>
+          {arc.stations.length > 0 && (
+            <p className="text-xs leading-relaxed text-[var(--color-text-muted)] opacity-80">
+              Direction changes: {arc.stations.map((station) => `${stationLabel(station.kind)} ${formatShortDate(station.date)}`).join(' · ')}.
+            </p>
           )}
         </div>
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--color-copper)]">How to use it</p>
-          <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-muted)]">{aiReading?.use ?? buildWaveUse(arc.transit, arc.context.lifeArea)}</p>
-          {aiReading?.doNotForce && <p className="mt-2 text-xs leading-relaxed text-[var(--color-text-muted)] opacity-80">Do not force: {aiReading.doNotForce}</p>}
+      </details>
+
+      <details className="mt-3 rounded-[10px] border border-[var(--color-border-subtle)] px-4 py-3">
+        <summary className="cursor-pointer list-none text-[10px] uppercase tracking-[0.18em] text-[var(--color-text-muted)]">Astrology notes</summary>
+        <div className="mt-3 space-y-3 border-t border-[var(--color-border-subtle)] pt-3">
+          <p className="text-sm leading-relaxed text-[var(--color-text-muted)]">{buildTransitReading(arc.transit)}</p>
+          <p className="text-xs leading-relaxed text-[var(--color-text-muted)] opacity-80">{buildTransitFeel(arc.transit)}</p>
+          <p className="text-xs leading-relaxed text-[var(--color-text-muted)] opacity-70">
+            Active lifecycle: {arcWindow(arc)} · {arc.totalDays} days from first contact to final fade.
+          </p>
         </div>
-      </div>
-      <p className="mt-3 text-xs leading-relaxed text-[var(--color-text-muted)] opacity-80">{buildTransitFeel(arc.transit)}</p>
+      </details>
       <div className="mt-4 grid gap-2 sm:grid-cols-2">
         <Link
           href={`/transits/${encodeURIComponent(arc.key)}`}
@@ -346,45 +290,9 @@ export default async function TransitRoomPage() {
         <div className="mt-6 h-px w-full bg-gradient-to-r from-transparent via-[var(--color-border-subtle)] to-transparent" />
       </header>
 
-      {timingSummary && (
-        <section className="mb-8 rounded-[10px] border border-[var(--color-electric)]/45 bg-[rgba(239,68,136,0.05)] px-5 py-5">
-          <p className="text-xs font-medium uppercase tracking-widest text-[var(--color-electric)]">Transit timing alert</p>
-          <p className="mt-2 text-[15px] leading-relaxed text-[var(--color-text)]">{timingSummary.headline}</p>
-          <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">{timingSummary.body}</p>
-          <Link href={timingSummary.href} className="mt-4 inline-flex text-xs uppercase tracking-[0.18em] text-[var(--color-electric)] hover:underline">
-            Open timing details →
-          </Link>
-        </section>
-      )}
-
-      <section className="mb-8 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-4 py-5 sm:px-5">
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-widest text-[var(--color-copper)]">
-              Transit calendar
-            </p>
-            <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-muted)]">
-              Each dot is a major personal transit wave. Matching colors connect the calendar to the arcs below.
-            </p>
-          </div>
-          {paid && (
-            <a href="/calendar" className="shrink-0 text-[10px] uppercase tracking-[0.18em] text-[var(--color-electric)] hover:underline">
-              Month →
-            </a>
-          )}
-        </div>
-        <CalendarGrid
-          transitDays={monthTransits}
-          todayStr={todayStr}
-          currentMonth={month}
-          startDayOfWeek={startDayOfWeek}
-          daysInMonth={daysInMonth}
-        />
-      </section>
-
       <section className="mb-8">
         <p className="mb-4 text-[10px] uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
-          Major waves active now
+          Your reading first
         </p>
         {activeMajorArcs.length > 0 ? (
           <div className="space-y-4">
@@ -409,6 +317,42 @@ export default async function TransitRoomPage() {
           </div>
         </section>
       )}
+
+      {timingSummary && (
+        <section className="mb-8 rounded-[10px] border border-[var(--color-electric)]/45 bg-[rgba(239,68,136,0.05)] px-5 py-5">
+          <p className="text-xs font-medium uppercase tracking-widest text-[var(--color-electric)]">Timing alert</p>
+          <p className="mt-2 text-[15px] leading-relaxed text-[var(--color-text)]">{timingSummary.headline}</p>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--color-text-muted)]">{timingSummary.body}</p>
+          <Link href={timingSummary.href} className="mt-4 inline-flex text-xs uppercase tracking-[0.18em] text-[var(--color-electric)] hover:underline">
+            Open timing details →
+          </Link>
+        </section>
+      )}
+
+      <section className="mb-8 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-4 py-5 sm:px-5">
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-widest text-[var(--color-copper)]">
+              Month map
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-[var(--color-text-muted)]">
+              Optional context: dots mark days with stronger personal transit waves. Your interpretation stays above; this is just the map.
+            </p>
+          </div>
+          {paid && (
+            <a href="/calendar" className="shrink-0 text-[10px] uppercase tracking-[0.18em] text-[var(--color-electric)] hover:underline">
+              Month →
+            </a>
+          )}
+        </div>
+        <CalendarGrid
+          transitDays={monthTransits}
+          todayStr={todayStr}
+          currentMonth={month}
+          startDayOfWeek={startDayOfWeek}
+          daysInMonth={daysInMonth}
+        />
+      </section>
 
       {/* Daily weather, demoted: useful triggers, not the main transit product. */}
       <section className="mb-8 rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-5 py-5 sm:px-6">

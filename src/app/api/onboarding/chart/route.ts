@@ -10,7 +10,6 @@ import {
   buildNatalReadingPrompt,
   type NatalReadingReport,
 } from '@/lib/natal-reading-prompt';
-import { getSubscription, isActive } from '@/lib/subscription';
 import { logError } from '@/lib/logger';
 
 import tzLookup from 'tz-lookup';
@@ -224,8 +223,9 @@ export async function POST(request: Request) {
     }, { onConflict: 'user_id' });
     if (chartError) throw chartError;
 
-    // Fire off the deep natal reading in the background — don't block the user
-    generateNatalReading(user.id, chart);
+    // Fire off the full natal reference in the background — don't block the user.
+    // This is the user's life map, not a tiny intro blurb.
+    generateNatalReading(user.id, chart, { premium: true });
 
     // Return summary for the chart reveal step
     const sun    = chart.placements.find((p) => p.key === 'sun')!;
@@ -276,13 +276,6 @@ export async function PATCH(request: Request) {
       // PATCH is also used without a body from /chart-error.
     }
 
-    if (forceRegenerateReading) {
-      const sub = await getSubscription(user.id);
-      if (!isActive(sub)) {
-        return NextResponse.json({ error: 'premium-required' }, { status: 403 });
-      }
-    }
-
     // Check if the chart is already valid — idempotent fast path.
     const { data: existingChart } = await admin
       .from('natal_charts')
@@ -314,7 +307,7 @@ export async function PATCH(request: Request) {
         aspects: existingChart.aspects_json ?? [],
         metadata: existingChart.metadata_json ?? {},
       }, {
-        premium: forceRegenerateReading,
+        premium: true,
       });
 
       if (!readingGenerated) {
@@ -357,7 +350,7 @@ export async function PATCH(request: Request) {
     }, { onConflict: 'user_id' });
 
     if (regenerateReading) {
-      const readingGenerated = await generateNatalReading(user.id, chart);
+      const readingGenerated = await generateNatalReading(user.id, chart, { premium: true });
       if (!readingGenerated) {
         return NextResponse.json({ error: 'natal-reading-generation-failed' }, { status: 500 });
       }

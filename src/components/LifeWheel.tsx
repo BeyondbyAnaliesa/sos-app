@@ -1,3 +1,5 @@
+import { useId } from 'react';
+
 export type LifeSignal = 'supportive' | 'cautionary' | 'ambient' | 'quiet';
 
 export interface LifeSegmentData {
@@ -5,132 +7,316 @@ export interface LifeSegmentData {
   signal: LifeSignal;
 }
 
-const CX = 150;
-const CY = 150;
-const INNER_R = 54;
-const OUTER_R = 96;
-const LABEL_R = 75;
-const GAP = 3;
+type Tier = 'primary' | 'secondary' | 'tertiary' | 'dormant';
 
-const COLORS: Record<LifeSignal, { fill: string; stroke: string; strokeWidth: number; text: string }> = {
-  supportive: {
-    fill: 'rgba(201,162,122,0.20)',
-    stroke: 'rgba(201,162,122,0.86)',
-    strokeWidth: 1.8,
-    text: '#F4EFE8',
-  },
-  cautionary: {
-    fill: 'rgba(239,68,136,0.12)',
-    stroke: 'rgba(239,68,136,0.74)',
-    strokeWidth: 1.8,
-    text: '#F4EFE8',
-  },
-  // Restrained warm presence — not activated, not dead, just quietly alive
-  ambient: {
-    fill: 'rgba(201,162,122,0.07)',
-    stroke: 'rgba(201,162,122,0.28)',
-    strokeWidth: 1.0,
-    text: 'rgba(201,162,122,0.50)',
-  },
-  quiet: {
-    fill: 'rgba(154,148,140,0.05)',
-    stroke: 'rgba(154,148,140,0.18)',
-    strokeWidth: 0.75,
-    text: 'rgba(154,148,140,0.35)',
-  },
+type SegmentSpec = {
+  label: string;
+  signal: LifeSignal;
+  angle: number;
 };
 
-function arcPath(innerR: number, outerR: number, startDeg: number, endDeg: number): string {
-  const r = (d: number) => (d * Math.PI) / 180;
-  const [sr, er] = [r(startDeg), r(endDeg)];
-  const x1 = CX + outerR * Math.cos(sr), y1 = CY + outerR * Math.sin(sr);
-  const x2 = CX + outerR * Math.cos(er), y2 = CY + outerR * Math.sin(er);
-  const x3 = CX + innerR * Math.cos(er), y3 = CY + innerR * Math.sin(er);
-  const x4 = CX + innerR * Math.cos(sr), y4 = CY + innerR * Math.sin(sr);
-  const large = endDeg - startDeg > 180 ? 1 : 0;
-  return (
-    `M${x1.toFixed(2)} ${y1.toFixed(2)} ` +
-    `A${outerR} ${outerR} 0 ${large} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} ` +
-    `L${x3.toFixed(2)} ${y3.toFixed(2)} ` +
-    `A${innerR} ${innerR} 0 ${large} 0 ${x4.toFixed(2)} ${y4.toFixed(2)}Z`
+const CX = 230;
+const CY = 230;
+const OUTER_R = 205;
+const INNER_R = 76;
+const GAP = 2;
+
+const TIER_BY_SIGNAL: Record<LifeSignal, Tier> = {
+  cautionary: 'primary',
+  supportive: 'secondary',
+  ambient: 'tertiary',
+  quiet: 'dormant',
+};
+
+const LABEL_BY_INPUT: Record<string, string> = {
+  MONEY: 'MONEY',
+  BODY: 'BODY',
+  MIND: 'MIND',
+  HOME: 'HOME',
+  RELATIONSHIPS: 'RELATIONSHIPS',
+  LOVE: 'LOVE',
+  SPIRIT: 'SPIRIT',
+  WORK: 'WORK',
+};
+
+const ORDER: Array<{ label: string; angle: number }> = [
+  { label: 'MONEY', angle: -90 },
+  { label: 'BODY', angle: -45 },
+  { label: 'MIND', angle: 0 },
+  { label: 'HOME', angle: 45 },
+  { label: 'RELATIONSHIPS', angle: 90 },
+  { label: 'LOVE', angle: 135 },
+  { label: 'SPIRIT', angle: 180 },
+  { label: 'WORK', angle: 225 },
+];
+
+const FILL_BY_TIER: Record<Tier, string> = {
+  primary: 'var(--wheel-g-pink)',
+  secondary: 'var(--wheel-g-champ)',
+  tertiary: 'var(--wheel-g-tert)',
+  dormant: 'var(--wheel-g-dorm)',
+};
+
+const FILTER_BY_TIER: Record<Tier, string | undefined> = {
+  primary: 'var(--wheel-f-pink)',
+  secondary: 'var(--wheel-f-champ)',
+  tertiary: 'var(--wheel-f-tert)',
+  dormant: undefined,
+};
+
+const STROKE_WIDTH_BY_TIER: Record<Tier, number> = {
+  primary: 2.2,
+  secondary: 1.6,
+  tertiary: 1,
+  dormant: 0.7,
+};
+
+const STROKE_OPACITY_BY_TIER: Record<Tier, number> = {
+  primary: 0.92,
+  secondary: 0.85,
+  tertiary: 0.55,
+  dormant: 0.35,
+};
+
+const LABEL_COLOR_BY_TIER: Record<Tier, string> = {
+  primary: '#FFFFFF',
+  secondary: '#160C1A',
+  tertiary: 'rgba(201,162,122,0.85)',
+  dormant: 'rgba(201,162,122,0.35)',
+};
+
+function rad(deg: number) {
+  return (deg * Math.PI) / 180;
+}
+
+function point(angle: number, radius: number) {
+  return {
+    x: CX + radius * Math.cos(rad(angle)),
+    y: CY + radius * Math.sin(rad(angle)),
+  };
+}
+
+function arcPath(startDeg: number, endDeg: number) {
+  const p1 = point(startDeg, OUTER_R);
+  const p2 = point(endDeg, OUTER_R);
+  const p3 = point(endDeg, INNER_R);
+  const p4 = point(startDeg, INNER_R);
+  return [
+    `M${p1.x.toFixed(1)} ${p1.y.toFixed(1)}`,
+    `A${OUTER_R} ${OUTER_R} 0 0 1 ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`,
+    `L${p3.x.toFixed(1)} ${p3.y.toFixed(1)}`,
+    `A${INNER_R} ${INNER_R} 0 0 0 ${p4.x.toFixed(1)} ${p4.y.toFixed(1)}Z`,
+  ].join(' ');
+}
+
+function buildSegments(segments: LifeSegmentData[]): SegmentSpec[] {
+  const byLabel = new Map(
+    segments.map((segment) => [LABEL_BY_INPUT[segment.label.toUpperCase()] ?? segment.label.toUpperCase(), segment.signal]),
   );
+
+  return ORDER.map(({ label, angle }) => ({
+    label,
+    angle,
+    signal: byLabel.get(label) ?? 'quiet',
+  }));
 }
 
 export default function LifeWheel({ segments }: { segments: LifeSegmentData[] }) {
+  const id = useId().replace(/:/g, '');
+  const ids = {
+    ring: `wheel-cu-ring-${id}`,
+    inner: `wheel-cu-inner-${id}`,
+    dorm: `wheel-g-dorm-${id}`,
+    pink: `wheel-g-pink-${id}`,
+    champ: `wheel-g-champ-${id}`,
+    tert: `wheel-g-tert-${id}`,
+    port: `wheel-g-port-${id}`,
+    fp: `wheel-f-pink-${id}`,
+    fc: `wheel-f-champ-${id}`,
+    ft: `wheel-f-tert-${id}`,
+    clip: `wheel-clip-${id}`,
+    title: `wheel-title-${id}`,
+  };
+
+  const normalized = buildSegments(segments);
+
   return (
     <svg
-      viewBox="-20 -20 340 340"
-      aria-hidden="true"
-      className="mx-auto w-full max-w-[320px]"
+      viewBox="0 0 460 460"
+      role="img"
+      aria-labelledby={ids.title}
+      className="mx-auto w-full max-w-[460px] drop-shadow-[0_24px_80px_rgba(0,0,0,0.42)]"
+      style={{
+        ['--wheel-g-pink' as string]: `url(#${ids.pink})`,
+        ['--wheel-g-champ' as string]: `url(#${ids.champ})`,
+        ['--wheel-g-tert' as string]: `url(#${ids.tert})`,
+        ['--wheel-g-dorm' as string]: `url(#${ids.dorm})`,
+        ['--wheel-f-pink' as string]: `url(#${ids.fp})`,
+        ['--wheel-f-champ' as string]: `url(#${ids.fc})`,
+        ['--wheel-f-tert' as string]: `url(#${ids.ft})`,
+      }}
     >
+      <title id={ids.title}>LifeWheel showing the current state across money, body, mind, home, relationships, love, spirit, and work.</title>
       <defs>
-        <radialGradient id="sos-wheel-cosmos" cx="50%" cy="42%" r="58%">
-          <stop offset="0%" stopColor="rgba(244,239,232,0.10)" />
-          <stop offset="48%" stopColor="rgba(201,162,122,0.06)" />
-          <stop offset="100%" stopColor="rgba(14,12,30,0.0)" />
+        <linearGradient id={ids.ring} x1="20%" y1="0%" x2="80%" y2="100%">
+          <stop offset="0%" stopColor="#EDD08A" />
+          <stop offset="25%" stopColor="#D4A96A" />
+          <stop offset="50%" stopColor="#C9A27A" />
+          <stop offset="75%" stopColor="#A07040" />
+          <stop offset="100%" stopColor="#C9A27A" />
+        </linearGradient>
+        <linearGradient id={ids.inner} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#D4A96A" />
+          <stop offset="50%" stopColor="#9A6E3A" />
+          <stop offset="100%" stopColor="#C9A27A" />
+        </linearGradient>
+
+        <radialGradient id={ids.dorm} cx="35%" cy="28%" r="78%">
+          <stop offset="0%" stopColor="#201E38" />
+          <stop offset="60%" stopColor="#14121E" />
+          <stop offset="100%" stopColor="#0D0C18" />
         </radialGradient>
+        <radialGradient id={ids.pink} cx="40%" cy="24%" r="82%">
+          <stop offset="0%" stopColor="#FF82BB" />
+          <stop offset="38%" stopColor="#EF4488" />
+          <stop offset="100%" stopColor="#B81E60" />
+        </radialGradient>
+        <radialGradient id={ids.champ} cx="40%" cy="24%" r="82%">
+          <stop offset="0%" stopColor="#FFF8E8" />
+          <stop offset="42%" stopColor="#F2DFB8" />
+          <stop offset="100%" stopColor="#C09050" />
+        </radialGradient>
+        <radialGradient id={ids.tert} cx="38%" cy="28%" r="80%">
+          <stop offset="0%" stopColor="#2E2C58" />
+          <stop offset="45%" stopColor="#1E1C40" />
+          <stop offset="100%" stopColor="#161432" />
+        </radialGradient>
+        <radialGradient id={ids.port} cx="38%" cy="32%" r="68%">
+          <stop offset="0%" stopColor="#1C1935" />
+          <stop offset="55%" stopColor="#0E0C1E" />
+          <stop offset="100%" stopColor="#080710" />
+        </radialGradient>
+
+        <filter id={ids.fp} x="-55%" y="-55%" width="210%" height="210%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="9" result="b1" />
+          <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="b2" />
+          <feColorMatrix in="b1" type="matrix" values="1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.6 0" result="r" />
+          <feMerge>
+            <feMergeNode in="r" />
+            <feMergeNode in="b2" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+        <filter id={ids.fc} x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="b" />
+          <feColorMatrix in="b" type="matrix" values="1.1 0 0 0 0 0.85 0 0 0 0 0.1 0 0 0 0 0 0 0 0.38 0" result="r" />
+          <feMerge>
+            <feMergeNode in="r" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+        <filter id={ids.ft} x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="b" />
+          <feColorMatrix in="b" type="matrix" values="1.0 0.5 0 0 0 0.6 0.3 0 0 0 0.1 0 0 0 0 0 0 0 0.28 0" result="r" />
+          <feMerge>
+            <feMergeNode in="r" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+
+        <clipPath id={ids.clip}>
+          <circle cx={CX} cy={CY} r={218} />
+        </clipPath>
       </defs>
 
-      <circle cx={CX} cy={CY} r={OUTER_R + 18} fill="url(#sos-wheel-cosmos)" />
-
-      {/* Outer atmospheric ring */}
-      <circle
-        cx={CX} cy={CY} r={OUTER_R + 8}
-        fill="none"
-        stroke="rgba(142,110,82,0.09)"
-        strokeWidth="0.75"
-      />
-
-      {segments.map((segment, i) => {
-        const nomStart = -90 + i * 60;
-        const startDeg = nomStart + GAP;
-        const endDeg   = nomStart + 60 - GAP;
-        const midRad   = ((nomStart + 30) * Math.PI) / 180;
-        const lx = CX + LABEL_R * Math.cos(midRad);
-        const ly = CY + LABEL_R * Math.sin(midRad);
-        const col = COLORS[segment.signal];
+      {normalized.map((segment) => {
+        const tier = TIER_BY_SIGNAL[segment.signal];
+        const half = 22.5 - GAP;
+        const start = segment.angle - half;
+        const end = segment.angle + half;
+        const panelPath = arcPath(start, end);
+        const labelRadius = (INNER_R + OUTER_R) / 2 + 4;
+        const labelPoint = point(segment.angle, labelRadius);
+        const rotation = segment.angle > 90 && segment.angle < 270 ? segment.angle + 180 : segment.angle;
+        const rimStart = point(start, OUTER_R + 2);
+        const rimEnd = point(end, OUTER_R + 2);
+        const isRelationships = segment.label === 'RELATIONSHIPS';
 
         return (
-          <g key={i}>
+          <g key={segment.label}>
+            {tier !== 'dormant' && (
+              <path
+                d={panelPath}
+                fill={FILL_BY_TIER[tier]}
+                filter={FILTER_BY_TIER[tier]}
+                opacity="0.55"
+                clipPath={`url(#${ids.clip})`}
+              />
+            )}
             <path
-              d={arcPath(INNER_R, OUTER_R, startDeg, endDeg)}
-              fill={col.fill}
-              stroke={col.stroke}
-              strokeWidth={col.strokeWidth}
+              d={panelPath}
+              fill={FILL_BY_TIER[tier]}
+              stroke="#C9A27A"
+              strokeWidth={STROKE_WIDTH_BY_TIER[tier]}
+              strokeOpacity={STROKE_OPACITY_BY_TIER[tier]}
               strokeLinejoin="round"
             />
-            <rect
-              x={(lx - 23).toFixed(2)}
-              y={(ly - 8).toFixed(2)}
-              width="46"
-              height="16"
-              rx="8"
-              fill="rgba(14,12,30,0.42)"
-              stroke="rgba(201,162,122,0.18)"
-            />
-            <text
-              x={lx.toFixed(2)}
-              y={ly.toFixed(2)}
-              textAnchor="middle"
-              dominantBaseline="central"
-              fontSize="7.5"
-              letterSpacing="0.10em"
-              fill={col.text}
-            >
-              {segment.label}
-            </text>
+            {(tier === 'primary' || tier === 'secondary') && (
+              <path
+                d={`M${rimStart.x.toFixed(1)} ${rimStart.y.toFixed(1)} A${OUTER_R + 2} ${OUTER_R + 2} 0 0 1 ${rimEnd.x.toFixed(1)} ${rimEnd.y.toFixed(1)}`}
+                fill="none"
+                stroke={tier === 'primary' ? 'rgba(239,68,136,0.75)' : 'rgba(242,223,184,0.65)'}
+                strokeWidth="2.5"
+              />
+            )}
+            {isRelationships ? (
+              <text
+                x={CX}
+                y={CY + (INNER_R + OUTER_R) / 2 + 4}
+                textAnchor="middle"
+                dominantBaseline="central"
+                letterSpacing="0.05em"
+                fontWeight="700"
+                fontFamily='-apple-system,BlinkMacSystemFont,"SF Pro Display",system-ui,sans-serif'
+                fontSize="17"
+                fill={LABEL_COLOR_BY_TIER[tier]}
+                pointerEvents="none"
+              >
+                <tspan x={CX} dy="-0.65em">RELATION-</tspan>
+                <tspan x={CX} dy="1.3em">SHIPS</tspan>
+              </text>
+            ) : (
+              <text
+                x={labelPoint.x.toFixed(1)}
+                y={labelPoint.y.toFixed(1)}
+                textAnchor="middle"
+                dominantBaseline="central"
+                letterSpacing="0.08em"
+                fontWeight="700"
+                fontFamily='-apple-system,BlinkMacSystemFont,"SF Pro Display",system-ui,sans-serif'
+                fontSize="17"
+                transform={`rotate(${rotation.toFixed(1)} ${labelPoint.x.toFixed(1)} ${labelPoint.y.toFixed(1)})`}
+                fill={LABEL_COLOR_BY_TIER[tier]}
+                pointerEvents="none"
+              >
+                {segment.label}
+              </text>
+            )}
           </g>
         );
       })}
 
-      {/* Center point */}
-      <circle
-        cx={CX} cy={CY} r="5"
-        fill="rgba(239,68,136,0.28)"
-        stroke="rgba(239,68,136,0.62)"
-        strokeWidth="0.9"
-      />
-      <circle cx={CX} cy={CY} r="10" fill="none" stroke="rgba(239,68,136,0.18)" strokeWidth="0.7" />
+      <circle cx={CX} cy={CY} r="218" fill="none" stroke={`url(#${ids.ring})`} strokeWidth="15" opacity="0.95" />
+      <circle cx={CX} cy={CY} r="210.5" fill="none" stroke="rgba(244,239,232,0.10)" strokeWidth="0.8" />
+      <circle cx={CX} cy={CY} r="209" fill="none" stroke="rgba(201,162,122,0.08)" strokeWidth="0.5" />
+
+      <circle cx={CX} cy={CY} r="79" fill="none" stroke={`url(#${ids.inner})`} strokeWidth="8" opacity="0.9" />
+      <circle cx={CX} cy={CY} r="75" fill="none" stroke="rgba(244,239,232,0.09)" strokeWidth="0.7" />
+
+      <circle cx={CX} cy={CY} r="70" fill={`url(#${ids.port})`} />
+      <circle cx={CX} cy={CY} r="70" fill="none" stroke={`url(#${ids.inner})`} strokeWidth="5" />
+      <circle cx={CX} cy={CY} r="66" fill="none" stroke="rgba(244,239,232,0.07)" strokeWidth="0.6" />
+      <circle cx={CX} cy={CY} r="62" fill="none" stroke="rgba(201,162,122,0.1)" strokeWidth="0.4" />
     </svg>
   );
 }

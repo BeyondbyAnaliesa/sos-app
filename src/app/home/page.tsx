@@ -18,19 +18,32 @@ import BottomNav from '@/components/BottomNav';
 import PendingLink from '@/components/PendingLink';
 
 function buildLifeSegments(guidance: GuidanceResult[]): LifeSegmentData[] {
-  const g = Object.fromEntries(guidance.map((r) => [r.domain, r]));
-  const signal = (domain: string): LifeSignal => {
-    const r = g[domain];
-    if (!r) return 'quiet';
-    return r.intensity === 'high' ? 'cautionary' : r.intensity === 'medium' ? 'supportive' : 'ambient';
+  const domainSignals = new Map<string, LifeSignal>();
+
+  for (const result of guidance as Array<GuidanceResult | (GuidanceResult & { domain: string })>) {
+    domainSignals.set(
+      result.domain,
+      result.intensity === 'high' ? 'cautionary' : result.intensity === 'medium' ? 'supportive' : 'ambient',
+    );
+  }
+
+  const signal = (domains: string[], fallback: LifeSignal = 'quiet'): LifeSignal => {
+    for (const domain of domains) {
+      const match = domainSignals.get(domain);
+      if (match) return match;
+    }
+    return fallback;
   };
+
   return [
-    { label: 'BODY',   signal: signal('body') },
-    { label: 'MIND',   signal: signal('mind') },
-    { label: 'SPIRIT', signal: signal('spirit') },
-    { label: 'RELATE', signal: signal('relationships') },
-    { label: 'WORK',   signal: signal('career') },
-    { label: 'HOME',   signal: signal('home') },
+    { label: 'MONEY', signal: signal(['money'], 'ambient') },
+    { label: 'BODY', signal: signal(['body']) },
+    { label: 'MIND', signal: signal(['mind']) },
+    { label: 'HOME', signal: signal(['home']) },
+    { label: 'RELATIONSHIPS', signal: signal(['relationships']) },
+    { label: 'LOVE', signal: signal(['love'], signal(['relationships'])) },
+    { label: 'SPIRIT', signal: signal(['spirit']) },
+    { label: 'WORK', signal: signal(['work', 'career']) },
   ];
 }
 
@@ -120,30 +133,46 @@ export default async function Home() {
     <main className="mx-auto w-full max-w-xl animate-[fade-in_0.35s_ease-out] px-5 pb-24 pt-8 sm:px-6 sm:pt-12">
       <Header date={todayDate} />
 
-      <section className="flex flex-col items-center pb-8 pt-2">
-        <LifeWheel segments={lifeSegments} />
-        <p className="mt-5 max-w-[280px] text-center text-sm leading-relaxed text-[var(--color-text-muted)]">
-          {stateText}
-        </p>
-        {overview.detail && (
-          <p className="mt-2 max-w-[300px] text-center text-[11px] leading-relaxed text-[var(--color-text-muted)] opacity-80">
-            {overview.detail}
+      <section className="relative overflow-hidden rounded-[28px] border border-[rgba(201,162,122,0.18)] bg-[linear-gradient(180deg,rgba(26,22,43,0.98),rgba(14,12,30,0.96))] px-4 pb-8 pt-5 shadow-[0_28px_90px_rgba(0,0,0,0.34)] sm:px-6">
+        <div className="pointer-events-none absolute inset-x-10 top-0 h-24 rounded-full bg-[radial-gradient(circle,rgba(239,68,136,0.14),transparent_70%)] blur-3xl" />
+        <div className="pointer-events-none absolute inset-x-16 top-24 h-32 rounded-full bg-[radial-gradient(circle,rgba(201,162,122,0.10),transparent_72%)] blur-3xl" />
+
+        <div className="relative z-10 flex flex-col items-center">
+          <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--color-copper-dim)]">Today&apos;s wheel</p>
+          <p className="mt-2 max-w-[260px] text-center text-xs leading-relaxed text-[var(--color-text-muted)]">
+            A quiet instrument for where today is asking the most of you.
           </p>
-        )}
+
+          <div className="mt-6 w-full max-w-[460px]">
+            <LifeWheel segments={lifeSegments} />
+          </div>
+
+          <div className="mt-5 max-w-[320px] text-center">
+            <p className="text-sm leading-relaxed text-[var(--color-text)]">{stateText}</p>
+            {overview.detail && (
+              <p className="mt-2 text-[11px] leading-relaxed text-[var(--color-text-muted)] opacity-80">
+                {overview.detail}
+              </p>
+            )}
+          </div>
+        </div>
       </section>
 
-      <div className="mt-4 h-px bg-gradient-to-r from-transparent via-[var(--color-border-subtle)] to-transparent" />
+      <section className="mt-5 rounded-[22px] border border-[var(--color-border-subtle)] bg-[linear-gradient(180deg,rgba(22,20,34,0.92),rgba(22,20,34,0.72))] px-4 py-5 sm:px-5">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.25em] text-[var(--color-text-muted)]">Navigate</p>
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">Simple routes, same fast loading flow.</p>
+          </div>
+          <div className="h-px flex-1 bg-gradient-to-r from-[var(--color-border-subtle)] to-transparent" />
+        </div>
 
-      <section className="pt-7">
-        <p className="mb-4 text-[10px] uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
-          Navigate
-        </p>
         <div className="grid grid-cols-2 gap-3">
           {controls.map((ctrl) => (
             <PendingLink
               key={ctrl.title}
               href={ctrl.href}
-              className="relative overflow-hidden rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-4 py-5 hover:border-[var(--color-border)] hover:bg-[var(--color-input)]"
+              className="relative overflow-hidden rounded-[16px] border border-[var(--color-border-subtle)] bg-[linear-gradient(180deg,rgba(30,27,48,0.82),rgba(22,20,34,0.96))] px-4 py-5 shadow-[0_12px_32px_rgba(0,0,0,0.18)] hover:border-[var(--color-border)] hover:bg-[var(--color-input)]"
               pendingLabel={ctrl.title === 'Transits' ? 'Opening transits' : 'Wait a moment'}
             >
               <span className="block text-lg text-[var(--color-copper-dim)]">{ctrl.glyph}</span>

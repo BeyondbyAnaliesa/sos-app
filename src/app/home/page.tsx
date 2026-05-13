@@ -133,11 +133,8 @@ export default async function Home() {
     <main className="mx-auto w-full max-w-xl animate-[fade-in_0.35s_ease-out] px-5 pb-24 pt-8 sm:px-6 sm:pt-12">
       <Header date={todayDate} />
 
-      <section className="relative overflow-hidden rounded-[28px] border border-[rgba(201,162,122,0.18)] bg-[linear-gradient(180deg,rgba(26,22,43,0.98),rgba(14,12,30,0.96))] px-4 pb-8 pt-5 shadow-[0_28px_90px_rgba(0,0,0,0.34)] sm:px-6">
-        <div className="pointer-events-none absolute inset-x-10 top-0 h-24 rounded-full bg-[radial-gradient(circle,rgba(239,68,136,0.14),transparent_70%)] blur-3xl" />
-        <div className="pointer-events-none absolute inset-x-16 top-24 h-32 rounded-full bg-[radial-gradient(circle,rgba(201,162,122,0.10),transparent_72%)] blur-3xl" />
-
-        <div className="relative z-10 flex flex-col items-center">
+      <section className="px-1 pb-8 pt-5 sm:px-2">
+        <div className="flex flex-col items-center">
           <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--color-copper-dim)]">Today&apos;s wheel</p>
           <p className="mt-2 max-w-[260px] text-center text-xs leading-relaxed text-[var(--color-text-muted)]">
             A quiet instrument for where today is asking the most of you.

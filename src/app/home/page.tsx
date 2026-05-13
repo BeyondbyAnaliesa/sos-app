@@ -135,12 +135,7 @@ export default async function Home() {
 
       <section className="px-1 pb-8 pt-5 sm:px-2">
         <div className="flex flex-col items-center">
-          <p className="text-[10px] uppercase tracking-[0.28em] text-[var(--color-copper-dim)]">Today&apos;s wheel</p>
-          <p className="mt-2 max-w-[260px] text-center text-xs leading-relaxed text-[var(--color-text-muted)]">
-            A quiet instrument for where today is asking the most of you.
-          </p>
-
-          <div className="mt-6 w-full max-w-[460px]">
+          <div className="w-full max-w-[460px]">
             <LifeWheel segments={lifeSegments} />
           </div>
 

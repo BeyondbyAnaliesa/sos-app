@@ -23,9 +23,57 @@ interface Props {
   loading: boolean;
 }
 
+const MONTHS = [
+  { value: '01', label: 'January' },
+  { value: '02', label: 'February' },
+  { value: '03', label: 'March' },
+  { value: '04', label: 'April' },
+  { value: '05', label: 'May' },
+  { value: '06', label: 'June' },
+  { value: '07', label: 'July' },
+  { value: '08', label: 'August' },
+  { value: '09', label: 'September' },
+  { value: '10', label: 'October' },
+  { value: '11', label: 'November' },
+  { value: '12', label: 'December' },
+];
+
+const EARLIEST_BIRTH_YEAR = 1900;
+
+function isLeapYear(year: number) {
+  return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+}
+
+function daysInMonth(year: string, month: string) {
+  const monthNumber = Number(month);
+  if (!monthNumber) return 31;
+
+  if (monthNumber === 2) {
+    const yearNumber = Number(year);
+    return yearNumber && isLeapYear(yearNumber) ? 29 : 28;
+  }
+
+  return [4, 6, 9, 11].includes(monthNumber) ? 30 : 31;
+}
+
+function buildBirthDate(year: string, month: string, day: string) {
+  if (!year || !month || !day) return '';
+  return `${year}-${month}-${day}`;
+}
+
 export default function BirthDataStep({ onSubmit, loading }: Props) {
-  const today = new Date().toISOString().split('T')[0];
-  const [birthDate, setBirthDate]       = useState('');
+  const today = new Date();
+  const todayIso = today.toISOString().split('T')[0];
+  const currentYear = today.getFullYear();
+  const yearOptions = useMemo(
+    () => Array.from({ length: currentYear - EARLIEST_BIRTH_YEAR + 1 }, (_, i) => String(currentYear - i)),
+    [currentYear],
+  );
+
+  const [birthMonth, setBirthMonth] = useState('');
+  const [birthDay, setBirthDay]     = useState('');
+  const [birthYear, setBirthYear]   = useState('');
+  const birthDate = buildBirthDate(birthYear, birthMonth, birthDay);
   const [birthTime, setBirthTime]       = useState('');
   const [timeUnknown, setTimeUnknown]   = useState(false);
   const [locationText, setLocationText] = useState('');
@@ -120,7 +168,16 @@ export default function BirthDataStep({ onSubmit, loading }: Props) {
     setShowDropdown(false);
   }
 
-  const ready = birthDate && trimmedLocation && (timeUnknown || birthTime) && !needsSelection;
+  const maxBirthDay = daysInMonth(birthYear, birthMonth);
+  const dayOptions = Array.from({ length: maxBirthDay }, (_, i) => String(i + 1).padStart(2, '0'));
+  const birthDateIsFuture = !!birthDate && birthDate > todayIso;
+  const ready = birthDate && !birthDateIsFuture && trimmedLocation && (timeUnknown || birthTime) && !needsSelection;
+
+  useEffect(() => {
+    if (birthDay && Number(birthDay) > maxBirthDay) {
+      setBirthDay('');
+    }
+  }, [birthDay, maxBirthDay]);
 
   return (
     <div>
@@ -137,14 +194,57 @@ export default function BirthDataStep({ onSubmit, loading }: Props) {
           <label className="mb-1 block text-[10px] uppercase tracking-widest text-[var(--color-text-muted)]">
             Birth Date
           </label>
-          <input
-            type="date"
-            value={birthDate}
-            onChange={(e) => setBirthDate(e.target.value)}
-            max={today}
-            required
-            className="h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-input)] px-4 text-base text-[var(--color-text)] focus:border-[var(--color-border)] focus:outline-none"
-          />
+          <div className="grid grid-cols-[1.25fr_0.8fr_0.95fr] gap-2">
+            <select
+              value={birthMonth}
+              onChange={(e) => {
+                setBirthMonth(e.target.value);
+                setBirthDay('');
+              }}
+              required
+              aria-label="Birth month"
+              className="h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-input)] px-3 text-base text-[var(--color-text)] focus:border-[var(--color-border)] focus:outline-none"
+            >
+              <option value="">Month</option>
+              {MONTHS.map((month) => (
+                <option key={month.value} value={month.value}>{month.label}</option>
+              ))}
+            </select>
+            <select
+              value={birthDay}
+              onChange={(e) => setBirthDay(e.target.value)}
+              required
+              aria-label="Birth day"
+              disabled={!birthMonth}
+              className="h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-input)] px-3 text-base text-[var(--color-text)] focus:border-[var(--color-border)] focus:outline-none disabled:opacity-45"
+            >
+              <option value="">Day</option>
+              {dayOptions.map((day) => (
+                <option key={day} value={day}>{Number(day)}</option>
+              ))}
+            </select>
+            <select
+              value={birthYear}
+              onChange={(e) => {
+                setBirthYear(e.target.value);
+                setBirthDay('');
+              }}
+              required
+              aria-label="Birth year"
+              className="h-[52px] w-full rounded-[10px] border border-[var(--color-border-subtle)] bg-[var(--color-input)] px-3 text-base text-[var(--color-text)] focus:border-[var(--color-border)] focus:outline-none"
+            >
+              <option value="">Year</option>
+              {yearOptions.map((year) => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </div>
+          <p className="mt-2 text-xs text-[var(--color-text-muted)]">
+            No calendar scrolling — choose month, day, and year directly.
+          </p>
+          {birthDateIsFuture && (
+            <p className="mt-2 text-xs text-red-400">Birth date cannot be in the future.</p>
+          )}
         </div>
 
         <div>

@@ -24,7 +24,7 @@ function buildLifeSegments(guidance: GuidanceResult[]): LifeSegmentData[] {
     const hasActiveTransit = result.summary !== 'No significant transits';
     domainSignals.set(
       result.domain,
-      !hasActiveTransit ? 'quiet' : result.intensity === 'high' ? 'cautionary' : result.intensity === 'medium' ? 'supportive' : 'ambient',
+      !hasActiveTransit ? 'quiet' : result.intensity === 'high' ? 'cautionary' : result.intensity === 'medium' ? 'supportive' : 'quiet',
     );
   }
 
@@ -37,12 +37,12 @@ function buildLifeSegments(guidance: GuidanceResult[]): LifeSegmentData[] {
   };
 
   return [
-    { label: 'MONEY', signal: signal(['money', 'career']) },
+    { label: 'MONEY', signal: signal(['money']) },
     { label: 'BODY', signal: signal(['body']) },
     { label: 'MIND', signal: signal(['mind']) },
     { label: 'HOME', signal: signal(['home']) },
     { label: 'RELATIONSHIPS', signal: signal(['relationships']) },
-    { label: 'LOVE', signal: signal(['love'], signal(['relationships'])) },
+    { label: 'LOVE', signal: signal(['love']) },
     { label: 'SPIRIT', signal: signal(['spirit']) },
     { label: 'WORK', signal: signal(['work', 'career']) },
   ];

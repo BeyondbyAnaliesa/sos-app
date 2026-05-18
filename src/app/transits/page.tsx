@@ -65,7 +65,7 @@ function stationLabel(kind: 'retrograde' | 'direct') {
 
 async function withTransitAiTimeout(
   promise: Promise<Record<string, MajorTransitAiReading>>,
-  timeoutMs = 6000,
+  timeoutMs = 2000,
 ) {
   let timeout: ReturnType<typeof setTimeout> | undefined;
 

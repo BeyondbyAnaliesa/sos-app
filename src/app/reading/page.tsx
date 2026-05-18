@@ -275,7 +275,7 @@ export default async function ReadingPage() {
         <div className="mt-6 h-px w-full bg-gradient-to-r from-transparent via-[var(--color-border-subtle)] to-transparent" />
       </header>
 
-      {!hasPremiumNatalReading && <NatalReadingUpgradeButton />}
+      {!hasPremiumNatalReading && <NatalReadingUpgradeButton autoStart />}
 
       <section className="mb-8 rounded-[18px] border border-[var(--color-copper-dim)]/25 bg-[linear-gradient(180deg,rgba(244,239,232,0.045),rgba(22,20,34,0.92))] px-5 py-6 text-center">
         <p className="text-[10px] uppercase tracking-[0.25em] text-[var(--color-copper-dim)]">Permanent reference</p>

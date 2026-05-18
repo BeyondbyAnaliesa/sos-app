@@ -1,14 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-export default function NatalReadingUpgradeButton() {
+export default function NatalReadingUpgradeButton({ autoStart = false }: { autoStart?: boolean }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function upgradeReading() {
+  const upgradeReading = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -31,7 +31,15 @@ export default function NatalReadingUpgradeButton() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [router]);
+
+  useEffect(() => {
+    if (!autoStart || loading) return;
+    const key = 'sos:natal-reading-auto-upgrade:v2';
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, '1');
+    void upgradeReading();
+  }, [autoStart, loading, upgradeReading]);
 
   return (
     <div className="mb-6 rounded-[16px] border border-[var(--color-electric)]/28 bg-[linear-gradient(180deg,rgba(239,68,136,0.08),rgba(22,20,34,0.94))] px-5 py-4">

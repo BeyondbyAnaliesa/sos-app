@@ -165,7 +165,6 @@ export default async function Home() {
               key={ctrl.title}
               href={ctrl.href}
               className="relative overflow-hidden rounded-[16px] border border-[var(--color-border-subtle)] bg-[linear-gradient(180deg,rgba(30,27,48,0.82),rgba(22,20,34,0.96))] px-4 py-5 shadow-[0_12px_32px_rgba(0,0,0,0.18)] hover:border-[var(--color-border)] hover:bg-[var(--color-input)]"
-              pendingLabel={ctrl.title === 'Transits' ? 'Opening transits' : 'Wait a moment'}
             >
               <span className="block text-lg text-[var(--color-copper-dim)]">{ctrl.glyph}</span>
               <span className="mt-2 block text-sm text-[var(--color-text)]">{ctrl.title}</span>

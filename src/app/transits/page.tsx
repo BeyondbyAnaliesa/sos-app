@@ -63,6 +63,24 @@ function stationLabel(kind: 'retrograde' | 'direct') {
   return kind === 'retrograde' ? 'Rx station' : 'Direct station';
 }
 
+async function withTransitAiTimeout(
+  promise: Promise<Record<string, MajorTransitAiReading>>,
+  timeoutMs = 6000,
+) {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<Record<string, MajorTransitAiReading>>((resolve) => {
+        timeout = setTimeout(() => resolve({}), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
 function MajorTransitCard({ arc, memory, chart, aiReading }: { arc: MajorTransitArc; memory: MajorWaveMemoryInput; chart: RichChart; aiReading?: MajorTransitAiReading }) {
   const memoryReading = buildMajorWaveMemoryReading(arc, memory, chart);
   const timing = buildTransitTiming(arc);
@@ -268,12 +286,12 @@ export default async function TransitRoomPage() {
   const activeMajorArcs = majorArcs.filter((arc) => arc.activeToday).slice(0, paid ? 8 : 2);
   const upcomingMajorArcs = majorArcs.filter((arc) => !arc.activeToday).slice(0, paid ? 6 : 2);
   const displayedMajorArcs = [...activeMajorArcs, ...upcomingMajorArcs];
-  const aiReadings = await getOrCreateMajorTransitAiReadings({
+  const aiReadings = await withTransitAiTimeout(getOrCreateMajorTransitAiReadings({
     userId: user.id,
     arcs: displayedMajorArcs,
     chart: richChart,
     memory: waveMemory,
-  });
+  }));
   const timingSummary = buildTransitTimingSummary(displayedMajorArcs, todayTransits.date);
 
   return (

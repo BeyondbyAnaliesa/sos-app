@@ -148,7 +148,7 @@ export default async function ReadingPage() {
 
   if (!user) redirect('/auth/login');
 
-  const [readingResult, chartResult, sub] = await Promise.all([
+  const [readingResult, chartResult, reportResult, sub] = await Promise.all([
     supabase
       .from('natal_readings')
       .select('reading_json')
@@ -159,6 +159,11 @@ export default async function ReadingPage() {
       .select('placements_json, angles_json, houses_json, aspects_json, metadata_json')
       .eq('user_id', user.id)
       .single(),
+    supabase
+      .from('onboarding_reports')
+      .select('report_json')
+      .eq('user_id', user.id)
+      .maybeSingle(),
     getSubscription(user.id),
   ]);
 
@@ -180,8 +185,19 @@ export default async function ReadingPage() {
   }
 
   const metadata = chartResult.data.metadata_json as { natalReading?: NatalReadingReport } | null;
+  const onboardingReport = reportResult.data?.report_json as { chartReading?: string; lookAhead?: string; themes?: string[] } | null | undefined;
+  const onboardingFallbackReading = onboardingReport?.chartReading ? {
+    sunReading: onboardingReport.chartReading,
+    moonReading: onboardingReport.lookAhead ?? onboardingReport.chartReading,
+    risingReading: onboardingReport.chartReading,
+    aspectHighlights: onboardingReport.themes?.length
+      ? `Early SOS themes: ${onboardingReport.themes.join(', ')}.`
+      : onboardingReport.chartReading,
+    synthesis: onboardingReport.lookAhead ?? onboardingReport.chartReading,
+  } satisfies NatalReadingReport : undefined;
   const savedReading = (readingResult.data?.reading_json as NatalReadingReport | undefined)
-    ?? metadata?.natalReading;
+    ?? metadata?.natalReading
+    ?? (onboardingFallbackReading as NatalReadingReport | undefined);
 
   // ── Reading still generating ──
   if (!savedReading) {

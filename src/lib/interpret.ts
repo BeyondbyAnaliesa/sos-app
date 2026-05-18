@@ -9,6 +9,7 @@ export interface GuidanceResult {
   message: string;
   intensity: Intensity;
   summary: string;
+  weight?: number;
 }
 
 
@@ -523,6 +524,7 @@ export function interpretTransits(
       message: buildMessage(domain, scored.slice(0, 2)),
       intensity: top?.intensity ?? 'low',
       summary,
+      weight: top?.weight ?? 0,
     };
   });
 }

@@ -19,12 +19,15 @@ import PendingLink from '@/components/PendingLink';
 
 function buildLifeSegments(guidance: GuidanceResult[]): LifeSegmentData[] {
   const domainSignals = new Map<string, LifeSignal>();
+  const activeGuidance = [...guidance]
+    .filter((result) => result.summary !== 'No significant transits' && (result.weight ?? 0) > 0)
+    .sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0))
+    .slice(0, 3);
 
-  for (const result of guidance as Array<GuidanceResult | (GuidanceResult & { domain: string })>) {
-    const hasActiveTransit = result.summary !== 'No significant transits';
+  for (const result of activeGuidance as Array<GuidanceResult | (GuidanceResult & { domain: string })>) {
     domainSignals.set(
       result.domain,
-      !hasActiveTransit ? 'quiet' : result.intensity === 'high' ? 'cautionary' : result.intensity === 'medium' ? 'supportive' : 'quiet',
+      result.intensity === 'high' ? 'cautionary' : result.intensity === 'medium' ? 'supportive' : 'ambient',
     );
   }
 

@@ -65,6 +65,7 @@ export default async function proxy(request: NextRequest) {
     || path.startsWith('/upgrade')
     || path === '/home'
     || path === '/access'
+    || path === '/install'
     || path === '/tester';
   if (!onAppHost && !isLocalPreviewHost(request) && isAppSurfacePath) {
     return NextResponse.redirect(appUrl(path, request));
@@ -77,7 +78,7 @@ export default async function proxy(request: NextRequest) {
 
   // Public tester start page must remain reachable even if the viewer has an existing session.
   // It is the free onboarding entry point for invited testers/investors.
-  if (path === '/tester') {
+  if (path === '/tester' || path === '/install') {
     return supabaseResponse;
   }
 

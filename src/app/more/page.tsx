@@ -23,6 +23,13 @@ const LINKS = [
     paid:  false,
   },
   {
+    href:  '/install',
+    glyph: '▣',
+    title: 'Install SOS',
+    desc:  'Add the SOS icon to your phone home screen',
+    paid:  false,
+  },
+  {
     href:  '/support',
     glyph: '◆',
     title: 'Contact Support',

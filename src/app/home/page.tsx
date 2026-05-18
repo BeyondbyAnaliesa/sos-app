@@ -21,9 +21,10 @@ function buildLifeSegments(guidance: GuidanceResult[]): LifeSegmentData[] {
   const domainSignals = new Map<string, LifeSignal>();
 
   for (const result of guidance as Array<GuidanceResult | (GuidanceResult & { domain: string })>) {
+    const hasActiveTransit = result.summary !== 'No significant transits';
     domainSignals.set(
       result.domain,
-      result.intensity === 'high' ? 'cautionary' : result.intensity === 'medium' ? 'supportive' : 'ambient',
+      !hasActiveTransit ? 'quiet' : result.intensity === 'high' ? 'cautionary' : result.intensity === 'medium' ? 'supportive' : 'ambient',
     );
   }
 
@@ -36,7 +37,7 @@ function buildLifeSegments(guidance: GuidanceResult[]): LifeSegmentData[] {
   };
 
   return [
-    { label: 'MONEY', signal: signal(['money'], 'ambient') },
+    { label: 'MONEY', signal: signal(['money', 'career']) },
     { label: 'BODY', signal: signal(['body']) },
     { label: 'MIND', signal: signal(['mind']) },
     { label: 'HOME', signal: signal(['home']) },

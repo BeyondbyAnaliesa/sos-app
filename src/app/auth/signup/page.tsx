@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { createBrowserClient } from '@supabase/ssr';
 import { trackClient } from '@/lib/analytics';
+import { getSafePostLoginRedirect } from '@/lib/auth/redirects';
 
 export default function SignupPage() {
   const [email, setEmail]       = useState('');
@@ -21,7 +22,9 @@ export default function SignupPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     );
 
-    const emailRedirectTo = `${window.location.origin}/auth/callback`;
+    const next = new URLSearchParams(window.location.search).get('next');
+    const redirectTo = getSafePostLoginRedirect(next) === '/' ? '/onboarding' : getSafePostLoginRedirect(next);
+    const emailRedirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`;
 
     const { error } = await supabase.auth.signUp({
       email,
@@ -40,7 +43,7 @@ export default function SignupPage() {
 
     trackClient('signup_complete', { method: 'email' });
 
-    window.location.href = '/onboarding';
+    window.location.href = redirectTo;
   }
 
   return (

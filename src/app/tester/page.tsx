@@ -42,9 +42,9 @@ export default function PublicTesterStartPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     );
 
-    const emailRedirectTo = `${window.location.origin}/auth/callback`;
+    const emailRedirectTo = `${window.location.origin}/auth/callback?next=%2Faccess`;
 
-    const { error: signUpError } = await supabase.auth.signUp({
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -57,6 +57,15 @@ export default function PublicTesterStartPage() {
       setError(signUpError.message);
       setLoading(false);
       return;
+    }
+
+    if (!signUpData.session) {
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) {
+        setError('Account created. Check your email if confirmation is required, then log in and enter your tester code.');
+        setLoading(false);
+        return;
+      }
     }
 
     try {

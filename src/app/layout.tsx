@@ -4,7 +4,7 @@ import ServiceWorkerRegistrar from '@/components/ServiceWorkerRegistrar';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 export const metadata: Metadata = {
-  title: 'SOS — Spiritual Operating System',
+  title: 'SOS',
   description: 'SOS reads actual chart timing with the lived context you share.',
   manifest: '/manifest.webmanifest',
   appleWebApp: {

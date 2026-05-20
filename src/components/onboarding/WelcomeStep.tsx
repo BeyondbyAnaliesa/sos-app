@@ -5,7 +5,7 @@ export default function WelcomeStep({ onBegin }: { onBegin: () => void }) {
 
       <h1 className="text-4xl font-light tracking-[0.3em] text-[var(--color-text)]">SOS</h1>
       <p className="mt-2 text-[10px] uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
-        Spiritual Operating System
+        Private astrology intelligence
       </p>
 
       <div className="mx-auto mt-10 max-w-md space-y-4 text-sm leading-relaxed text-[var(--color-text-muted)]">

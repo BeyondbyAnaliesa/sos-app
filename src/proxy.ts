@@ -5,6 +5,7 @@ import { getLoginRedirectPath } from '@/lib/auth/redirects';
 
 const APP_HOST = 'app.getsos.app';
 const APP_ORIGIN = `https://${APP_HOST}`;
+const PUBLIC_APP_ROUTES = new Set(['/install', '/privacy', '/support']);
 
 function requestHost(request: NextRequest) {
   return request.headers.get('host')?.split(':')[0] ?? '';
@@ -52,6 +53,11 @@ export default async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   const path = request.nextUrl.pathname;
   const onAppHost = isAppHost(request);
+
+  // Public install/legal/support routes must stay reachable before auth on every public host.
+  if (PUBLIC_APP_ROUTES.has(path)) {
+    return supabaseResponse;
+  }
 
   // Keep the marketing root purely public. Logged-in app home lives on app.getsos.app/home.
   if (onAppHost && path === '/') {

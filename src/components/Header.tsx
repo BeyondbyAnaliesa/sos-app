@@ -9,7 +9,7 @@ export default function Header({ date }: { date: string }) {
       <h1 className="text-4xl font-light tracking-[0.35em] text-[var(--color-text)] sm:text-5xl">SOS</h1>
 
       <p className="mt-2 text-[10px] uppercase tracking-[0.25em] text-[var(--color-text-muted)]">
-        Spiritual Operating System
+        Private astrology intelligence
       </p>
 
       <time

@@ -2,9 +2,9 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'SOS — Spiritual Operating System',
+    name: 'SOS',
     short_name: 'SOS',
-    description: 'Your daily guidance, decoded from the cosmos.',
+    description: 'SOS reads actual chart timing with the lived context you share.',
     start_url: '/',
     display: 'standalone',
     orientation: 'portrait',

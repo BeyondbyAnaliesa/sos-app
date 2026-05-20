@@ -36,6 +36,29 @@ describe('proxy domain and auth route handling', () => {
     expect(response.headers.get('location')).toBe('https://app.getsos.app/auth/signup?utm_source=substack');
   });
 
+  it('keeps install public on the marketing domain', async () => {
+    mockUser = null;
+    const { default: proxy } = await import('../proxy');
+
+    const response = await proxy(req('https://www.getsos.app/install'));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('location')).toBeNull();
+  });
+
+  it('keeps privacy and support public on the app domain', async () => {
+    mockUser = null;
+    const { default: proxy } = await import('../proxy');
+
+    const privacy = await proxy(req('https://app.getsos.app/privacy'));
+    const support = await proxy(req('https://app.getsos.app/support'));
+
+    expect(privacy.status).toBe(200);
+    expect(privacy.headers.get('location')).toBeNull();
+    expect(support.status).toBe(200);
+    expect(support.headers.get('location')).toBeNull();
+  });
+
   it('sends app subdomain root to login when signed out', async () => {
     mockUser = null;
     const { default: proxy } = await import('../proxy');

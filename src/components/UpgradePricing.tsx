@@ -6,9 +6,17 @@ import { PLANS, type BillingInterval, type PlanKey } from '@/lib/stripe';
 
 type UpgradePricingProps = {
   nativeIOS?: boolean;
+  charterSoldOut?: boolean;
+  charterSeatCount?: number;
+  charterSeatLimit?: number;
 };
 
-export default function UpgradePricing({ nativeIOS = false }: UpgradePricingProps) {
+export default function UpgradePricing({
+  nativeIOS = false,
+  charterSoldOut = false,
+  charterSeatCount,
+  charterSeatLimit,
+}: UpgradePricingProps) {
   const [memberInterval, setMemberInterval] = useState<BillingInterval>('year');
 
   const memberPlan: PlanKey = memberInterval === 'month' ? 'member_monthly' : 'member_annual';
@@ -22,19 +30,27 @@ export default function UpgradePricing({ nativeIOS = false }: UpgradePricingProp
             Charter
           </p>
           <span className="rounded-[10px] border border-[var(--color-border-subtle)] px-2 py-0.5 text-[10px] uppercase tracking-wider text-[var(--color-copper)]">
-            Locked forever
+            {charterSoldOut ? 'Sold out' : 'Locked while active'}
           </span>
         </div>
         <p className="mt-2 text-xs uppercase tracking-[0.2em] text-[var(--color-copper)]">
-          Founding access
+          Charter Access
         </p>
         <p className="mt-3 flex items-baseline gap-2">
           <span className="text-4xl font-light text-[var(--color-text)]">${PLANS.charter_annual.price}</span>
           <span className="text-sm text-[var(--color-text-muted)]">/ year</span>
         </p>
         <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-          {PLANS.charter_annual.description}
+          {charterSoldOut
+            ? 'The first Charter spots are gone. Standard membership is available.'
+            : PLANS.charter_annual.description}
         </p>
+
+        {typeof charterSeatCount === 'number' && typeof charterSeatLimit === 'number' && !charterSoldOut ? (
+          <p className="mt-2 text-xs text-[var(--color-copper)]">
+            {Math.max(charterSeatLimit - charterSeatCount, 0)} Charter spots remaining.
+          </p>
+        ) : null}
 
         <ul className="mt-5 space-y-2 text-sm text-[var(--color-text-muted)]">
           <li className="flex items-start gap-2">
@@ -55,11 +71,15 @@ export default function UpgradePricing({ nativeIOS = false }: UpgradePricingProp
           </li>
           <li className="flex items-start gap-2">
             <span className="mt-0.5 text-[var(--color-copper)]">✓</span>
-            <span>Locked-in $49 rate for as long as SOS exists</span>
+            <span>Locked-in $49/year rate while your subscription remains active</span>
           </li>
         </ul>
 
-        {nativeIOS ? (
+        {charterSoldOut ? (
+          <p className="mt-6 rounded-[10px] border border-[var(--color-border-subtle)] px-4 py-3 text-center text-xs leading-relaxed text-[var(--color-text-muted)]">
+            Charter Access is sold out. Standard membership is still available.
+          </p>
+        ) : nativeIOS ? (
           <p className="mt-6 rounded-[10px] border border-[var(--color-border-subtle)] px-4 py-3 text-center text-xs leading-relaxed text-[var(--color-text-muted)]">
             Charter checkout is temporarily unavailable in this iOS build while App Store purchases are being configured.
           </p>

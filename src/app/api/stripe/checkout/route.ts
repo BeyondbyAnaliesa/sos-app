@@ -3,6 +3,7 @@ export const runtime = 'nodejs';
 import { NextResponse } from 'next/server';
 import { createClient, createAdminClient } from '@/lib/supabase/server';
 import stripe, { PLANS, resolveCheckoutPlan } from '@/lib/stripe';
+import { getActiveCharterSeatCount, isCharterPlan, isCharterSoldOut } from '@/lib/charter';
 import { logError } from '@/lib/logger';
 
 export async function POST(request: Request) {
@@ -32,8 +33,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // Look up or create Stripe customer
     const admin = createAdminClient();
+
+    if (isCharterPlan(plan)) {
+      const activeCharterSeats = await getActiveCharterSeatCount(admin);
+      if (isCharterSoldOut(activeCharterSeats)) {
+        return NextResponse.json(
+          { error: 'Charter Access is sold out. Standard membership is still available.' },
+          { status: 409 },
+        );
+      }
+    }
+
+    // Look up or create Stripe customer
     const { data: existingSub } = await admin
       .from('subscriptions')
       .select('stripe_customer_id')

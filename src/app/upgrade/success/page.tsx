@@ -35,7 +35,7 @@ export default async function SuccessPage() {
 
         <p className="mx-auto mt-4 max-w-sm text-sm leading-relaxed text-[var(--color-text-muted)]">
           {sub?.plan === 'charter_annual'
-            ? 'Your Charter spot is locked in at $49/year for as long as SOS exists.'
+            ? 'Charter members keep $49/year while their Charter subscription remains active.'
             : sub?.billingInterval === 'month'
               ? 'Your monthly membership is active. Everything is now unlocked.'
               : 'Your annual membership is active. Everything is now unlocked.'}

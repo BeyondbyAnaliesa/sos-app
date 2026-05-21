@@ -36,11 +36,11 @@ const LEGACY_PLAN_ALIASES = {
 export const PLANS = {
   charter_annual: {
     priceId:         process.env.STRIPE_PRICE_ID_CHARTER ?? '',
-    name:            'Charter Member',
+    name:            'Charter Access',
     price:           49,
     interval:        'year' as const,
     tier:            'charter' as const,
-    description:     'Locked in for life — this rate never increases.',
+    description:     'Locked at $49/year while your subscription remains active.',
     checkoutLabel:   '$49/year',
   },
   member_annual: {

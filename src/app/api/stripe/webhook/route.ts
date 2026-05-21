@@ -7,6 +7,20 @@ import { getCanonicalPlanKey, resolvePlanFromPriceId } from '@/lib/stripe';
 import { track } from '@/lib/analytics';
 import { logError } from '@/lib/logger';
 
+function getSubscriptionPeriodFields(sub: Stripe.Subscription) {
+  const subscription = sub as unknown as {
+    current_period_end?: number | null;
+    cancel_at_period_end?: boolean | null;
+  };
+
+  return {
+    current_period_end: subscription.current_period_end
+      ? new Date(subscription.current_period_end * 1000).toISOString()
+      : null,
+    cancel_at_period_end: subscription.cancel_at_period_end ?? false,
+  };
+}
+
 export async function POST(request: Request) {
   const body = await request.text();
   const signature = request.headers.get('stripe-signature');
@@ -58,6 +72,7 @@ export async function POST(request: Request) {
           stripe_subscription_id: stripeSubId,
           price_id:               item?.price.id ?? null,
           status:                 stripeSub.status,
+          ...getSubscriptionPeriodFields(stripeSub),
           updated_at:             new Date().toISOString(),
         }, { onConflict: 'user_id' });
 
@@ -77,6 +92,7 @@ export async function POST(request: Request) {
           stripe_subscription_id: sub.id,
           price_id:               subItem?.price.id ?? null,
           status:                 sub.status,
+          ...getSubscriptionPeriodFields(sub),
           updated_at:             new Date().toISOString(),
         }, { onConflict: 'user_id' });
 
@@ -93,6 +109,7 @@ export async function POST(request: Request) {
           user_id:                userId,
           stripe_subscription_id: sub.id,
           status:                 'canceled',
+          ...getSubscriptionPeriodFields(sub),
           updated_at:             new Date().toISOString(),
         }, { onConflict: 'user_id' });
 

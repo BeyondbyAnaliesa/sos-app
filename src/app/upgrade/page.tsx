@@ -1,8 +1,9 @@
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient, createClient } from '@/lib/supabase/server';
 import { getLoginRedirectPath } from '@/lib/auth/redirects';
 import { getSubscription, isActive } from '@/lib/subscription';
+import { CHARTER_SEAT_LIMIT, getActiveCharterSeatCount, isCharterSoldOut } from '@/lib/charter';
 import UpgradePricing from '@/components/UpgradePricing';
 import BottomNav from '@/components/BottomNav';
 import AppBackLink from '@/components/AppBackLink';
@@ -19,6 +20,8 @@ export default async function UpgradePage() {
   const sub = await getSubscription(user.id);
   if (isActive(sub)) redirect('/home');
 
+  const activeCharterSeats = await getActiveCharterSeatCount(createAdminClient());
+
   return (
     <main className="mx-auto w-full max-w-xl px-5 pb-24 pt-10 sm:px-6 sm:pt-14">
       <AppBackLink />
@@ -33,7 +36,12 @@ export default async function UpgradePage() {
         <div className="mt-6 h-px w-full bg-gradient-to-r from-transparent via-[var(--color-border-subtle)] to-transparent" />
       </header>
 
-      <UpgradePricing nativeIOS={isNativeIOS} />
+      <UpgradePricing
+        nativeIOS={isNativeIOS}
+        charterSoldOut={isCharterSoldOut(activeCharterSeats)}
+        charterSeatCount={activeCharterSeats}
+        charterSeatLimit={CHARTER_SEAT_LIMIT}
+      />
 
       <div className="mt-8 space-y-3 text-center text-xs leading-relaxed text-[var(--color-text-muted)]">
         <p className="opacity-50">
@@ -44,7 +52,7 @@ export default async function UpgradePage() {
             </>
           ) : (
             <>
-              Monthly or annual billing. Cancel anytime — you keep access until the period ends.
+              Monthly or annual billing. Cancel anytime. Your access continues until the end of the paid period.
               <br />Secure checkout via Stripe. We never store your card details.
             </>
           )}

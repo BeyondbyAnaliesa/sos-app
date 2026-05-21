@@ -97,8 +97,10 @@ describe('/api/stripe/webhook', () => {
       },
     });
     retrieveSubscriptionMock.mockResolvedValue({
-      status: 'active',
-      items:  { data: [{ price: { id: 'price_member_annual' } }] },
+      status:               'active',
+      current_period_end:   1798761600,
+      cancel_at_period_end: false,
+      items:                { data: [{ price: { id: 'price_member_annual' } }] },
     });
     upsertMock.mockResolvedValue({ error: null });
     const { POST } = await loadRoute();
@@ -113,6 +115,42 @@ describe('/api/stripe/webhook', () => {
       stripe_subscription_id: 'sub_test',
       price_id:               'price_member_annual',
       status:                 'active',
+      current_period_end:     '2027-01-01T00:00:00.000Z',
+      cancel_at_period_end:   false,
+      updated_at:             expect.any(String),
+    }, { onConflict: 'user_id' });
+  });
+
+  it('persists renewal and cancel-at-period-end fields on subscription updates', async () => {
+    constructEventMock.mockReturnValue({
+      id:   'evt_sub_updated',
+      type: 'customer.subscription.updated',
+      data: {
+        object: {
+          id:                   'sub_test',
+          customer:             'cus_test',
+          metadata:             { supabase_user_id: 'user_test' },
+          status:               'active',
+          current_period_end:   1798761600,
+          cancel_at_period_end: true,
+          items:                { data: [{ price: { id: 'price_member_annual' } }] },
+        },
+      },
+    });
+    upsertMock.mockResolvedValue({ error: null });
+    const { POST } = await loadRoute();
+
+    const response = await POST(request('{"id":"evt_sub_updated"}', 'signed'));
+
+    expect(response.status).toBe(200);
+    expect(upsertMock).toHaveBeenCalledWith({
+      user_id:                'user_test',
+      stripe_customer_id:     'cus_test',
+      stripe_subscription_id: 'sub_test',
+      price_id:               'price_member_annual',
+      status:                 'active',
+      current_period_end:     '2027-01-01T00:00:00.000Z',
+      cancel_at_period_end:   true,
       updated_at:             expect.any(String),
     }, { onConflict: 'user_id' });
   });
